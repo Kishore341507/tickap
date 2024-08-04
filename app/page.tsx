@@ -5,7 +5,8 @@ import { ModeToggle } from "../components/ui/mode-toggle";
 
 export default function Home() {
   return (
-    <main>
+    <main className="text-center">
+      <h1>We are Building tickAp...</h1>
     </main>
   );
 }
