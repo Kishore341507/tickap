@@ -1,9 +1,13 @@
+import { auth } from '@/auth'
 import React from 'react'
 
-export default function Tournaments() {
+export default async function Tournaments() {
+
+  var session = await auth() ;
+
   return (
     <div>
-      List of Tournaments will shown here.
+      Hello {session?.user?.name}
     </div>
   )
 }
