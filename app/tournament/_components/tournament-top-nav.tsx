@@ -55,7 +55,7 @@ export default async function TournamentTopNav({
           <SheetTrigger className="min-[1024px]:hidden p-2 transition">
             {/* <HamburgerMenuIcon /> */}
             <Menu />
-            <Link href="/dashboard">
+            <Link href="/tournament">
               <span className="sr-only">Home</span>
             </Link>
           </SheetTrigger>
