@@ -40,6 +40,17 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ModeToggleSub } from "@/components/ui/mode-toggle-sub";
+import { env } from "process";
+import { List } from "postcss/lib/list";
+
+interface Guild {
+  id: string;
+  name: string;
+  permissions: string;
+  icon: string;
+  manager: boolean;
+  mutual: boolean;
+}
 
 export default async function TournamentTopNav({
   children,
@@ -47,13 +58,29 @@ export default async function TournamentTopNav({
   children: React.ReactNode;
 }) {
   const session = await auth();
+  const mutualManagerGuilds = [];
+  const toAddGuilds = [];
+  
+  if (session) {
+    const responce = await fetch( env.API_URL + "/discord/user/mutual-guild");
+    if (responce.ok){
+      const data : Guild[] = await responce.json();
+      data.forEach((guild: Guild) => {
+        if (guild.manager && guild.mutual) {
+          mutualManagerGuilds.push(guild);
+        }
+        if (guild.manager && !guild.mutual) {
+          toAddGuilds.push(guild);
+        }
+      });
+    }
+  }
 
   return (
     <div className="flex flex-col">
       <header className="flex h-14 lg:h-[55px] items-center gap-4 border-b px-3 border-secondary">
         <Dialog>
           <SheetTrigger className="min-[1024px]:hidden p-2 transition">
-            {/* <HamburgerMenuIcon /> */}
             <Menu />
             <Link href="/tournament">
               <span className="sr-only">Home</span>
@@ -61,7 +88,8 @@ export default async function TournamentTopNav({
           </SheetTrigger>
           <SheetContent side="left">
             <SheetHeader>
-              <Link href="/">
+              <Link className="flex m-auto" href="/">
+                <Image src="/tickap_dark.svg" width={30} height={30} alt="Tickap : logo" />
                 <SheetTitle>TickAp</SheetTitle>
               </Link>
             </SheetHeader>
@@ -82,6 +110,19 @@ export default async function TournamentTopNav({
                   </Button>
                 </Link>
               </DialogClose>
+              { mutualManagerGuilds.length > 0 && 
+                <div>
+                  <DialogClose asChild>
+                    <Link href="/tournament/guild">
+                      <Button variant="outline" className="w-full">
+                        <Folder className="mr-2 h-4 w-4" />
+                        Guilds
+                      </Button>
+                    </Link>
+                  </DialogClose>
+                </div>
+              }
+
               <Separator className="my-3" />
             </div>
           </SheetContent>
