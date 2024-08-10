@@ -23,5 +23,5 @@ export async function GET( request : NextRequest ) {
     //     guild.manager = (BigInt(guild.permissions) & BigInt(0x20)) !== BigInt(0);
     // });
 
-    return NextResponse.json({ message : "Hello World" });
+    return NextResponse.json({ message : "Hello 2" });
 }
