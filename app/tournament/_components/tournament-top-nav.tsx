@@ -95,6 +95,14 @@ export default async function TournamentTopNav({
                   </Button>
                 </Link>
               </DialogClose>
+              <DialogClose asChild>
+                <Link href="/tournament/aboutus">
+                  <Button variant="outline" className="w-full">
+                    <Server className="mr-2 h-4 w-4" />
+                    About us
+                  </Button>
+                </Link>
+              </DialogClose>
               <Separator className="my-3" />
             </div>
           </SheetContent>
@@ -136,7 +144,7 @@ export default async function TournamentTopNav({
 
               <DropdownMenuItem>
                 <LifeBuoy className="mr-2 h-4 w-4" />
-                Support
+                <Link href="https://discord.gg/JEZW33uSNU" target="_blank" >Support</Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem>
