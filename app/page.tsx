@@ -5,13 +5,13 @@ export default function Home() {
     // <main className="text-center">
     //   <h1>We are Building tickAp...</h1>
     // </main>
-    //redirect to /tournament
+    //redirect to /event
     <div>
       <script
         dangerouslySetInnerHTML={{
           __html: `
           if (window.location.pathname === '/') {
-            window.location.href = '/tournament';
+            window.location.href = '/event';
           }
         `,
         }}

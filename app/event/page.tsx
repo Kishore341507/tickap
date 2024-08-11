@@ -19,7 +19,7 @@ interface Guild {
   icon: string;
 }
 
-export default async function Tournaments() {
+export default async function Events() {
 
   const Events = await prisma.events.findMany({});
   const liveEvents = await prisma.events.findMany({
@@ -36,7 +36,7 @@ export default async function Tournaments() {
   return (
     <>
       <h4 className="scroll-m-20 text-xl font-semibold tracking-tight">
-        Tournaments
+        Events
       </h4>
       <Tabs defaultValue="Upcoming" >
         <TabsList className="grid grid-cols-3 lg:w-[400px] md:w-[400px] mb-5">

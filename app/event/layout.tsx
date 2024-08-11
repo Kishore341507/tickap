@@ -1,6 +1,6 @@
 import React from "react";
-import TournamentSideBar from "./_components/tournament-side-bar";
-import TournamentTopNav from "./_components/tournament-top-nav";
+import EventSideBar from "./_components/event-side-bar";
+import EventTopNav from "./_components/event-top-nav";
 import AuthProvider from "../auth/Provider";
 import {
   ResizableHandle,
@@ -8,7 +8,7 @@ import {
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
 
-export default function TournamentLayout({
+export default function EventLayout({
   children,
 }: {
   children: React.ReactNode;
@@ -16,11 +16,11 @@ export default function TournamentLayout({
   return (
     <AuthProvider>
       <div className="grid min-h-screen w-full lg:grid-cols-[240px_1fr]">
-        <TournamentSideBar></TournamentSideBar>
+        <EventSideBar></EventSideBar>
 
-        <TournamentTopNav>
+        <EventTopNav>
           <main className="flex flex-col gap-4 p-4 lg:gap-6">{children}</main>
-        </TournamentTopNav>
+        </EventTopNav>
       </div>
     </AuthProvider>
   );

@@ -53,7 +53,7 @@ interface Guild {
   mutual: boolean;
 }
 
-export default async function TournamentTopNav({
+export default async function EventTopNav({
   children,
 }: {
   children: React.ReactNode;
@@ -67,7 +67,7 @@ export default async function TournamentTopNav({
         <Dialog>
           <SheetTrigger className="min-[1024px]:hidden p-2 transition">
             <Menu />
-            <Link href="/tournament">
+            <Link href="/event">
               <span className="sr-only">Home</span>
             </Link>
           </SheetTrigger>
@@ -80,7 +80,7 @@ export default async function TournamentTopNav({
             </SheetHeader>
             <div className="flex flex-col space-y-3 mt-[1rem]">
               <DialogClose asChild>
-                <Link href="/tournament">
+                <Link href="/event">
                   <Button variant="outline" className="w-full">
                     <HomeIcon className="mr-2 h-4 w-4" />
                     Home
@@ -88,7 +88,7 @@ export default async function TournamentTopNav({
                 </Link>
               </DialogClose>
               <DialogClose asChild>
-                <Link href="/tournament/server">
+                <Link href="/event/server">
                   <Button variant="outline" className="w-full">
                     <Server className="mr-2 h-4 w-4" />
                     Servers
@@ -96,7 +96,7 @@ export default async function TournamentTopNav({
                 </Link>
               </DialogClose>
               <DialogClose asChild>
-                <Link href="/tournament/aboutus">
+                <Link href="/event/aboutus">
                   <Button variant="outline" className="w-full">
                     <Server className="mr-2 h-4 w-4" />
                     About us

@@ -31,9 +31,9 @@ export default function AboutUs() {
 
       <ul className="my-6 ml-6 list-disc [&>li]:mt-0 ">
         <li><Link className="text-blue-400 " href="https://youtu.be/jystuvCajyI"> Bot Tutorial </Link></li>
-        <li><Link className="text-blue-400 " href="/tournament/privacy-policy" > Privacy Policy </Link></li>
-        <li><Link className="text-blue-400 " href="/tournament/terms-and-conditions" > Terms and Conditions </Link></li>
-        <li><Link className="text-blue-400 " href="/tournament/contact-us" > Contact Us </Link></li>
+        <li><Link className="text-blue-400 " href="/event/privacy-policy" > Privacy Policy </Link></li>
+        <li><Link className="text-blue-400 " href="/event/terms-and-conditions" > Terms and Conditions </Link></li>
+        <li><Link className="text-blue-400 " href="/event/contact-us" > Contact Us </Link></li>
         <li><Link className="text-blue-400 " href="https://merchant.razorpay.com/policy/MJ3012NomSaIan/refund" > Cancellation & Refund Policy </Link></li>
         <li><Link className="text-blue-400 " href="https://merchant.razorpay.com/policy/MJ3012NomSaIan/shipping" > Shipping & Delivery Policy </Link></li>
       </ul>

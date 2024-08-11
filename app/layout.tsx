@@ -8,7 +8,7 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "TickAp",
-  description: "A app for managing tournaments",
+  description: "A app for managing events",
 };
 
 export default function RootLayout({

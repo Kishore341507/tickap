@@ -21,7 +21,7 @@ interface Guild {
   mutual: boolean;
 }
 
-export default function TournamentSideBar() {
+export default function EventSideBar() {
   const pathname = usePathname();
   const { theme } = useTheme();
   const { status } = useSession();
@@ -64,10 +64,10 @@ export default function TournamentSideBar() {
                 "flex items-center gap-2 rounded-lg px-3 py-2 text-gray-500 transition-all hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50",
                 {
                   "flex items-center gap-2 rounded-lg bg-gray-100 px-3 py-2 text-gray-900  transition-all hover:text-gray-900 dark:bg-gray-800 dark:text-gray-50 dark:hover:text-gray-50":
-                    pathname === "/tournament",
+                    pathname === "/event",
                 }
               )}
-              href="/tournament"
+              href="/event"
             >
               <div className="border rounded-lg dark:bg-black dark:border-gray-800 border-gray-400 p-1 bg-white">
                 <HomeIcon className="h-3 w-3" />
@@ -79,10 +79,10 @@ export default function TournamentSideBar() {
                 "flex items-center gap-2 rounded-lg px-3 py-2 text-gray-500 transition-all hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50",
                 {
                   "flex items-center gap-2 rounded-lg bg-gray-100 px-3 py-2 text-gray-900  transition-all hover:text-gray-900 dark:bg-gray-800 dark:text-gray-50 dark:hover:text-gray-50":
-                    pathname === "/tournament/server",
+                    pathname === "/event/server",
                 }
               )}
-              href="/tournament/server"
+              href="/event/server"
             >
               <div className="border rounded-lg dark:bg-black dark:border-gray-800 border-gray-400 p-1 bg-white">
                 <Server className="h-3 w-3" />
@@ -95,10 +95,10 @@ export default function TournamentSideBar() {
                 "flex items-center gap-2 rounded-lg px-3 py-2 text-gray-500 transition-all hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50",
                 {
                   "flex items-center gap-2 rounded-lg bg-gray-100 px-3 py-2 text-gray-900  transition-all hover:text-gray-900 dark:bg-gray-800 dark:text-gray-50 dark:hover:text-gray-50":
-                    pathname === "/tournament/aboutus",
+                    pathname === "/event/aboutus",
                 }
               )}
-              href="/tournament/aboutus"
+              href="/event/aboutus"
             >
               <div className="border rounded-lg dark:bg-black dark:border-gray-800 border-gray-400 p-1 bg-white">
                 <Info className="h-3 w-3" />
@@ -122,10 +122,10 @@ export default function TournamentSideBar() {
                         "flex items-center gap-2 rounded-lg px-3 py-2 text-gray-500 transition-all hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50",
                         {
                           "flex items-center gap-2 rounded-lg bg-gray-100 px-3 py-2 text-gray-900  transition-all hover:text-gray-900 dark:bg-gray-800 dark:text-gray-50 dark:hover:text-gray-50":
-                            pathname === `/tournament/server/${guild.id}`,
+                            pathname === `/event/server/${guild.id}`,
                         }
                       )}
-                      href={`/tournament/server/${guild.id}`}
+                      href={`/event/server/${guild.id}`}
                     >
                       <div className="border rounded-lg dark:bg-black dark:border-gray-800 border-gray-400 bg-white">
                         <Image
@@ -159,10 +159,10 @@ export default function TournamentSideBar() {
                         "flex items-center gap-2 rounded-lg px-3 py-2 text-gray-500 transition-all hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50",
                         {
                           "flex items-center gap-2 rounded-lg bg-gray-100 px-3 py-2 text-gray-900  transition-all hover:text-gray-900 dark:bg-gray-800 dark:text-gray-50 dark:hover:text-gray-50":
-                            pathname === `/tournament/server/${guild.id}`,
+                            pathname === `/event/server/${guild.id}`,
                         }
                       )}
-                      href={`/tournament/server/${guild.id}`}
+                      href={`/event/server/${guild.id}`}
                     >
                       <div className="border rounded-lg dark:bg-black dark:border-gray-800 border-gray-400 bg-white">
                         <Image
