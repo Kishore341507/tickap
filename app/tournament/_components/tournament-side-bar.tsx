@@ -30,7 +30,7 @@ export default function TournamentSideBar() {
   const [toAddGuilds, setToAddGuilds] = useState([]);
   useEffect(() => {
     if (status !== "authenticated") return;
-    fetch("/api/discord/user/mutual-guild")
+    fetch("/api/discord/user/guild")
       .then((res) => {
         if (!res.ok) return;
         return res.json();

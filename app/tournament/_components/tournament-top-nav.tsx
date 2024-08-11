@@ -42,6 +42,7 @@ import {
 import { ModeToggleSub } from "@/components/ui/mode-toggle-sub";
 import { env } from "process";
 import { List } from "postcss/lib/list";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface Guild {
   id: string;
@@ -58,23 +59,7 @@ export default async function TournamentTopNav({
   children: React.ReactNode;
 }) {
   const session = await auth();
-  const mutualManagerGuilds = [];
-  const toAddGuilds = [];
-  
-  if (session) {
-    const responce = await fetch( env.API_URL + "/discord/user/mutual-guild");
-    if (responce.ok){
-      const data : Guild[] = await responce.json();
-      data.forEach((guild: Guild) => {
-        if (guild.manager && guild.mutual) {
-          mutualManagerGuilds.push(guild);
-        }
-        if (guild.manager && !guild.mutual) {
-          toAddGuilds.push(guild);
-        }
-      });
-    }
-  }
+
 
   return (
     <div className="flex flex-col">
@@ -110,19 +95,6 @@ export default async function TournamentTopNav({
                   </Button>
                 </Link>
               </DialogClose>
-              { mutualManagerGuilds.length > 0 && 
-                <div>
-                  <DialogClose asChild>
-                    <Link href="/tournament/guild">
-                      <Button variant="outline" className="w-full">
-                        <Folder className="mr-2 h-4 w-4" />
-                        Guilds
-                      </Button>
-                    </Link>
-                  </DialogClose>
-                </div>
-              }
-
               <Separator className="my-3" />
             </div>
           </SheetContent>
@@ -181,7 +153,9 @@ export default async function TournamentTopNav({
           </DropdownMenu>
         </div>
       </header>
-      {children}
+      <ScrollArea style={{ height: `calc(100vh - 60px)` }} >
+        {children}
+      </ScrollArea>
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import * as React from "react"
 import Image from "next/image"
 import { cn } from "@/lib/utils"
-import { AspectRatio } from "./aspect-ratio"
+import { AspectRatio } from "@/components/ui/aspect-ratio"
 
 const Card = React.forwardRef<
   HTMLDivElement,
@@ -81,9 +81,8 @@ const CardImage = React.forwardRef<
   HTMLImageElement,
   React.ImgHTMLAttributes<HTMLImageElement>
 >(({ className, ...props }, ref) => (
-  // <img ref={ref} className={cn("h-auto w-full", className)} {...props} />
   <AspectRatio ratio={21 / 9}>
-    <Image src={props.src!} alt={props.alt!} className={cn("rounded-t-lg object-cover bg-muted", className)} {...props} width={420} height={180} />
+    <Image src={props.src!} alt={props.alt!} className={cn("rounded-t-lg h-full object-contain bg-muted", className)} {...props} width={500} height={500} />
   </AspectRatio>
 ));
 CardImage.displayName = "CardImage";
