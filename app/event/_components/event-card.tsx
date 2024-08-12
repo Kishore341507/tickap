@@ -7,9 +7,9 @@ import React from 'react'
 interface Event {
     banner: string;
     name: string;
-    category_name: string ;
-    date?: Date;
-    details?: string;
+    category_name: string | null;
+    date?: Date | null;
+    details?: string | null;
     status: string;
   }
   
