@@ -14,16 +14,25 @@ enum EventStatus {
   Live
 }
 
+enum Platform {
+  Discord
+  TickAp
+  Other
+}
+
+enum Category {
+  VedioGame
+  ESports
+  Music
+  Other
+}
+
 model events {
   id                BigInt              @id @default(autoincrement())
-  name              String?             @db.VarChar
-  guild_id          BigInt?
-  channel_id        BigInt?
-  banner            String?             @db.VarChar
-  game_name         String?             @db.VarChar
+  name              String              @db.VarChar
+  banner            String              @db.VarChar  @default("/tickap_dark.png")
   start_time        Int?
   date              DateTime?           @db.Timestamp          
-  manager_id        BigInt?
   prize             String?             @db.VarChar
   max_teams         Int?
   min_team_player   Int?
@@ -33,9 +42,18 @@ model events {
   is_solo           Boolean?
   extra             Json?
   redirect_url      String?             @db.VarChar
-  guild_url         String?             @db.VarChar
-  role_id           BigInt?
+  location          String?             @db.VarChar
+  location_url      String?             @db.VarChar
   status            EventStatus         @default(Open)      
+
+  category          Category            @default(VedioGame)
+  category_name     String?             @db.VarChar
+  
+  platform          Platform            @default(Discord)
+  role_id           BigInt?
+  manager_id        BigInt?
+  guild_id          BigInt?
+  channel_id        BigInt?
   
   created_at        DateTime            @default(now())
   updated_at        DateTime            @updatedAt

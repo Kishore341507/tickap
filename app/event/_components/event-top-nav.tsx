@@ -60,7 +60,6 @@ export default async function EventTopNav({
 }) {
   const session = await auth();
 
-
   return (
     <div className="flex flex-col">
       <header className="flex h-14 lg:h-[55px] items-center gap-4 border-b px-3 border-secondary">

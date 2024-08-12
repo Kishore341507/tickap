@@ -64,7 +64,7 @@ const CardContent = React.forwardRef<
   <div ref={ref} className={cn("p-6 pt-0", className)} {...props} />
 ))
 CardContent.displayName = "CardContent"
-
+ 
 const CardFooter = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
@@ -77,14 +77,26 @@ const CardFooter = React.forwardRef<
 ))
 CardFooter.displayName = "CardFooter"
 
-const CardImage = React.forwardRef<
-  HTMLImageElement,
-  React.ImgHTMLAttributes<HTMLImageElement>
->(({ className, ...props }, ref) => (
-  <AspectRatio ratio={21 / 9}>
-    <Image src={props.src!} alt={props.alt!} className={cn("rounded-t-lg h-full object-contain bg-muted", className)} {...props} width={500} height={500} />
-  </AspectRatio>
-));
+interface CardImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
+  ratio?: number;
+}
+
+const CardImage = React.forwardRef<HTMLImageElement, CardImageProps>(
+  ({ className, ratio = 21 / 9, ...props }, ref) => (
+    <div>
+      <AspectRatio ratio={ratio}>
+        <Image
+          src={props.src!}
+          alt={props.alt!}
+          className={cn("rounded-t-lg h-full object-contain bg-muted", className)}
+          {...props}
+          width={500}
+          height={500}
+        />
+      </AspectRatio>
+    </div>
+  )
+);
 CardImage.displayName = "CardImage";
 
 export { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent , CardImage }

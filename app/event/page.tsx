@@ -1,16 +1,6 @@
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardImage,
-  CardTitle,
-} from "@/components/ui/card";
 import prisma from "@/prisma/db";
-
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, Gamepad2 } from "lucide-react";
+import EventCard from "./_components/event-card";
 
 interface Guild {
   id: string;
@@ -31,7 +21,6 @@ export default async function Events() {
   const upcomingEvents = await prisma.events.findMany({
     where: { AND: [{ status: "Open" }, { date: { gt: new Date() } }] },
   });
-  console.log(await prisma.events.findMany({}));
 
   return (
     <>
@@ -49,32 +38,7 @@ export default async function Events() {
         <TabsContent value="Upcoming">
           <div className="grid lg:grid-cols-3 md:grid-cols-2 sm:grid-cols-1 gap-4 ">
             {upcomingEvents.map((event) => (
-              <Card key={event.id} className="border-secondary hover:scale-105 duration-500 ease-in-out" >
-                <CardImage
-                  src={event.banner!}
-                  alt={event.name!}
-                  width={200}
-                  height={200}
-                  style={{ backgroundImage  : `url(${event.banner})`}}
-                  className="bg-cover bg-center backdrop-blur-lg"
-                />
-                <CardContent>
-                  <CardHeader className="text-center pb-3" >
-                    <CardTitle>
-                        {event.name}
-                      </CardTitle>
-                    <CardDescription className="flex gap-2 justify-center" >
-                        <Gamepad2 className="h-4 w-4" />
-                        <span>{event.game_name}</span>
-                    </CardDescription>
-                    <CardDescription  className="flex gap-2 justify-center">
-                        <Calendar className="h-4 w-4" />
-                        <span>{event.date?.toDateString()}</span>
-                    </CardDescription>
-                  </CardHeader>
-                  <CardDescription className="text-center" >{ event.details?.length && event.details.length > 100 ? event.details.slice(0, 100) + "..." : event.details }</CardDescription>
-                </CardContent>
-              </Card>
+              <EventCard key={event.id} event={event} ></EventCard>
             ))}
           </div>
         </TabsContent>
@@ -82,32 +46,7 @@ export default async function Events() {
         <TabsContent value="Live">
           <div className="grid lg:grid-cols-3 md:grid-cols-2 sm:grid-cols-1 gap-4 ">
           {liveEvents.map((event) => (
-              <Card key={event.id} className="border-secondary hover:scale-105 duration-500 ease-in-out" >
-                <CardImage
-                  src={event.banner!}
-                  alt={event.name!}
-                  width={200}
-                  height={200}
-                  style={{ backgroundImage  : `url(${event.banner})`}}
-                  className="bg-cover bg-center backdrop-blur-lg"
-                />
-                <CardContent>
-                  <CardHeader className="text-center pb-3" >
-                    <CardTitle>
-                        {event.name}
-                      </CardTitle>
-                    <CardDescription className="flex gap-2 justify-center" >
-                        <Gamepad2 className="h-4 w-4" />
-                        <span>{event.game_name}</span>
-                    </CardDescription>
-                    <CardDescription  className="flex gap-2 justify-center">
-                        <Calendar className="h-4 w-4" />
-                        <span>{event.date?.toDateString()}</span>
-                    </CardDescription>
-                  </CardHeader>
-                  <CardDescription className="text-center" >{ event.details?.length && event.details.length > 100 ? event.details.slice(0, 100) + "..." : event.details }</CardDescription>
-                </CardContent>
-              </Card>
+              <EventCard key={event.id} event={event} ></EventCard>
             ))}
           </div>
         </TabsContent>
@@ -115,32 +54,7 @@ export default async function Events() {
         <TabsContent value="Closed">
           <div className="grid lg:grid-cols-3 md:grid-cols-2 sm:grid-cols-1 gap-4 ">
           {closedEvents.map((event) => (
-              <Card key={event.id} className="border-secondary hover:scale-105 duration-500 ease-in-out" >
-                <CardImage
-                  src={event.banner!}
-                  alt={event.name!}
-                  width={200}
-                  height={200}
-                  style={{ backgroundImage  : `url(${event.banner})`}}
-                  className="bg-cover bg-center backdrop-blur-lg"
-                />
-                <CardContent>
-                  <CardHeader className="text-center pb-3" >
-                    <CardTitle>
-                        {event.name}
-                      </CardTitle>
-                    <CardDescription className="flex gap-2 justify-center" >
-                        <Gamepad2 className="h-4 w-4" />
-                        <span>{event.game_name}</span>
-                    </CardDescription>
-                    <CardDescription  className="flex gap-2 justify-center">
-                        <Calendar className="h-4 w-4" />
-                        <span>{event.date?.toDateString()}</span>
-                    </CardDescription>
-                  </CardHeader>
-                  <CardDescription className="text-center" >{ event.details?.length && event.details.length > 100 ? event.details.slice(0, 100) + "..." : event.details }</CardDescription>
-                </CardContent>
-              </Card>
+              <EventCard key={event.id} event={event} ></EventCard>
             ))}
           </div>
         </TabsContent>

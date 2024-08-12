@@ -19,6 +19,7 @@ interface Guild {
   icon: string;
   manager: boolean;
   mutual: boolean;
+  approximate_member_count : number; 
 }
 
 export default function EventSideBar() {
@@ -36,12 +37,10 @@ export default function EventSideBar() {
         return res.json();
       })
       .then((data) => {
-        setMutualManagerGuilds(data.filter((guild: Guild) => guild.manager &&  guild.mutual ));
-        setToAddGuilds(data.filter((guild: Guild) => guild.manager && !guild.mutual ));
+        setMutualManagerGuilds(data.filter((guild: Guild) => guild.manager &&  guild.mutual ).sort((a: any, b: any) => b.approximate_member_count - a.approximate_member_count) );
+        setToAddGuilds(data.filter((guild: Guild) => guild.manager && !guild.mutual ).sort((a: any, b: any) => b.approximate_member_count - a.approximate_member_count));
       })
-      .catch((err) => console.error(err));
   }, [status]);
-
 
   return (
     <div className="lg:block hidden border-r h-full border-secondary">

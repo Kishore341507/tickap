@@ -13,10 +13,6 @@ export const metadata: Metadata = {
   creator : "Kamal Kisore",
 };
 
-
-
-
-
 export default function EventLayout({
   children,
 }: {
