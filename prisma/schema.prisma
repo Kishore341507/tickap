@@ -170,3 +170,10 @@ model Authenticator {
  
   @@id([userId, credentialID])
 }
+
+model Discordauth {
+  id        String  @unique
+  ip        String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
