@@ -30,7 +30,12 @@ export default function EventSideBar() {
   const [mutualManagerGuilds, setMutualManagerGuilds] = useState([]);
   const [toAddGuilds, setToAddGuilds] = useState([]);
   useEffect(() => {
-    if (status !== "authenticated") return;
+    console.log("status", status);
+    if (status !== "authenticated"){
+      setMutualManagerGuilds([]);
+      setToAddGuilds([]);
+      return;
+    } 
     fetch("/api/discord/user/guild")
       .then((res) => {
         if (!res.ok) return;

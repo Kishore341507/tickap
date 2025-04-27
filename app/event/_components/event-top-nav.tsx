@@ -1,4 +1,4 @@
-import { auth } from "@/auth";
+import { auth, signIn, signOut } from "@/auth";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose } from "@/components/ui/dialog";
 import { ModeToggle } from "@/components/ui/mode-toggle";
@@ -43,6 +43,7 @@ import { ModeToggleSub } from "@/components/ui/mode-toggle-sub";
 import { env } from "process";
 import { List } from "postcss/lib/list";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { redirect } from "next/navigation";
 
 interface Guild {
   id: string;
@@ -146,15 +147,27 @@ export default async function EventTopNav({
                 <Link href="https://discord.gg/JEZW33uSNU" target="_blank" >Support</Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>
-                <Link href={ session ? "/api/auth/signout" : "/api/auth/signin"} className="flex" >
-                  {session ? (
-                    <LogOut className="mr-2 h-4 w-4" />
-                  ) : (
-                    <KeyRound className="mr-2 h-4 w-4" />
-                  )}
-                  {session ? <span className="inline-span">Sign Out</span> : <span className="inline-span">Sign In</span>}
-                </Link>
+
+              {/* {session &&
+
+                <DropdownMenuItem onClick={async () => {
+                  "use server"
+                  await signOut()
+                }}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span className="inline-span">Sign Out</span>
+                </DropdownMenuItem>
+              } */}
+
+              <DropdownMenuItem onClick={async () =>{ 
+                "use server"
+                session ? await signOut() : await signIn('discord'); redirect("/");}}>
+                {session ? (
+                  <LogOut className="mr-2 h-4 w-4" />
+                ) : (
+                  <KeyRound className="mr-2 h-4 w-4" />
+                )}
+                {session ? <span className="inline-span">Sign Out</span> : <span className="inline-span">Sign In</span>}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -163,6 +176,6 @@ export default async function EventTopNav({
       <ScrollArea style={{ height: `calc(100vh - 60px)` }} >
         {children}
       </ScrollArea>
-    </div>
+    </div >
   );
 }
