@@ -17,8 +17,9 @@ interface Props {
   params : { id : string }
 }
 
-export default async function Events( { params : { id } } : Props ) {
+export default async function Events( {params,}: {params: Promise<{ id: string }>} ) {
 
+  const {id} = await params;
   const Events = await prisma.events.findMany({});
   const liveEvents = await prisma.events.findMany({
     where: {AND : [{ status: "Live" }, { guild_id:  parseInt(id) }]},
