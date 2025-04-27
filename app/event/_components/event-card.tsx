@@ -1,6 +1,6 @@
 import { AspectRatio } from '@/components/ui/aspect-ratio';
 import { Badge, badgeVariants } from '@/components/ui/badge';
-import { Card, CardContent, CardDescription, CardHeader, CardImage, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardImage, CardTitle } from '@/components/ui/image-card';
 import { Calendar, Gamepad2 } from 'lucide-react';
 import React from 'react'
 

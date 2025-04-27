@@ -28,11 +28,15 @@ export default async function Servers() {
     }
   });
   var botGuilds : Guild[] = await botGuildsResponce.json();
-  botGuilds.forEach((guild: Guild) => {
-    guild.icon = guild.icon ? `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png` : 'https://cdn.discordapp.com/embed/avatars/0'
-  });
+
+  if( botGuilds && botGuilds.length != 0 ){
+    botGuilds.forEach((guild: Guild) => {
+      guild.icon = guild.icon ? `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png` : 'https://cdn.discordapp.com/embed/avatars/0'
+    });
+  }
   
   if( session ){
+    console.log(session);
     const accessToken = (await prisma.account.findFirst({ where: { userId: session?.user?.id } }))?.access_token
     const userGuildsResponce: Response = await fetch(env.DISCORD_API_URL + '/users/@me/guilds?with_counts=true', {
       headers: {
@@ -42,21 +46,26 @@ export default async function Servers() {
       }
     });
 
-    const userGuilds = await userGuildsResponce.json();
-    // sort userGuilds by approximate_member_count in descending order
-    userGuilds.forEach((guild: any) => {
-      guild.icon = guild.icon ? `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png` : 'https://cdn.discordapp.com/embed/avatars/0.png';
-      guild.manager = (BigInt(guild.permissions) & BigInt(0x20)) !== BigInt(0);
-      guild.mutual = (botGuilds.some((botGuild: any) => botGuild.id === guild.id));
+    const userGuilds = await userGuildsResponce.json() || [] ;
 
-      if( guild.manager && guild.mutual ){
-        managableGuilds.push(guild);
-        botGuilds = botGuilds.filter((botGuild : any) => botGuild.id !== guild.id);
-      } else if( guild.manager && !guild.mutual ){
-        toAddGuilds.push(guild);
-        botGuilds = botGuilds.filter((botGuild : any) => botGuild.id !== guild.id);
-      }
-    });
+    console.log(userGuilds);
+
+    if( userGuilds && Array.isArray(userGuilds) && userGuilds.length !== 0 ){
+      userGuilds.forEach((guild: any) => {
+        guild.icon = guild.icon ? `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png` : 'https://cdn.discordapp.com/embed/avatars/0.png';
+        guild.manager = (BigInt(guild.permissions) & BigInt(0x20)) !== BigInt(0);
+        guild.mutual = (botGuilds.some((botGuild: any) => botGuild.id === guild.id));
+  
+        if( guild.manager && guild.mutual ){
+          managableGuilds.push(guild);
+          botGuilds = botGuilds.filter((botGuild : any) => botGuild.id !== guild.id);
+        } else if( guild.manager && !guild.mutual ){
+          toAddGuilds.push(guild);
+          botGuilds = botGuilds.filter((botGuild : any) => botGuild.id !== guild.id);
+        }
+      });
+    }
+
   }
 
   const canJoinGuilds = botGuilds ;
