@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,12 +26,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Loader2 } from "lucide-react";
+import { CalendarIcon, Loader2, Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
 
 // Enum types recreated here to match Prisma model
 enum Category {
@@ -93,6 +94,59 @@ export default function CreateEvent() {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [bannerPreview, setBannerPreview] = useState("");
+  const [roles, setRoles] = useState<{ id: string; name: string; color?: number; position: number }[]>([]);
+  const [channels, setChannels] = useState<{ id: string; name: string; position: number }[]>([]);
+  const [isLoadingRoles, setIsLoadingRoles] = useState(false);
+  const [isLoadingChannels, setIsLoadingChannels] = useState(false);
+  const [roleOpen, setRoleOpen] = useState(false);
+  const [managerOpen, setManagerOpen] = useState(false);
+  const [channelOpen, setChannelOpen] = useState(false);
+
+  // Fetch roles and channels when component mounts
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setIsLoadingRoles(true);
+        setIsLoadingChannels(true);
+
+        // Fetch roles
+        const rolesResponse = await fetch(`/api/discord/bot/roles?guildId=${params.id}`);
+        if (!rolesResponse.ok) {
+          throw new Error('Failed to fetch roles');
+        }
+        const rolesData = await rolesResponse.json();
+        console.log("Roles data:", rolesData);
+        // Sort roles by position in descending order (higher position first)
+        const sortedRoles = [...rolesData].sort((a, b) => b.position - a.position);
+        setRoles(sortedRoles || []);
+
+        // Fetch channels
+        const channelsResponse = await fetch(`/api/discord/bot/channels?guildId=${params.id}`);
+        if (!channelsResponse.ok) {
+          throw new Error('Failed to fetch channels');
+        }
+        const channelsData = await channelsResponse.json();
+        // Filter for text channels and sort by position
+        const textChannels = channelsData
+          .filter((channel: any) => channel.type === 0)
+          .sort((a: any, b: any) => a.position - b.position);
+        console.log("Channels data:", channelsData);
+        setChannels(textChannels || []);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        toast({
+          title: "Error",
+          description: "Failed to fetch Discord data",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoadingRoles(false);
+        setIsLoadingChannels(false);
+      }
+    };
+
+    fetchData();
+  }, [params.id, toast]);
 
   // Get tomorrow's date for default value
   const tomorrow = new Date();
@@ -137,6 +191,11 @@ export default function CreateEvent() {
       reader.readAsDataURL(file);
       console.log("File selected:", file);
     }
+  };
+
+  // Helper function to convert decimal color to hex
+  const decimalToHex = (decimal: number) => {
+    return `#${decimal.toString(16).padStart(6, '0')}`;
   };
 
   async function onSubmit(values: EventFormValues) {
@@ -531,11 +590,88 @@ export default function CreateEvent() {
                     control={form.control}
                     name="role_id"
                     render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Role ID</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Discord Role ID" {...field} />
-                        </FormControl>
+                      <FormItem className="flex flex-col">
+                        <FormLabel>Role</FormLabel>
+                        <Popover open={roleOpen} onOpenChange={setRoleOpen}>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant="outline"
+                                role="combobox"
+                                aria-expanded={roleOpen}
+                                className="w-full justify-between"
+                                disabled={isLoadingRoles}
+                              >
+                                {isLoadingRoles ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : field.value ? (
+                                  <span 
+                                    style={{ 
+                                      color: roles.find(r => r.id === field.value)?.color 
+                                        ? decimalToHex(roles.find(r => r.id === field.value)!.color!) 
+                                        : undefined,
+                                      fontWeight: roles.find(r => r.id === field.value)?.color ? 500 : undefined
+                                    }}
+                                  >
+                                    {roles.find((role) => role.id === field.value)?.name || "Select a role"}
+                                  </span>
+                                ) : (
+                                  "Select a role"
+                                )}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-full p-0">
+                            <Command className="max-h-[300px] overflow-y-auto">
+                              <CommandInput placeholder="Search roles..." />
+                              <CommandEmpty>No roles found.</CommandEmpty>
+                              <CommandGroup className="overflow-y-auto">
+                                <CommandItem
+                                  value=""
+                                  onSelect={() => {
+                                    field.onChange("");
+                                    setRoleOpen(false);
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      field.value === "" ? "opacity-100" : "opacity-0"
+                                    )}
+                                  />
+                                  None
+                                </CommandItem>
+                                {roles.map((role) => (
+                                  <CommandItem
+                                    key={role.id}
+                                    value={role.name}
+                                    onSelect={() => {
+                                      field.onChange(role.id);
+                                      setRoleOpen(false);
+                                    }}
+                                    className="flex items-center"
+                                  >
+                                    <Check
+                                      className={cn(
+                                        "mr-2 h-4 w-4",
+                                        field.value === role.id ? "opacity-100" : "opacity-0"
+                                      )}
+                                    />
+                                    <span 
+                                      style={{ 
+                                        color: role.color ? decimalToHex(role.color) : undefined,
+                                        fontWeight: role.color ? 500 : undefined
+                                      }}
+                                    >
+                                      {role.name}
+                                    </span>
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -545,11 +681,88 @@ export default function CreateEvent() {
                     control={form.control}
                     name="manager_id"
                     render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Manager ID</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Manager Role ID" {...field} />
-                        </FormControl>
+                      <FormItem className="flex flex-col">
+                        <FormLabel>Manager Role</FormLabel>
+                        <Popover open={managerOpen} onOpenChange={setManagerOpen}>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant="outline"
+                                role="combobox"
+                                aria-expanded={managerOpen}
+                                className="w-full justify-between"
+                                disabled={isLoadingRoles}
+                              >
+                                {isLoadingRoles ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : field.value ? (
+                                  <span 
+                                    style={{ 
+                                      color: roles.find(r => r.id === field.value)?.color 
+                                        ? decimalToHex(roles.find(r => r.id === field.value)!.color!) 
+                                        : undefined,
+                                      fontWeight: roles.find(r => r.id === field.value)?.color ? 500 : undefined
+                                    }}
+                                  >
+                                    {roles.find((role) => role.id === field.value)?.name || "Select a role"}
+                                  </span>
+                                ) : (
+                                  "Select a role"
+                                )}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-full p-0">
+                            <Command className="max-h-[300px] overflow-y-auto">
+                              <CommandInput placeholder="Search roles..." />
+                              <CommandEmpty>No roles found.</CommandEmpty>
+                              <CommandGroup className="overflow-y-auto">
+                                <CommandItem
+                                  value=""
+                                  onSelect={() => {
+                                    field.onChange("");
+                                    setManagerOpen(false);
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      field.value === "" ? "opacity-100" : "opacity-0"
+                                    )}
+                                  />
+                                  None
+                                </CommandItem>
+                                {roles.map((role) => (
+                                  <CommandItem
+                                    key={role.id}
+                                    value={role.name}
+                                    onSelect={() => {
+                                      field.onChange(role.id);
+                                      setManagerOpen(false);
+                                    }}
+                                    className="flex items-center"
+                                  >
+                                    <Check
+                                      className={cn(
+                                        "mr-2 h-4 w-4",
+                                        field.value === role.id ? "opacity-100" : "opacity-0"
+                                      )}
+                                    />
+                                    <span 
+                                      style={{ 
+                                        color: role.color ? decimalToHex(role.color) : undefined,
+                                        fontWeight: role.color ? 500 : undefined
+                                      }}
+                                    >
+                                      {role.name}
+                                    </span>
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -559,11 +772,71 @@ export default function CreateEvent() {
                     control={form.control}
                     name="channel_id"
                     render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Channel ID</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Discord Channel ID" {...field} />
-                        </FormControl>
+                      <FormItem className="flex flex-col">
+                        <FormLabel>Channel</FormLabel>
+                        <Popover open={channelOpen} onOpenChange={setChannelOpen}>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant="outline"
+                                role="combobox"
+                                aria-expanded={channelOpen}
+                                className="w-full justify-between"
+                                disabled={isLoadingChannels}
+                              >
+                                {isLoadingChannels ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : field.value ? (
+                                  channels.find((channel) => channel.id === field.value)?.name || "Select a channel"
+                                ) : (
+                                  "Select a channel"
+                                )}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-full p-0">
+                            <Command className="max-h-[300px] overflow-y-auto">
+                              <CommandInput placeholder="Search channels..." />
+                              <CommandEmpty>No channels found.</CommandEmpty>
+                              <CommandGroup className="overflow-y-auto">
+                                <CommandItem
+                                  value=""
+                                  onSelect={() => {
+                                    field.onChange("");
+                                    setChannelOpen(false);
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      field.value === "" ? "opacity-100" : "opacity-0"
+                                    )}
+                                  />
+                                  None
+                                </CommandItem>
+                                {channels.map((channel) => (
+                                  <CommandItem
+                                    key={channel.id}
+                                    value={channel.name}
+                                    onSelect={() => {
+                                      field.onChange(channel.id);
+                                      setChannelOpen(false);
+                                    }}
+                                  >
+                                    <Check
+                                      className={cn(
+                                        "mr-2 h-4 w-4",
+                                        field.value === channel.id ? "opacity-100" : "opacity-0"
+                                      )}
+                                    />
+                                    {channel.name}
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
                         <FormMessage />
                       </FormItem>
                     )}

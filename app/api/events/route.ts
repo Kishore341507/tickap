@@ -47,24 +47,19 @@ export async function POST(req: NextRequest) {
         console.log("Uploading banner file:", bannerFile);
         const bytes = await bannerFile.arrayBuffer();
         const buffer = Buffer.from(bytes);
-        
-        // Create directory if it doesn't exist
-        const uploadDir = join(process.cwd(), "public", "uploads");
-        // console.log("Upload directory path:", uploadDir);
-        await mkdir(uploadDir, { recursive: true });
-        
-        // Generate unique filename with fallback name if bannerFile.name is undefined
-        const originalName = bannerFile.name || "unknown.png";
-        const uniqueFilename = `${randomUUID()}-${originalName}`;
-        const filePath = join(uploadDir, uniqueFilename);
-        // console.log("Saving file to:", filePath);
 
-        console.log("File path:", filePath);
-        
-        // Write file
-        await writeFile(filePath, buffer);
-        // console.log("File written successfully");
-        bannerPath = `/uploads/${uniqueFilename}`;
+        const fileStorage = await prisma.fileStorage.create({
+          data: {
+            filename: bannerFile.name || "unknown.png",
+            mimetype: bannerFile.type || "image/png",
+            data: buffer,
+            size: buffer.length,
+          },
+        });
+
+        // Use the file ID as the banner path
+        bannerPath = `/api/files/${fileStorage.id}`;
+
       } catch (error) {
         console.error("Error uploading banner:", error);
         console.log("Using default banner");

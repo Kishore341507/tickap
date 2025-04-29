@@ -8,6 +8,8 @@ import { Plus } from "lucide-react";
 import { auth } from "@/auth";
 import { env } from 'process';
 import { log } from "console";
+import { useState } from "react";
+import { checkIsManager } from "@/lib/discord";
 
 interface Guild {
   id: string;
@@ -41,11 +43,6 @@ export default async function Events( {params,}: {params: Promise<{ id: string }
     event.status === "Open" && event.date && event.date > new Date()
   );
 
-  // console.log(events);
-
-  // console.log(liveEvents);
-
-  // get the guild 
   const guildResponce: Response = await fetch(env.DISCORD_API_URL + `/guilds/${id}`, {
     headers: {
       Authorization: `Bot ${env.DISCORD_BOT_TOKEN}`
@@ -58,29 +55,21 @@ export default async function Events( {params,}: {params: Promise<{ id: string }
   }
 
   // fetch the guild member with bot 
+  let isManager = false;
 
   const session = await auth() ;
   if( session ){
-    // console.log(JSON.stringify(session) );
-    const guildMemberResponce: Response = await fetch(env.DISCORD_API_URL + `/guilds/${id}/members/${session?.user?.userId}`, {
-      headers: {
-        Authorization: `Bot ${env.DISCORD_BOT_TOKEN}`
-      }, next: {
-        revalidate: 600
-      }
-    });
-    const guildMember = await guildMemberResponce.json();
-    // console.log(guildMember);
+
+    // check if the user is a manager
+    const userId = session.user.userId!;
+    const guildId = id;
+    const isManagerResponce = await checkIsManager(userId, guildId);
+    console.log("isManagerResponce: ", isManagerResponce);
+    
   }
 
   return (
-    <>  
-      <Link href={`/event/server/${id}/create`} className="absolute right-2 bottom-2">
-        <Button className={clsx({ "animate-bounce": upcomingEvents.length == 0 })}>
-          <Plus className="mr-2 h-4 w-4" />
-          Create new
-        </Button>
-      </Link>
+    <>
     
       <h4 className="scroll-m-20 text-xl font-semibold tracking-tight">
         {guildName} Events
@@ -118,6 +107,13 @@ export default async function Events( {params,}: {params: Promise<{ id: string }
           </div>
         </TabsContent>
       </Tabs>
+
+      <Link href={`/event/server/${id}/create`} className="absolute right-2 bottom-2 z-99">
+        <Button className={clsx({ "animate-bounce": upcomingEvents.length == 0 })}>
+          <Plus className="mr-2 h-4 w-4" />
+          Create new
+        </Button>
+      </Link>
     </>
   );
 }
