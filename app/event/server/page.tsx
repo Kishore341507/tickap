@@ -36,7 +36,7 @@ export default async function Servers() {
   }
   
   if( session ){
-    console.log(session);
+    // console.log(session);
     const accessToken = (await prisma.account.findFirst({ where: { userId: session?.user?.id } }))?.access_token
     const userGuildsResponce: Response = await fetch(env.DISCORD_API_URL + '/users/@me/guilds?with_counts=true', {
       headers: {
@@ -48,7 +48,7 @@ export default async function Servers() {
 
     const userGuilds = await userGuildsResponce.json() || [] ;
 
-    console.log(userGuilds);
+    // console.log(userGuilds);
 
     if( userGuilds && Array.isArray(userGuilds) && userGuilds.length !== 0 ){
       userGuilds.forEach((guild: any) => {

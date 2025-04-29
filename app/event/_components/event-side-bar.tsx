@@ -30,7 +30,7 @@ export default function EventSideBar() {
   const [mutualManagerGuilds, setMutualManagerGuilds] = useState([]);
   const [toAddGuilds, setToAddGuilds] = useState([]);
   useEffect(() => {
-    console.log("status", status);
+    // console.log("status", status);
     if (status !== "authenticated"){
       setMutualManagerGuilds([]);
       setToAddGuilds([]);

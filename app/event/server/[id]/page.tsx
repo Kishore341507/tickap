@@ -7,6 +7,7 @@ import clsx from "clsx";
 import { Plus } from "lucide-react";
 import { auth } from "@/auth";
 import { env } from 'process';
+import { log } from "console";
 
 interface Guild {
   id: string;
@@ -22,16 +23,27 @@ interface Props {
 export default async function Events( {params,}: {params: Promise<{ id: string }>} ) {
 
   const {id} = await params;
-  const Events = await prisma.events.findMany({});
-  const liveEvents = await prisma.events.findMany({
-    where: {AND : [{ status: "Live" }, { guild_id:  parseInt(id) }]},
+  
+  // Fetch all events for the guild in a single query
+  const events = await prisma.events.findMany({
+    where: {
+      guild_id: BigInt(id)
+    },
+    orderBy: {
+      date: 'asc'
+    }
   });
-  const closedEvents = await prisma.events.findMany({
-    where: {AND : [{ status: "Closed" }, { guild_id:  parseInt(id) }]},
-  });
-  const upcomingEvents = await prisma.events.findMany({
-    where: { AND: [{ status: "Open" }, { date: { gt: new Date() } }, { guild_id:  parseInt(id) }] },
-  });
+
+  // Filter events in memory for better performance
+  const liveEvents = events.filter(event => event.status === "Live");
+  const closedEvents = events.filter(event => event.status === "Closed");
+  const upcomingEvents = events.filter(event => 
+    event.status === "Open" && event.date && event.date > new Date()
+  );
+
+  // console.log(events);
+
+  // console.log(liveEvents);
 
   // get the guild 
   const guildResponce: Response = await fetch(env.DISCORD_API_URL + `/guilds/${id}`, {
@@ -49,7 +61,7 @@ export default async function Events( {params,}: {params: Promise<{ id: string }
 
   const session = await auth() ;
   if( session ){
-    console.log(JSON.stringify(session) );
+    // console.log(JSON.stringify(session) );
     const guildMemberResponce: Response = await fetch(env.DISCORD_API_URL + `/guilds/${id}/members/${session?.user?.userId}`, {
       headers: {
         Authorization: `Bot ${env.DISCORD_BOT_TOKEN}`
@@ -58,7 +70,7 @@ export default async function Events( {params,}: {params: Promise<{ id: string }
       }
     });
     const guildMember = await guildMemberResponce.json();
-    console.log(guildMember);
+    // console.log(guildMember);
   }
 
   return (
