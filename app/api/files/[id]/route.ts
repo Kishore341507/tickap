@@ -3,12 +3,13 @@ import prisma from "@/prisma/db";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  {params,}: {params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const file = await prisma.fileStorage.findUnique({
       where: {
-        id: params.id,
+        id: id,
       },
     });
 
