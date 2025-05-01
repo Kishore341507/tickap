@@ -5,15 +5,10 @@ import { Badge } from "@/components/ui/badge";
 import { Calendar, MapPin, Users, Trophy, Info } from "lucide-react";
 import { format } from "date-fns";
 import Image from "next/image";
-import { getGuild } from "@/lib/discord";
+import { getGuild, checkIsManager } from "@/lib/discord";
 import { auth } from "@/auth";
 import { RegisterButton } from "./_components/register-button";
-
-// interface EventDetailPageProps {
-//   params: {
-//     id: string;
-//   };
-// }
+import ManagerActionCard from "./_components/manager-action-card";
 
 export default async function EventDetailPage({params,}: {params: Promise<{ id: string }>} ) {
   const session = await auth();
@@ -43,6 +38,12 @@ export default async function EventDetailPage({params,}: {params: Promise<{ id: 
       user.user_id === userId
       )
     );
+  }
+
+  // Check if current user is manager for this guild
+  let isManager = false;
+  if (session?.user?.userId && event.guild_id) {
+    isManager = await checkIsManager(session.user.userId, event.guild_id.toString());
   }
 
   // Fetch guild information if the event has a guild_id
@@ -189,6 +190,7 @@ export default async function EventDetailPage({params,}: {params: Promise<{ id: 
                   maxTeamPlayer={event.max_team_player}
                   minTeamPlayer={event.min_team_player}
                   guildId={event.guild_id}
+                  session={!!session}
                 />
               </div>
             </CardContent>
@@ -234,6 +236,15 @@ export default async function EventDetailPage({params,}: {params: Promise<{ id: 
               </div>
             </CardContent>
           </Card>
+
+          {/* Manager Actions Card - Only shown to managers */}
+          {isManager && event.guild_id && (
+            <ManagerActionCard 
+              eventId={id}
+              currentStatus={event.status}
+              guildId={event.guild_id.toString()}
+            />
+          )}
         </div>
       </div>
     </div>

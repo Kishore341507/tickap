@@ -7,20 +7,8 @@ import clsx from "clsx";
 import { Plus } from "lucide-react";
 import { auth } from "@/auth";
 import { env } from 'process';
-import { log } from "console";
-import { useState } from "react";
 import { checkIsManager } from "@/lib/discord";
 
-interface Guild {
-  id: string;
-  name: string;
-  permissions: string;
-  icon: string;
-}
-
-interface Props {
-  params : { id : string }
-}
 
 export default async function Events( {params,}: {params: Promise<{ id: string }>} ) {
 

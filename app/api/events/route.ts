@@ -2,10 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import prisma from "@/prisma/db";
 import { EventStatus, Platform, Category } from "@prisma/client";
-import { writeFile } from "fs/promises";
-import { join } from "path";
-import { mkdir } from "fs/promises";
-import { randomUUID } from "crypto";
+import { checkIsManager } from "@/lib/discord";
 
 // Helper function to handle BigInt serialization
 const serializeData = (data: any): any => {
@@ -33,16 +30,30 @@ export async function POST(req: NextRequest) {
     // Get form data
     const formData = await req.formData();
     
+    // Check if user is a manager for the specified guild
+    const userId = session.user?.userId;
+    const guildId = formData.get("guild_id")?.toString();
+    
+    if (!userId || !guildId) {
+      return NextResponse.json(
+        { error: "Invalid user or guild information" },
+        { status: 400 }
+      );
+    }
+
+    const isManager = await checkIsManager(userId, guildId);
+    if (!isManager) {
+      return NextResponse.json(
+        { error: "You do not have permission to create events for this guild" },
+        { status: 403 }
+      );
+    }
+    
     // Handle banner upload
     let bannerPath = "/tickap_dark.png"; // Default banner
-    const bannerFile = formData.get("banner") ;
-    // bannerFile is a string
-    // console.log("Banner file type:", typeof bannerFile);
-    // console.log("Banner file1:", bannerFile?.valueOf());
-    // console.log("Banner file2:", bannerFile?.toString());
+    const bannerFile = formData.get("banner") as File || null;
     
-    if (bannerFile && bannerFile instanceof Blob) {
-    // if (bannerFile ) {
+    if ( bannerFile && bannerFile.size && bannerFile instanceof Blob) {
       try {
         console.log("Uploading banner file:", bannerFile);
         const bytes = await bannerFile.arrayBuffer();
@@ -128,4 +139,132 @@ export async function GET() {
       { status: 500 }
     );
   }
-} 
+}
+
+export async function PUT(req: NextRequest) {
+  try {
+    // Check authentication
+    const session = await auth();
+    if (!session) {
+      return NextResponse.json(
+        { error: "You must be logged in to update an event" },
+        { status: 401 }
+      );
+    }
+
+    // Get event ID from request
+    const { searchParams } = new URL(req.url);
+    const eventId = searchParams.get("id");
+    if (!eventId) {
+      return NextResponse.json(
+        { error: "Event ID is required" },
+        { status: 400 }
+      );
+    }
+
+    // Find the event
+    const existingEvent = await prisma.events.findUnique({
+      where: { id: parseInt(eventId) },
+    });
+
+    if (!existingEvent) {
+      return NextResponse.json(
+        { error: "Event not found" },
+        { status: 404 }
+      );
+    }
+
+    // Check if user is a manager for this guild
+    const userId = session.user?.userId;
+    const guildId = existingEvent.guild_id?.toString();
+    
+    if (!userId || !guildId) {
+      return NextResponse.json(
+        { error: "Invalid user or guild information" },
+        { status: 400 }
+      );
+    }
+
+    const isManager = await checkIsManager(userId, guildId);
+    if (!isManager) {
+      return NextResponse.json(
+        { error: "You do not have permission to update this event" },
+        { status: 403 }
+      );
+    }
+
+    // Get form data
+    const formData = await req.formData();
+    
+    // Handle banner upload
+    let bannerPath = existingEvent.banner; // Keep existing banner by default
+    const bannerFile = formData.get("banner") as File || null;
+    
+    if (bannerFile && bannerFile.size && bannerFile instanceof Blob) {
+      try {
+        console.log("Uploading new banner file:", bannerFile);
+        const bytes = await bannerFile.arrayBuffer();
+        const buffer = Buffer.from(bytes);
+
+        const fileStorage = await prisma.fileStorage.create({
+          data: {
+            filename: bannerFile.name || "unknown.png",
+            mimetype: bannerFile.type || "image/png",
+            data: buffer,
+            size: buffer.length,
+          },
+        });
+
+        // Use the file ID as the banner path
+        bannerPath = `/api/files/${fileStorage.id}`;
+
+      } catch (error) {
+        console.error("Error uploading banner:", error);
+        console.log("Keeping existing banner");
+        // Continue with existing banner if upload fails
+      }
+    }
+
+    // Parse form data
+    const data = {
+      name: formData.get("name") as string || existingEvent.name,
+      banner: bannerPath,
+      date: formData.get("date") ? new Date(formData.get("date") as string) : existingEvent.date,
+      start_time: formData.get("start_time") ? parseInt(formData.get("start_time")?.toString().replace(":", "") || "0") : existingEvent.start_time,
+      prize: formData.get("prize") as string || existingEvent.prize,
+      max_teams: formData.get("max_teams") ? parseInt(formData.get("max_teams") as string) : existingEvent.max_teams,
+      min_team_player: formData.get("min_team_player") ? parseInt(formData.get("min_team_player") as string) : existingEvent.min_team_player,
+      max_team_player: formData.get("max_team_player") ? parseInt(formData.get("max_team_player") as string) : existingEvent.max_team_player,
+      rules: formData.get("rules") as string || existingEvent.rules,
+      details: formData.get("details") as string || existingEvent.details,
+      is_solo: formData.has("is_solo") ? formData.get("is_solo") === "true" : existingEvent.is_solo,
+      redirect_url: formData.get("redirect_url") as string || existingEvent.redirect_url,
+      location: formData.get("location") as string || existingEvent.location,
+      location_url: formData.get("location_url") as string || existingEvent.location_url,
+      status: formData.get("status") as EventStatus || existingEvent.status,
+      category: formData.get("category") as Category || existingEvent.category,
+      category_name: formData.get("category_name") as string || existingEvent.category_name,
+      platform: formData.get("platform") as Platform || existingEvent.platform,
+      role_id: formData.get("role_id") ? BigInt(formData.get("role_id") as string) : existingEvent.role_id,
+      manager_id: formData.get("manager_id") ? BigInt(formData.get("manager_id") as string) : existingEvent.manager_id,
+      guild_id: formData.get("guild_id") ? BigInt(formData.get("guild_id") as string) : existingEvent.guild_id,
+      channel_id: formData.get("channel_id") ? BigInt(formData.get("channel_id") as string) : existingEvent.channel_id,
+      updated_at: new Date(),
+    };
+
+    // Update event in database
+    const updatedEvent = await prisma.events.update({
+      where: { id: parseInt(eventId) },
+      data
+    });
+
+    const serializedEvent = serializeData(updatedEvent);
+    return NextResponse.json({ event: serializedEvent });
+  } catch (error) {
+    console.error("Error updating event:", error);
+    return NextResponse.json(
+      { error: "Failed to update event" },
+      { status: 500 }
+    );
+  }
+}

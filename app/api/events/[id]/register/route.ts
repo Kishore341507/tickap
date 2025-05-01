@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import prisma from "@/prisma/db";
+import { getMember } from "@/lib/discord";
 
 export async function POST(
   request: NextRequest,
@@ -133,6 +134,49 @@ export async function POST(
       );
     }
 
+    // Get guild_id from event for Discord API calls
+    if (!event.guild_id) {
+      return NextResponse.json(
+        { message: "Event is not associated with a Discord server" },
+        { status: 400 }
+      );
+    }
+
+    // Fetch Discord information for all team members
+    const teamMembersData = await Promise.all(
+      teamMembers.map(async (memberId: string) => {
+        const memberData = await getMember(event.guild_id!.toString(), memberId);
+        
+        // If member data couldn't be fetched, use basic information
+        if (!memberData) {
+          return {
+            user_id: BigInt(memberId),
+            user_name: null,
+            pfp: null,
+            event_id: BigInt(id),
+          };
+        }
+        
+        // Get user data from Discord response
+        const user = memberData.user;
+        const username = user.global_name || user.username;
+        
+        // Construct avatar URL
+        let avatarUrl = null;
+        if (user.avatar) {
+          const format = user.avatar.startsWith("a_") ? "gif" : "png";
+          avatarUrl = `https://cdn.discordapp.com/avatars/${memberId}/${user.avatar}.${format}`;
+        }
+        
+        return {
+          user_id: BigInt(memberId),
+          user_name: username,
+          pfp: avatarUrl,
+          event_id: BigInt(id),
+        };
+      })
+    );
+
     // Create team registration with all members
     const registration = await prisma.registrations.create({
       data: {
@@ -147,13 +191,8 @@ export async function POST(
               pfp: session.user.image || null,
               event_id: BigInt(id),
             },
-            // Register all team members
-            ...teamMembers.map((memberId: string) => ({
-              user_id: BigInt(memberId),
-              event_id: BigInt(id),
-              // Note: We don't have team members' names and images here
-              // This would normally come from a Discord API call or database lookup
-            })),
+            // Register all team members with their Discord information
+            ...teamMembersData,
           ],
         },
       },

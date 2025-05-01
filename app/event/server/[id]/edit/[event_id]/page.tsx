@@ -58,13 +58,7 @@ enum EventStatus {
 // Create a Zod schema for form validation
 const eventFormSchema = z.object({
   name: z.string().min(1, "Event name is required"),
-  date: z.date().refine((date) => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    return date > today;
-  }, {
-    message: "Event date must be in the future",
-  }),
+  date: z.date().optional(),
   start_time: z.string(),
   is_solo: z.boolean().default(false),
   category: z.nativeEnum(Category),
@@ -82,7 +76,8 @@ const eventFormSchema = z.object({
   category_name: z.string().optional(),
   role_id: z.string().optional(),
   manager_id: z.string().optional(),
-  channel_id: z.string().optional()
+  channel_id: z.string().optional(),
+  status: z.nativeEnum(EventStatus)
 }).refine((data) => {
   // If it's not a solo event, min_team_player and max_team_player must be provided
   if (data.is_solo === false) {
@@ -97,11 +92,12 @@ const eventFormSchema = z.object({
 // Type for our form values
 type EventFormValues = z.infer<typeof eventFormSchema>;
 
-export default function CreateEvent() {
+export default function EditEvent() {
   const params = useParams();
   const router = useRouter();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [bannerPreview, setBannerPreview] = useState("");
   const [roles, setRoles] = useState<{ id: string; name: string; color?: number; position: number }[]>([]);
   const [channels, setChannels] = useState<{ id: string; name: string; position: number }[]>([]);
@@ -110,64 +106,15 @@ export default function CreateEvent() {
   const [roleOpen, setRoleOpen] = useState(false);
   const [managerOpen, setManagerOpen] = useState(false);
   const [channelOpen, setChannelOpen] = useState(false);
+  const [eventData, setEventData] = useState<any>(null);
+  const [needsBannerUpload, setNeedsBannerUpload] = useState(false);
 
-  // Fetch roles and channels when component mounts
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setIsLoadingRoles(true);
-        setIsLoadingChannels(true);
-
-        // Fetch roles
-        const rolesResponse = await fetch(`/api/discord/bot/roles?guildId=${params.id}`);
-        if (!rolesResponse.ok) {
-          throw new Error('Failed to fetch roles');
-        }
-        const rolesData = await rolesResponse.json();
-        console.log("Roles data:", rolesData);
-        // Sort roles by position in descending order (higher position first)
-        const sortedRoles = [...rolesData].sort((a, b) => b.position - a.position);
-        setRoles(sortedRoles || []);
-
-        // Fetch channels
-        const channelsResponse = await fetch(`/api/discord/bot/channels?guildId=${params.id}`);
-        if (!channelsResponse.ok) {
-          throw new Error('Failed to fetch channels');
-        }
-        const channelsData = await channelsResponse.json();
-        // Filter for text channels and sort by position
-        const textChannels = channelsData
-          .filter((channel: any) => channel.type === 0)
-          .sort((a: any, b: any) => a.position - b.position);
-        console.log("Channels data:", channelsData);
-        setChannels(textChannels || []);
-      } catch (error) {
-        console.error('Error fetching data:', error);
-        toast({
-          title: "Error",
-          description: "Failed to fetch Discord data",
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoadingRoles(false);
-        setIsLoadingChannels(false);
-      }
-    };
-
-    fetchData();
-  }, [params.id, toast]);
-
-  // Get tomorrow's date for default value
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  tomorrow.setHours(0, 0, 0, 0);
-
-  // Use explicit casting to avoid TypeScript errors
-  const form = useForm({
+  // Use form with default values
+  const form = useForm<EventFormValues>({
     resolver: zodResolver(eventFormSchema) as any,
     defaultValues: {
       name: "",
-      date: tomorrow,
+      date: undefined,
       start_time: "12:00",
       is_solo: false,
       category: Category.VedioGame,
@@ -182,26 +129,133 @@ export default function CreateEvent() {
       role_id: "",
       manager_id: "",
       channel_id: "",
-      banner: new Blob(), // Default to an empty Blob
-      max_teams : undefined,
-      min_team_player : undefined,
-      max_team_player : undefined,
+      status: EventStatus.Open,
+      max_teams: undefined,
+      min_team_player: undefined,
+      max_team_player: undefined,
     },
   });
 
   const isSolo = form.watch("is_solo");
 
+  // Fetch event data
+  useEffect(() => {
+    const fetchEvent = async () => {
+      try {
+        setIsLoading(true);
+        const response = await fetch(`/api/events/${params.event_id}`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch event !');
+        }
+        const data = await response.json();
+        setEventData(data.event);
+        
+        // Format time for the form
+        let startTimeFormatted = "12:00";
+        if (data.event.start_time) {
+          const timeStr = data.event.start_time.toString().padStart(4, '0');
+          startTimeFormatted = `${timeStr.slice(0, 2)}:${timeStr.slice(2, 4)}`;
+        }
+
+        // Set form values
+        form.reset({
+          name: data.event.name,
+          date: data.event.date ? new Date(data.event.date) : undefined,
+          start_time: startTimeFormatted,
+          is_solo: data.event.is_solo,
+          category: data.event.category,
+          platform: data.event.platform,
+          prize: data.event.prize || "",
+          rules: data.event.rules || "",
+          details: data.event.details || "",
+          location: data.event.location || "",
+          location_url: data.event.location_url || "",
+          redirect_url: data.event.redirect_url || "",
+          category_name: data.event.category_name || "",
+          role_id: data.event.role_id ? data.event.role_id.toString() : "",
+          manager_id: data.event.manager_id ? data.event.manager_id.toString() : "",
+          channel_id: data.event.channel_id ? data.event.channel_id.toString() : "",
+          status: data.event.status,
+          max_teams: data.event.max_teams,
+          min_team_player: data.event.min_team_player,
+          max_team_player: data.event.max_team_player,
+        });
+
+        // Set banner preview
+        if (data.event.banner) {
+          setBannerPreview(data.event.banner);
+        }
+      } catch (error) {
+        console.error("Error fetching event:", error);
+        toast({
+          title: "Error",
+          description: "Failed to fetch event data",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (params.event_id) {
+      fetchEvent();
+    }
+  }, [params.event_id, form, toast]);
+
+  // Fetch roles and channels
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setIsLoadingRoles(true);
+        setIsLoadingChannels(true);
+
+        // Fetch roles
+        const rolesResponse = await fetch(`/api/discord/bot/roles?guildId=${params.id}`);
+        if (!rolesResponse.ok) {
+          throw new Error('Failed to fetch roles');
+        }
+        const rolesData = await rolesResponse.json();
+        const sortedRoles = [...rolesData].sort((a, b) => b.position - a.position);
+        setRoles(sortedRoles || []);
+
+        // Fetch channels
+        const channelsResponse = await fetch(`/api/discord/bot/channels?guildId=${params.id}`);
+        if (!channelsResponse.ok) {
+          throw new Error('Failed to fetch channels');
+        }
+        const channelsData = await channelsResponse.json();
+        const textChannels = channelsData
+          .filter((channel: any) => channel.type === 0)
+          .sort((a: any, b: any) => a.position - b.position);
+        setChannels(textChannels || []);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        toast({
+          title: "Error",
+          description: "Failed to fetch Discord data",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoadingRoles(false);
+        setIsLoadingChannels(false);
+      }
+    };
+
+    if (params.id) {
+      fetchData();
+    }
+  }, [params.id, toast]);
+
   const handleBannerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    console.log("File selected:", file);
     if (file) {
       form.setValue("banner", file);
+      setNeedsBannerUpload(true);
       const reader = new FileReader();
       reader.onloadend = () => {
         setBannerPreview(reader.result as string);
       };
       reader.readAsDataURL(file);
-      console.log("File selected:", file);
     }
   };
 
@@ -218,6 +272,11 @@ export default function CreateEvent() {
 
       // Append all form values to formData
       Object.entries(values).forEach(([key, value]) => {
+        if (key === "banner" && !needsBannerUpload) {
+          // Skip banner if not changed
+          return;
+        }
+        
         if (value instanceof Date) {
           formData.append(key, value.toISOString());
         } else if (value instanceof Blob) {
@@ -227,38 +286,30 @@ export default function CreateEvent() {
         }
       });
 
-      // Debug the banner file
-      const bannerFile = formData.get("banner");
-      console.log("Sending banner file type:", typeof bannerFile);
-      console.log("Sending banner file:", bannerFile);
-
       // Add guild_id from params
       formData.append("guild_id", String(params.id));
 
-      // Add status as "Open"
-      formData.append("status", EventStatus.Open);
-
-      const response = await fetch("/api/events", {
-        method: "POST",
+      // Update the event
+      const response = await fetch(`/api/events?id=${params.event_id}`, {
+        method: "PUT",
         body: formData,
       });
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || "Failed to create event");
+        throw new Error(error.message || "Failed to update event");
       }
 
-      const data = await response.json();
       toast({
         title: "Success",
-        description: "Event created successfully!",
+        description: "Event updated successfully!",
       });
       router.push(`/event/server/${params.id}`);
     } catch (error) {
-      console.error("Error creating event:", error);
+      console.error("Error updating event:", error);
       toast({
         title: "Error",
-        description: "Failed to create event",
+        description: "Failed to update event",
         variant: "destructive",
       });
     } finally {
@@ -266,10 +317,19 @@ export default function CreateEvent() {
     }
   }
 
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin" />
+        <span className="ml-2">Loading event data...</span>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto py-6">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Create New Event</h1>
+        <h1 className="text-2xl font-bold">Edit Event</h1>
         <Button variant="outline" onClick={() => router.back()}>
           Cancel
         </Button>
@@ -293,15 +353,35 @@ export default function CreateEvent() {
                 )}
               />
 
+              <FormField
+                control={form.control}
+                name="status"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Event Status</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select status" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {Object.values(EventStatus).map((status) => (
+                          <SelectItem key={status} value={status}>
+                            {status}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
               <div className="space-y-4">
                 <FormLabel>Banner Image</FormLabel>
-                <Input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleBannerChange}
-                />
                 {bannerPreview && (
-                  <div className="mt-2">
+                  <div className="mt-2 mb-2">
                     <Image
                       src={bannerPreview}
                       alt="Banner preview"
@@ -311,6 +391,11 @@ export default function CreateEvent() {
                     />
                   </div>
                 )}
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleBannerChange}
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -319,7 +404,7 @@ export default function CreateEvent() {
                   name="date"
                   render={({ field }) => (
                     <FormItem className="flex flex-col">
-                      <FormLabel className="py-1" >Event Date</FormLabel>
+                      <FormLabel className="py-1">Event Date</FormLabel>
                       <Popover>
                         <PopoverTrigger asChild>
                           <FormControl>
@@ -345,11 +430,6 @@ export default function CreateEvent() {
                             selected={field.value}
                             onSelect={field.onChange}
                             initialFocus
-                            disabled={(date) => {
-                              const today = new Date();
-                              today.setHours(0, 0, 0, 0);
-                              return date <= today;
-                            }}
                           />
                         </PopoverContent>
                       </Popover>
@@ -865,10 +945,10 @@ export default function CreateEvent() {
               {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Creating...
+                  Updating...
                 </>
               ) : (
-                "Create Event"
+                "Update Event"
               )}
             </Button>
           </div>

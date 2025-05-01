@@ -25,6 +25,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useSession } from "next-auth/react";
 
 interface TeamMember {
     avatar?: string;
@@ -46,6 +47,7 @@ interface RegisterButtonProps {
     maxTeamPlayer: number | null;
     minTeamPlayer: number | null;
     guildId: bigint | null;
+    session: boolean ;
 }
 
 export function RegisterButton({
@@ -56,7 +58,8 @@ export function RegisterButton({
     isSolo,
     maxTeamPlayer,
     minTeamPlayer,
-    guildId
+    guildId,
+    session,
 }: RegisterButtonProps) {
     const [isLoading, setIsLoading] = useState(false);
     const [isTeamDialogOpen, setIsTeamDialogOpen] = useState(false);
@@ -68,6 +71,10 @@ export function RegisterButton({
     const [teamNameError, setTeamNameError] = useState("");
     const router = useRouter();
     const { toast } = useToast();
+
+    const { data: sessionData } = useSession();
+    console.log("Session data:", sessionData);
+    // session = sessionData?.user ? true : false; // Check if user is logged in
 
     // Debounce search query
     useEffect(() => {
@@ -98,8 +105,8 @@ export function RegisterButton({
             }
 
             const data = await response.json();
-            console.log("Search results:", data);
-            setSearchResults(data);
+            const filteredData = data.filter((member: TeamMember) => member.user.id !== sessionData?.user.userId);
+            setSearchResults(filteredData);
         } catch (error) {
             console.error("Error searching members:", error);
             toast({
@@ -266,7 +273,12 @@ export function RegisterButton({
     let buttonVariant: "default" | "secondary" | "destructive" | "outline" = "default";
     let disabled = false;
 
-    if (isLoading) {
+    if (!session) {
+        buttonText = "Login to Register";
+        buttonVariant = "outline";
+        disabled = true;
+    }
+    else if (isLoading) {
         buttonText = "Registering...";
         disabled = true;
     } else if (isRegistered) {
@@ -279,6 +291,10 @@ export function RegisterButton({
         disabled = true;
     } else if (eventStatus === "Cancelled") {
         buttonText = "Event Cancelled";
+        buttonVariant = "destructive";
+        disabled = true;
+    } else if (eventStatus !== "Open") {
+        buttonText = "Registration Closed";
         buttonVariant = "destructive";
         disabled = true;
     }
