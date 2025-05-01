@@ -65,6 +65,9 @@ export default async function Events( {params,}: {params: Promise<{ id: string }
     const guildId = id;
     const isManagerResponce = await checkIsManager(userId, guildId);
     console.log("isManagerResponce: ", isManagerResponce);
+    if(isManagerResponce){
+      isManager = true;
+    }
     
   }
 
@@ -108,12 +111,15 @@ export default async function Events( {params,}: {params: Promise<{ id: string }
         </TabsContent>
       </Tabs>
 
-      <Link href={`/event/server/${id}/create`} className="absolute right-2 bottom-2 z-99">
-        <Button className={clsx({ "animate-bounce": upcomingEvents.length == 0 })}>
-          <Plus className="mr-2 h-4 w-4" />
-          Create new
-        </Button>
-      </Link>
+      { isManager && 
+        <Link href={`/event/server/${id}/create`} className="absolute right-2 bottom-2 z-99">
+          <Button className={clsx({ "animate-bounce": upcomingEvents.length == 0 })}>
+            <Plus className="mr-2 h-4 w-4" />
+            Create new
+          </Button>
+        </Link>
+      }
+
     </>
   );
 }

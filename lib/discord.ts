@@ -129,3 +129,48 @@ export async function checkIsManager(
   }
 }
 
+export async function getGuildMembers(guildId: string) {
+  const membersResponse = await fetch(
+    `${env.DISCORD_API_URL}/guilds/${guildId}/members`,
+    {
+      headers: {
+        Authorization: `Bot ${env.DISCORD_BOT_TOKEN}`,
+      },
+      next: {
+        revalidate: 300,
+      },
+    }
+  );
+
+  if (!membersResponse.ok) {
+    return null;
+  }
+
+  return await membersResponse.json();
+}
+
+export async function searchGuildMembers(guildId: string, query: string, limit?: number) {
+  const searchParams = new URLSearchParams({
+    query: query,
+    limit: (limit || 1).toString()
+  });
+
+  const searchResponse = await fetch(
+    `${env.DISCORD_API_URL}/guilds/${guildId}/members/search?${searchParams}`,
+    {
+      headers: {
+        Authorization: `Bot ${env.DISCORD_BOT_TOKEN}`,
+      },
+      next: {
+        revalidate: 60,
+      },
+    }
+  );
+
+  if (!searchResponse.ok) {
+    return null;
+  }
+
+  return await searchResponse.json();
+}
+

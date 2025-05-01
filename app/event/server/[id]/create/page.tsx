@@ -174,6 +174,9 @@ export default function CreateEvent() {
       manager_id: "",
       channel_id: "",
       banner: new Blob(), // Default to an empty Blob
+      max_teams : undefined,
+      min_team_player : undefined,
+      max_team_player : undefined,
     },
   });
 
@@ -396,69 +399,71 @@ export default function CreateEvent() {
                 )}
               />
 
-              {!isSolo && (
-                <div className="grid grid-cols-3 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="max_teams"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Max Teams</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            min="1"
-                            placeholder="Max teams"
-                            value={field.value || ""}
-                            onChange={(e) => field.onChange(parseInt(e.target.value) || undefined)}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+              <div className="grid grid-cols-3 gap-4">
+                <FormField
+                  control={form.control}
+                  name="max_teams"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Max Teams</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min="1"
+                          placeholder="No limit"
+                          value={field.value || ""}
+                          onChange={(e) => field.onChange(parseInt(e.target.value) || undefined)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-                  <FormField
-                    control={form.control}
-                    name="min_team_player"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Min Players</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            min="1"
-                            placeholder="Min players"
-                            value={field.value || ""}
-                            onChange={(e) => field.onChange(parseInt(e.target.value) || undefined)}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                {!isSolo && (
+                  <>
+                    <FormField
+                      control={form.control}
+                      name="min_team_player"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Min Players</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              min="1"
+                              placeholder="Min players"
+                              value={field.value || ""}
+                              onChange={(e) => field.onChange(parseInt(e.target.value) || undefined)}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                  <FormField
-                    control={form.control}
-                    name="max_team_player"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Max Players</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            min="1"
-                            placeholder="Max players"
-                            value={field.value || ""}
-                            onChange={(e) => field.onChange(parseInt(e.target.value) || undefined)}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              )}
+                    <FormField
+                      control={form.control}
+                      name="max_team_player"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Max Players</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              min="1"
+                              placeholder="Max players"
+                              value={field.value || ""}
+                              onChange={(e) => field.onChange(parseInt(e.target.value) || undefined)}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </>
+                )}
+              </div>
             </div>
 
             <div className="space-y-6">
