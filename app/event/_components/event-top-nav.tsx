@@ -43,7 +43,8 @@ import { ModeToggleSub } from "@/components/ui/mode-toggle-sub";
 import { env } from "process";
 import { List } from "postcss/lib/list";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { redirect } from "next/navigation";
+// import { redirect } from "next/navigation";
+import { revalidatePath } from 'next/cache';
 
 interface Guild {
   id: string;
@@ -161,7 +162,7 @@ export default async function EventTopNav({
 
               <DropdownMenuItem onClick={async () =>{ 
                 "use server"
-                session ? await signOut() : await signIn('discord'); redirect("/");}}>
+                session ? await signOut() : await signIn('discord'); revalidatePath('/'); }}>
                 {session ? (
                   <LogOut className="mr-2 h-4 w-4" />
                 ) : (

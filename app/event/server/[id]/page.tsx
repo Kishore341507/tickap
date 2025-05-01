@@ -5,42 +5,65 @@ import Link from "next/link";
 import { Button, buttonVariants } from "@/components/ui/button";
 import clsx from "clsx";
 import { Plus } from "lucide-react";
+import { auth } from "@/auth";
+import { env } from 'process';
+import { checkIsManager } from "@/lib/discord";
 
-interface Guild {
-  id: string;
-  name: string;
-  permissions: string;
-  icon: string;
-}
-
-interface Props {
-  params : { id : string }
-}
 
 export default async function Events( {params,}: {params: Promise<{ id: string }>} ) {
 
   const {id} = await params;
-  const Events = await prisma.events.findMany({});
-  const liveEvents = await prisma.events.findMany({
-    where: {AND : [{ status: "Live" }, { guild_id:  parseInt(id) }]},
-  });
-  const closedEvents = await prisma.events.findMany({
-    where: {AND : [{ status: "Closed" }, { guild_id:  parseInt(id) }]},
-  });
-  const upcomingEvents = await prisma.events.findMany({
-    where: { AND: [{ status: "Open" }, { date: { gt: new Date() } }, { guild_id:  parseInt(id) }] },
+  
+  // Fetch all events for the guild in a single query
+  const events = await prisma.events.findMany({
+    where: {
+      guild_id: BigInt(id)
+    },
+    orderBy: {
+      date: 'asc'
+    }
   });
 
+  // Filter events in memory for better performance
+  const liveEvents = events.filter(event => event.status === "Live");
+  const closedEvents = events.filter(event => event.status === "Closed");
+  const upcomingEvents = events.filter(event => 
+    event.status === "Open" && event.date && event.date > new Date()
+  );
+
+  const guildResponce: Response = await fetch(env.DISCORD_API_URL + `/guilds/${id}`, {
+    headers: {
+      Authorization: `Bot ${env.DISCORD_BOT_TOKEN}`
+    }
+  });
+  const guild = await guildResponce.json();
+  let guildName = "Server";
+  if(guild){
+    guildName = guild.name;
+  }
+
+  // fetch the guild member with bot 
+  let isManager = false;
+
+  const session = await auth() ;
+  if( session ){
+
+    // check if the user is a manager
+    const userId = session.user.userId!;
+    const guildId = id;
+    const isManagerResponce = await checkIsManager(userId, guildId);
+    console.log("isManagerResponce: ", isManagerResponce);
+    if(isManagerResponce){
+      isManager = true;
+    }
+    
+  }
 
   return (
-    <>  
-      <Button className={ clsx("absolute right-2 bottom-2" , { "absolute right-2 bottom-2 animate-bounce" : upcomingEvents.length == 0 } )} >
-        <Plus className="pr-2" />
-        Create new
-        </Button>
+    <>
     
       <h4 className="scroll-m-20 text-xl font-semibold tracking-tight">
-        Server Events
+        {guildName} Events
       </h4>
       <Tabs defaultValue="Upcoming" >
         <TabsList className="grid grid-cols-3 lg:w-[400px] md:w-[400px] mb-5">
@@ -75,6 +98,16 @@ export default async function Events( {params,}: {params: Promise<{ id: string }
           </div>
         </TabsContent>
       </Tabs>
+
+      { isManager && 
+        <Link href={`/event/server/${id}/create`} className="absolute right-2 bottom-2 z-99">
+          <Button className={clsx({ "animate-bounce": upcomingEvents.length == 0 })}>
+            <Plus className="mr-2 h-4 w-4" />
+            Create new
+          </Button>
+        </Link>
+      }
+
     </>
   );
 }
