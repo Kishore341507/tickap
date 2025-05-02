@@ -72,7 +72,7 @@ interface RegisterButtonProps {
     minTeamPlayer: number | null;
     guildId: bigint | null;
     session: boolean;
-    userRegistration: Registration | null;
+    userRegistration: Registration | null | undefined;
 }
 
 export function RegisterButton({
