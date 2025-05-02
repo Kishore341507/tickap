@@ -338,7 +338,7 @@ export function RegisterButton({
     }
     // If loading, show loading state
     else if (isLoading) {
-        buttonText = isRegistered ? "Unregistering..." : "Registering...";
+        buttonText = isRegistered ? "Processing Unregistration..." : "Submitting Registration...";
         disabled = true;
     } 
     // If event is not open, show appropriate text
