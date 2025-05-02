@@ -210,3 +210,113 @@ export async function POST(
     );
   }
 }
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: {params: Promise<{ id: string }>} 
+) {
+  try {
+    const session = await auth();
+    const { id } = await params;
+    
+    // Check if user is authenticated
+    if (!session || !session.user) {
+      return NextResponse.json({ message: "Not authorized" }, { status: 401 });
+    }
+    
+    const userId = BigInt(session.user.userId!);
+
+    // Get the event by ID with the user's registration
+    const event = await prisma.events.findUnique({
+      where: { id: BigInt(id) },
+      include: {
+        registrations: {
+          where: {
+            registrationusers: {
+              some: {
+                user_id: userId,
+              },
+            },
+          },
+          include: {
+            registrationusers: true,
+          },
+        },
+      },
+    });
+
+    // Check if event exists
+    if (!event) {
+      return NextResponse.json({ message: "Event not found" }, { status: 404 });
+    }
+
+    // Check if user is registered for this event
+    if (event.registrations.length === 0) {
+      return NextResponse.json(
+        { message: "You are not registered for this event" },
+        { status: 400 }
+      );
+    }
+
+    const registration = event.registrations[0];
+
+    // Case 1: Solo event - Delete the entire registration
+    if (event.is_solo === true) {
+      await prisma.registrations.delete({
+        where: {
+          id: registration.id,
+        },
+      });
+
+      return NextResponse.json(
+        { message: "Successfully unregistered from the event" },
+        { status: 200 }
+      );
+    }
+
+    // Case 2: Team event
+    // Calculate the number of members in the team excluding the current user
+    const remainingMembers = registration.registrationusers.filter(
+      user => user.user_id !== userId
+    );
+
+    // If removing the user would make the team too small based on min_team_player,
+    // or if this was the last team member, delete the entire registration
+    if (!remainingMembers.length || 
+        (event.min_team_player && remainingMembers.length < event.min_team_player)) {
+      await prisma.registrations.delete({
+        where: {
+          id: registration.id,
+        },
+      });
+
+      return NextResponse.json(
+        { message: "Your team has been removed from the event" },
+        { status: 200 }
+      );
+    } 
+    
+    // Otherwise, just remove this user from the team
+    else {
+      await prisma.registrationusers.delete({
+        where: {
+          user_id_registration_id: {
+            user_id: userId,
+            registration_id: registration.id,
+          },
+        },
+      });
+
+      return NextResponse.json(
+        { message: "You have been removed from the team" },
+        { status: 200 }
+      );
+    }
+  } catch (error) {
+    console.error("Unregistration error:", error);
+    return NextResponse.json(
+      { message: "Failed to unregister from event" },
+      { status: 500 }
+    );
+  }
+}

@@ -2,13 +2,20 @@ import prisma from "@/prisma/db";
 import { notFound } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, MapPin, Users, Trophy, Info } from "lucide-react";
+import { Calendar, MapPin, Users, Trophy, Info, UserCircle2 } from "lucide-react";
 import { format } from "date-fns";
 import Image from "next/image";
 import { getGuild, checkIsManager } from "@/lib/discord";
 import { auth } from "@/auth";
 import { RegisterButton } from "./_components/register-button";
 import ManagerActionCard from "./_components/manager-action-card";
+import { 
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 export default async function EventDetailPage({params,}: {params: Promise<{ id: string }>} ) {
   const session = await auth();
@@ -31,13 +38,17 @@ export default async function EventDetailPage({params,}: {params: Promise<{ id: 
 
   // Check if current user is registered for this event
   let isRegistered = false;
+  let userRegistration = null;
+  
   if (session?.user?.userId) {
     const userId = session.user.userId ? BigInt(session.user.userId) : null;
-    isRegistered = event.registrations.some(registration => 
-      registration.registrationusers.some(user => 
-      user.user_id === userId
-      )
+    
+    // Find registration that includes the current user
+    userRegistration = event.registrations.find(registration => 
+      registration.registrationusers.some(user => user.user_id === userId)
     );
+    
+    isRegistered = !!userRegistration;
   }
 
   // Check if current user is manager for this guild
@@ -138,6 +149,39 @@ export default async function EventDetailPage({params,}: {params: Promise<{ id: 
             </CardContent>
           </Card>
 
+          <div className="lg:hidden">
+            <Card>
+              <CardHeader>
+                <CardTitle>Registration Information</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-sm text-gray-500">Total Teams Registered</p>
+                    <p className="text-2xl font-bold">
+                      {event.registrations.length}
+                      {event.max_teams && ` / ${event.max_teams}`}
+                    </p>
+                  </div>
+                  
+                  {/* Registration Button */}
+                  <RegisterButton 
+                    eventId={id}
+                    eventStatus={event.status}
+                    isRegistered={isRegistered}
+                    redirectUrl={event.redirect_url}
+                    isSolo={event.is_solo}
+                    maxTeamPlayer={event.max_team_player}
+                    minTeamPlayer={event.min_team_player}
+                    guildId={event.guild_id}
+                    session={!!session}
+                    userRegistration={userRegistration}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
           {/* Event Description */}
           {event.details && (
             <Card>
@@ -161,40 +205,108 @@ export default async function EventDetailPage({params,}: {params: Promise<{ id: 
               </CardContent>
             </Card>
           )}
+
+          {/* Registrations Accordion */}
+          {event.registrations.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5" />
+                  Registered Teams
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Accordion type="single" collapsible className="w-full">
+                  {event.registrations.map((registration) => (
+                    <AccordionItem key={registration.id.toString()} value={registration.id.toString()}>
+                      <AccordionTrigger className="hover:no-underline">
+                        <div className="flex items-center justify-between w-full pr-4">
+                          <span className="font-medium">
+                            {registration.team_name || "Unnamed Team"} 
+                          </span>
+                          <Badge variant="outline" className="ml-2">
+                            {registration.registrationusers.length} {registration.registrationusers.length === 1 ? 'member' : 'members'}
+                          </Badge>
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        <div className="space-y-4 py-2">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {registration.registrationusers.map((user) => (
+                              <div 
+                                key={user.user_id.toString()} 
+                                className="flex items-center gap-3 p-2 rounded-md border"
+                              >
+                                <Avatar className="h-8 w-8">
+                                  <AvatarImage
+                                    src={user.pfp || undefined}
+                                    alt={user.user_name || "User"}
+                                  />
+                                  <AvatarFallback>
+                                    <UserCircle2 className="h-6 w-6" />
+                                  </AvatarFallback>
+                                </Avatar>
+                                <span className="font-medium">
+                                  {user.user_name || "Unknown User"}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  ))}
+                </Accordion>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* Sidebar */}
         <div className="space-y-6">
-          {/* Registration Info */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Registration Information</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div>
-                  <p className="text-sm text-gray-500">Total Teams Registered</p>
-                  <p className="text-2xl font-bold">
-                    {event.registrations.length}
-                    {event.max_teams && ` / ${event.max_teams}`}
-                  </p>
+          
+          {/* Manager Actions Card - Only shown to managers */}
+          {isManager && event.guild_id && (
+            <ManagerActionCard 
+              eventId={id}
+              currentStatus={event.status}
+              guildId={event.guild_id.toString()}
+            />
+          )}
+          
+          {/* Registration Info - for desktop view */}
+          <div className="hidden lg:block">
+            <Card>
+              <CardHeader>
+                <CardTitle>Registration Information</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-sm text-gray-500">Total Teams Registered</p>
+                    <p className="text-2xl font-bold">
+                      {event.registrations.length}
+                      {event.max_teams && ` / ${event.max_teams}`}
+                    </p>
+                  </div>
+                  
+                  {/* Registration Button */}
+                  <RegisterButton 
+                    eventId={id}
+                    eventStatus={event.status}
+                    isRegistered={isRegistered}
+                    redirectUrl={event.redirect_url}
+                    isSolo={event.is_solo}
+                    maxTeamPlayer={event.max_team_player}
+                    minTeamPlayer={event.min_team_player}
+                    guildId={event.guild_id}
+                    session={!!session}
+                    userRegistration={userRegistration}
+                  />
                 </div>
-                
-                {/* Registration Button */}
-                <RegisterButton 
-                  eventId={id}
-                  eventStatus={event.status}
-                  isRegistered={isRegistered}
-                  redirectUrl={event.redirect_url}
-                  isSolo={event.is_solo}
-                  maxTeamPlayer={event.max_team_player}
-                  minTeamPlayer={event.min_team_player}
-                  guildId={event.guild_id}
-                  session={!!session}
-                />
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </div>
 
           {/* Platform Info */}
           <Card>
@@ -236,15 +348,6 @@ export default async function EventDetailPage({params,}: {params: Promise<{ id: 
               </div>
             </CardContent>
           </Card>
-
-          {/* Manager Actions Card - Only shown to managers */}
-          {isManager && event.guild_id && (
-            <ManagerActionCard 
-              eventId={id}
-              currentStatus={event.status}
-              guildId={event.guild_id.toString()}
-            />
-          )}
         </div>
       </div>
     </div>

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Search, UserPlus, X } from "lucide-react";
+import { Loader2, Search, UserPlus, X, UserMinus, LogOut } from "lucide-react";
 import {
     Dialog,
     DialogContent,
@@ -26,6 +26,17 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useSession } from "next-auth/react";
+import { 
+    AlertDialog, 
+    AlertDialogContent, 
+    AlertDialogHeader, 
+    AlertDialogTitle,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogCancel,
+    AlertDialogAction
+} from "@/components/ui/alert-dialog";
+import { Card, CardContent } from "@/components/ui/card";
 
 interface TeamMember {
     avatar?: string;
@@ -35,7 +46,20 @@ interface TeamMember {
         avatar: string;
         global_name: string;
     }
+}
 
+interface RegistrationUser {
+    user_id: bigint;
+    user_name: string | null;
+    pfp: string | null;
+    registration_id: bigint;
+    event_id: bigint;
+}
+
+interface Registration {
+    id: bigint;
+    team_name: string | null;
+    registrationusers: RegistrationUser[];
 }
 
 interface RegisterButtonProps {
@@ -47,7 +71,8 @@ interface RegisterButtonProps {
     maxTeamPlayer: number | null;
     minTeamPlayer: number | null;
     guildId: bigint | null;
-    session: boolean ;
+    session: boolean;
+    userRegistration: Registration | null | undefined;
 }
 
 export function RegisterButton({
@@ -60,9 +85,11 @@ export function RegisterButton({
     minTeamPlayer,
     guildId,
     session,
+    userRegistration,
 }: RegisterButtonProps) {
     const [isLoading, setIsLoading] = useState(false);
     const [isTeamDialogOpen, setIsTeamDialogOpen] = useState(false);
+    const [isUnregisterDialogOpen, setIsUnregisterDialogOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
     const [searchResults, setSearchResults] = useState<TeamMember[]>([]);
     const [selectedMembers, setSelectedMembers] = useState<TeamMember[]>([]);
@@ -73,8 +100,6 @@ export function RegisterButton({
     const { toast } = useToast();
 
     const { data: sessionData } = useSession();
-    console.log("Session data:", sessionData);
-    // session = sessionData?.user ? true : false; // Check if user is logged in
 
     // Debounce search query
     useEffect(() => {
@@ -196,6 +221,38 @@ export function RegisterButton({
         }
     };
 
+    const handleUnregister = async () => {
+        try {
+            setIsLoading(true);
+            const response = await fetch(`/api/events/${eventId}/register`, {
+                method: "DELETE",
+            });
+            
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.message || "Failed to unregister from event");
+            }
+
+            toast({
+                title: "Unregistered successfully",
+                description: "You have been removed from this event.",
+                variant: "success",
+            });
+
+            // Refresh the page to show updated registration status
+            router.refresh();
+        } catch (error: any) {
+            toast({
+                title: "Unregister failed",
+                description: error.message || "Something went wrong. Please try again.",
+                variant: "destructive",
+            });
+        } finally {
+            setIsLoading(false);
+            setIsUnregisterDialogOpen(false);
+        }
+    };
+
     const validateTeamName = () => {
         if (!teamName) {
             setTeamNameError("Team name is required");
@@ -273,19 +330,19 @@ export function RegisterButton({
     let buttonVariant: "default" | "secondary" | "destructive" | "outline" = "default";
     let disabled = false;
 
+    // If not logged in, show login button
     if (!session) {
         buttonText = "Login to Register";
         buttonVariant = "outline";
         disabled = true;
     }
+    // If loading, show loading state
     else if (isLoading) {
-        buttonText = "Registering...";
+        buttonText = isRegistered ? "Processing Unregistration..." : "Submitting Registration...";
         disabled = true;
-    } else if (isRegistered) {
-        buttonText = "Already Registered";
-        buttonVariant = "secondary";
-        disabled = true;
-    } else if (eventStatus === "Closed") {
+    } 
+    // If event is not open, show appropriate text
+    else if (eventStatus === "Closed") {
         buttonText = "Registration Closed";
         buttonVariant = "destructive";
         disabled = true;
@@ -297,6 +354,72 @@ export function RegisterButton({
         buttonText = "Registration Closed";
         buttonVariant = "destructive";
         disabled = true;
+    }
+    
+    // If the user is registered, show current registration details
+    if (isRegistered && userRegistration) {
+        return (
+            <div className="space-y-4">
+                <Card className="border-green-500">
+                    <CardContent className="pt-4">
+                        <div className="space-y-3">
+                            <div className="flex justify-between items-center">
+                                <Badge variant="outline" className="bg-green-50">
+                                    {isSolo ? "Registered" : "Team Registered"}
+                                </Badge>
+                                <p className="text-sm font-medium">{userRegistration.team_name || "Your Registration"}</p>
+                            </div>
+                            
+                            {!isSolo && (
+                                <div className="mt-2">
+                                    <p className="text-xs text-muted-foreground mb-1">Team Members ({userRegistration.registrationusers.length})</p>
+                                    <div className="flex flex-wrap gap-1">
+                                        {userRegistration.registrationusers.map(user => (
+                                            <Badge key={user.user_id.toString()} variant="secondary" className="text-xs">
+                                                {user.user_name || "Unknown"}
+                                            </Badge>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </CardContent>
+                </Card>
+                
+                <Button
+                    onClick={() => setIsUnregisterDialogOpen(true)}
+                    variant="outline"
+                    className="w-full"
+                    disabled={isLoading}
+                >
+                    {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UserMinus className="mr-2 h-4 w-4" />}
+                    Unregister
+                </Button>
+
+                <AlertDialog open={isUnregisterDialogOpen} onOpenChange={setIsUnregisterDialogOpen}>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                {isSolo 
+                                    ? "This will remove your registration from this event." 
+                                    : userRegistration.registrationusers.length <= (minTeamPlayer || 1)
+                                        ? "This will remove you and your entire team from this event."
+                                        : "This will remove you from this team."
+                                }
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel disabled={isLoading}>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleUnregister} disabled={isLoading}>
+                                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                                Confirm
+                            </AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+            </div>
+        );
     }
 
     return (
