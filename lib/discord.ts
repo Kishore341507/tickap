@@ -174,3 +174,6 @@ export async function searchGuildMembers(guildId: string, query: string, limit?:
   return await searchResponse.json();
 }
 
+// export a url (variable)
+export const botInviteUrl = 'https://discord.com/oauth2/authorize?client_id=1111585383705219134&permissions=17996718402624&integration_type=0&scope=bot+applications.commands'
+
