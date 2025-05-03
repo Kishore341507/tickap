@@ -40,14 +40,14 @@ export default function eventCard({ event }: EventCardProps) {
             </CardDescription>
             <CardDescription className="flex gap-2 justify-center">
               <Calendar className="h-4 w-4" />
-              <span>{event.date?.toDateString()}</span>
+              <span>{event.date?.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
             </CardDescription>
           </CardHeader>
-          <CardDescription className="text-center">
+          {/* <CardDescription className="text-center">
             {event.details?.length && event.details.length > 100
               ? event.details.slice(0, 100) + '...'
               : event.details}
-          </CardDescription>
+          </CardDescription> */}
         </CardContent>
       </Card>
     </Link>

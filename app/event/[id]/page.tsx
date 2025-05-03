@@ -117,8 +117,18 @@ export default async function EventDetailPage({ params, }: { params: Promise<{ i
                 <div className="flex items-center gap-2">
                   <Calendar className="h-5 w-5 text-gray-500" />
                   <span>
-                    {event.date
+                    {/* {event.date
                       ? format(new Date(event.date), "MMMM d, yyyy h:mm a")
+                      : "Date not set"} */}
+                    {event.date
+                      ? new Date(event.date).toLocaleString('en-US', {
+                        month: 'long',
+                        day: 'numeric',
+                        year: 'numeric',
+                        hour: 'numeric',
+                        minute: 'numeric',
+                        hour12: true,
+                      })
                       : "Date not set"}
                   </span>
                 </div>
