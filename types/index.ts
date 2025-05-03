@@ -87,9 +87,9 @@ export interface Event {
   location_url: string | null;
   rules: string | null;
   prize: string | null;
-  role_id: BigInt | null;
-  manager_id: BigInt | null;
-  channel_id: BigInt | null;
+  role_id: bigint | null;
+  manager_id: bigint | null;
+  channel_id: bigint | null;
 }
 
 /**
