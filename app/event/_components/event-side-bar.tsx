@@ -12,6 +12,7 @@ import { json } from "stream/consumers";
 import { useSession } from "next-auth/react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
+import { botInviteUrl } from "@/lib/discord";
 
 interface Guild {
   id: string;
@@ -212,7 +213,8 @@ export default function EventSideBar() {
                                 pathname === `/event/server/${guild.id}`,
                             }
                           )}
-                          href={`/event/server/${guild.id}`}
+                          // href={`/event/server/${guild.id}`}
+                          href={botInviteUrl} target="_blank"
                         >
                           <div className="border rounded-lg dark:bg-black dark:border-gray-800 border-gray-400 bg-white">
                             <Image

@@ -4,6 +4,7 @@ import { env } from 'process';
 import React from 'react'
 import GuildCard from '../_components/guild-card';
 import Link from 'next/link';
+import { botInviteUrl } from '@/lib/discord';
 
 interface Guild {
   id: string;
@@ -90,7 +91,8 @@ export default async function Servers() {
       { toAddGuilds.length > 0 &&
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-8 my-4 mx-3">
           {toAddGuilds.map((guild: Guild) => (
-            <Link href={`/event/server/${guild.id}`} key={guild.id}  >
+            // <Link href={`/event/server/${guild.id}`} key={guild.id}  >
+            <Link href={botInviteUrl} key={guild.id} target='_blank' >
               <GuildCard guild={guild} />
             </Link>
           ))}

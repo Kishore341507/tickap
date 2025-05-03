@@ -122,9 +122,9 @@ export async function checkIsManager(
     }
 
     const MANAGE_GUILD = BigInt(0x20);
-    return (permissions & MANAGE_GUILD) === MANAGE_GUILD;
+    const ADMINISTRATOR = BigInt(0x00000008);
+    return (permissions & MANAGE_GUILD) === MANAGE_GUILD || (permissions & ADMINISTRATOR) === ADMINISTRATOR;
   } catch (error) {
-    console.error("Error checking manager permission:", error);
     return false;
   }
 }
@@ -174,3 +174,5 @@ export async function searchGuildMembers(guildId: string, query: string, limit?:
   return await searchResponse.json();
 }
 
+// export a url (variable)
+export const botInviteUrl = 'https://discord.com/oauth2/authorize?client_id=1111585383705219134&permissions=17996718402624&integration_type=0&scope=bot+applications.commands'
