@@ -168,7 +168,7 @@ export default function CreateEvent() {
     defaultValues: {
       name: "",
       date: tomorrow,
-      start_time: "12:00",
+      start_time: "20:00",
       is_solo: false,
       category: Category.VedioGame,
       platform: Platform.Discord,
@@ -219,7 +219,11 @@ export default function CreateEvent() {
       // Append all form values to formData
       Object.entries(values).forEach(([key, value]) => {
         if (value instanceof Date) {
-          formData.append(key, value.toISOString());
+          const date = new Date(value);
+          const timeParts = values.start_time.split(":");
+          date.setHours(parseInt(timeParts[0]), parseInt(timeParts[1]), 0, 0);
+          formData.append(key, date.toISOString());
+          console.log("Sending date:", date.toISOString());
         } else if (value instanceof Blob) {
           formData.append(key, value);
         } else if (value !== undefined && value !== null) {
