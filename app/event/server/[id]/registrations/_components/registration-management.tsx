@@ -4,13 +4,14 @@ import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { PlusCircle } from "lucide-react";
+import { PlusCircle, Download } from "lucide-react";
 import { RegistrationsList } from "./registrations-list";
 import { AddRegistrationDialog } from "./add-registration-dialog";
 import { AddUserToTeamDialog } from "./add-user-dialog";
 import { RemoveUserDialog } from "./remove-user-dialog";
 import { DeleteRegistrationDialog } from "./delete-registration-dialog";
 import { ReplaceUserDialog } from "./replace-user-dialog";
+import { ExportDataDialog } from "./export-data-dialog";
 
 interface RegistrationUser {
   user_id: bigint;
@@ -50,6 +51,7 @@ export function RegistrationManagement({ eventId, guildId, event }: Registration
   const [showRemoveUser, setShowRemoveUser] = useState(false);
   const [showDeleteRegistration, setShowDeleteRegistration] = useState(false);
   const [showReplaceUser, setShowReplaceUser] = useState(false);
+  const [showExportDialog, setShowExportDialog] = useState(false);
   const [selectedRegistration, setSelectedRegistration] = useState<Registration | null>(null);
   const [selectedUser, setSelectedUser] = useState<RegistrationUser | null>(null);
   const [registrations, setRegistrations] = useState<Registration[]>(
@@ -121,11 +123,18 @@ export function RegistrationManagement({ eventId, guildId, event }: Registration
               </div>
             </CardDescription>
           </div>
-          <div className="flex items-center justify-end">
+          <div className="flex items-center justify-end gap-2">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => setShowExportDialog(true)}
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Export Data
+            </Button>
             <Button 
               variant="outline" 
               size="sm" 
-              className="ml-2"
               onClick={() => setShowAddRegistration(true)}
             >
               <PlusCircle className="h-4 w-4 mr-2" />
@@ -211,6 +220,13 @@ export function RegistrationManagement({ eventId, guildId, event }: Registration
         guildId={guildId}
         registration={selectedRegistration}
         user={selectedUser}
+      />
+
+      <ExportDataDialog
+        open={showExportDialog}
+        onClose={() => setShowExportDialog(false)}
+        eventName={event.name}
+        registrations={registrations}
       />
     </>
   );

@@ -161,7 +161,8 @@ export default function EditEvent() {
         form.reset({
           name: data.event.name,
           date: data.event.date ? new Date(data.event.date) : undefined,
-          start_time: startTimeFormatted,
+          // get time from data.event.data
+          start_time: data.event.date ? new Date(data.event.date).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false }) : undefined,
           is_solo: data.event.is_solo,
           category: data.event.category,
           platform: data.event.platform,
@@ -176,9 +177,9 @@ export default function EditEvent() {
           manager_id: data.event.manager_id ? data.event.manager_id.toString() : "",
           channel_id: data.event.channel_id ? data.event.channel_id.toString() : "",
           status: data.event.status,
-          max_teams: data.event.max_teams,
-          min_team_player: data.event.min_team_player,
-          max_team_player: data.event.max_team_player,
+          max_teams: data.event.max_teams ? data.event.max_teams : undefined,
+          min_team_player: data.event.min_team_player ? data.event.min_team_player : undefined,
+          max_team_player: data.event.max_team_player ? data.event.max_team_player : undefined,
         });
 
         // Set banner preview
@@ -278,7 +279,11 @@ export default function EditEvent() {
         }
         
         if (value instanceof Date) {
-          formData.append(key, value.toISOString());
+          // formData.append(key, value.toISOString());
+          const date = new Date(value);
+          const timeParts = values.start_time.split(":");
+          date.setHours(parseInt(timeParts[0]), parseInt(timeParts[1]), 0, 0);
+          formData.append(key, date.toISOString());
         } else if (value instanceof Blob) {
           formData.append(key, value);
         } else if (value !== undefined && value !== null) {
