@@ -9,18 +9,20 @@ import { getGuild, checkIsManager } from "@/lib/discord";
 import { auth } from "@/auth";
 import { RegisterButton } from "./_components/register-button";
 import ManagerActionCard from "./_components/manager-action-card";
-import { 
+import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
-export default async function EventDetailPage({params,}: {params: Promise<{ id: string }>} ) {
+export default async function EventDetailPage({ params, }: { params: Promise<{ id: string }> }) {
   const session = await auth();
-  const { id } = await params ;
-  
+  const { id } = await params;
+
   const event = await prisma.events.findUnique({
     where: { id: BigInt(id) },
     include: {
@@ -39,15 +41,15 @@ export default async function EventDetailPage({params,}: {params: Promise<{ id: 
   // Check if current user is registered for this event
   let isRegistered = false;
   let userRegistration = null;
-  
+
   if (session?.user?.userId) {
     const userId = session.user.userId ? BigInt(session.user.userId) : null;
-    
+
     // Find registration that includes the current user
-    userRegistration = event.registrations.find(registration => 
+    userRegistration = event.registrations.find(registration =>
       registration.registrationusers.some(user => user.user_id === userId)
     );
-    
+
     isRegistered = !!userRegistration;
   }
 
@@ -163,9 +165,9 @@ export default async function EventDetailPage({params,}: {params: Promise<{ id: 
                       {event.max_teams && ` / ${event.max_teams}`}
                     </p>
                   </div>
-                  
+
                   {/* Registration Button */}
-                  <RegisterButton 
+                  <RegisterButton
                     eventId={id}
                     eventStatus={event.status}
                     isRegistered={isRegistered}
@@ -210,10 +212,20 @@ export default async function EventDetailPage({params,}: {params: Promise<{ id: 
           {event.registrations.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="h-5 w-5" />
-                  Registered Teams
-                </CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    <Users className="h-5 w-5" />
+                    Registered Teams
+                  </CardTitle>
+                  {isManager && (
+                    <Link href={`/event/server/${event.guild_id?.toString()}/registrations/${id}`}>
+                      <Button variant="outline" size="sm">
+                        <span className="sr-only">Manage</span>
+                        Manage
+                      </Button>
+                    </Link>
+                  )}
+                </div>
               </CardHeader>
               <CardContent>
                 <Accordion type="single" collapsible className="w-full">
@@ -222,7 +234,7 @@ export default async function EventDetailPage({params,}: {params: Promise<{ id: 
                       <AccordionTrigger className="hover:no-underline">
                         <div className="flex items-center justify-between w-full pr-4">
                           <span className="font-medium">
-                            {registration.team_name || "Unnamed Team"} 
+                            {registration.team_name || "Unnamed Team"}
                           </span>
                           <Badge variant="outline" className="ml-2">
                             {registration.registrationusers.length} {registration.registrationusers.length === 1 ? 'member' : 'members'}
@@ -233,8 +245,8 @@ export default async function EventDetailPage({params,}: {params: Promise<{ id: 
                         <div className="space-y-4 py-2">
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             {registration.registrationusers.map((user) => (
-                              <div 
-                                key={user.user_id.toString()} 
+                              <div
+                                key={user.user_id.toString()}
                                 className="flex items-center gap-3 p-2 rounded-md border"
                               >
                                 <Avatar className="h-8 w-8">
@@ -264,16 +276,16 @@ export default async function EventDetailPage({params,}: {params: Promise<{ id: 
 
         {/* Sidebar */}
         <div className="space-y-6">
-          
+
           {/* Manager Actions Card - Only shown to managers */}
           {isManager && event.guild_id && (
-            <ManagerActionCard 
+            <ManagerActionCard
               eventId={id}
               currentStatus={event.status}
               guildId={event.guild_id.toString()}
             />
           )}
-          
+
           {/* Registration Info - for desktop view */}
           <div className="hidden lg:block">
             <Card>
@@ -289,9 +301,9 @@ export default async function EventDetailPage({params,}: {params: Promise<{ id: 
                       {event.max_teams && ` / ${event.max_teams}`}
                     </p>
                   </div>
-                  
+
                   {/* Registration Button */}
-                  <RegisterButton 
+                  <RegisterButton
                     eventId={id}
                     eventStatus={event.status}
                     isRegistered={isRegistered}

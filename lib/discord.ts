@@ -88,27 +88,23 @@ export async function checkIsManager(
     // Fetch guild information
     const guild = await getGuild(guildId);
     if (!guild) {
-      console.error("Guild not found:", guildId);
       return false;
     }
 
     // Check if the user is the guild owner
     if (guild.owner_id === userId) {
-      console.log("User is the guild owner:", userId);
       return true;
     }
 
     // Fetch member information
     const member = await getMember(guildId, userId);
     if (!member) {
-      console.error("Member not found:", userId);
       return false;
     }
 
     // Get guild roles
     const roles = guild.roles || await getGuildRoles(guildId);
     if (!roles) {
-      console.error("Roles not found for guild:", guildId);
       return false;
     }
 
@@ -122,7 +118,6 @@ export async function checkIsManager(
       const rolePerms = rolePermissionsMap.get(roleId);
       if (rolePerms !== undefined) {
         permissions |= rolePerms;
-        console.log(`Role ID: ${roleId}, Permissions: ${rolePerms}`);
       }
     }
 
@@ -130,7 +125,6 @@ export async function checkIsManager(
     const ADMINISTRATOR = BigInt(0x00000008);
     return (permissions & MANAGE_GUILD) === MANAGE_GUILD || (permissions & ADMINISTRATOR) === ADMINISTRATOR;
   } catch (error) {
-    console.error("Error checking manager permission:", error);
     return false;
   }
 }
@@ -182,4 +176,3 @@ export async function searchGuildMembers(guildId: string, query: string, limit?:
 
 // export a url (variable)
 export const botInviteUrl = 'https://discord.com/oauth2/authorize?client_id=1111585383705219134&permissions=17996718402624&integration_type=0&scope=bot+applications.commands'
-
