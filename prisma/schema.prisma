@@ -21,7 +21,7 @@ enum Platform {
 }
 
 enum Category {
-  VedioGame
+  VideoGame
   ESports
   Music
   Other
@@ -46,7 +46,7 @@ model events {
   location_url      String?             @db.VarChar
   status            EventStatus         @default(Open)      
 
-  category          Category            @default(VedioGame)
+  category          Category            @default(VideoGame)
   category_name     String?             @db.VarChar
   
   platform          Platform            @default(Discord)

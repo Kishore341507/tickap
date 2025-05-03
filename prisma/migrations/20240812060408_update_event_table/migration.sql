@@ -11,12 +11,12 @@
 CREATE TYPE "Platform" AS ENUM ('Discord', 'TickAp', 'Other');
 
 -- CreateEnum
-CREATE TYPE "Category" AS ENUM ('VedioGame', 'ESports', 'Music', 'Other');
+CREATE TYPE "Category" AS ENUM ('VideoGame', 'ESports', 'Music', 'Other');
 
 -- AlterTable
 ALTER TABLE "event" DROP COLUMN "game_name",
 DROP COLUMN "guild_url",
-ADD COLUMN     "category" "Category" NOT NULL DEFAULT 'VedioGame',
+ADD COLUMN     "category" "Category" NOT NULL DEFAULT 'VideoGame',
 ADD COLUMN     "category_name" VARCHAR,
 ADD COLUMN     "location" VARCHAR,
 ADD COLUMN     "location_url" VARCHAR,

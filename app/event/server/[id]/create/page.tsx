@@ -150,7 +150,7 @@ export default function CreateEvent() {
       date: tomorrow,
       start_time: "20:00",
       is_solo: false,
-      category: Category.VedioGame,
+      category: Category.VideoGame,
       platform: Platform.Discord,
       prize: "",
       rules: "",

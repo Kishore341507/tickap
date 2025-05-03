@@ -2,7 +2,7 @@
  * Common enums for the Tickap application
  */
 export enum Category {
-  VedioGame = "VedioGame",
+  VideoGame = "VideoGame",
   ESports = "ESports",
   Music = "Music",
   Other = "Other"

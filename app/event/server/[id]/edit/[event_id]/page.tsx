@@ -97,7 +97,7 @@ export default function EditEvent() {
       date: undefined,
       start_time: "12:00",
       is_solo: false,
-      category: Category.VedioGame,
+      category: Category.VideoGame,
       platform: Platform.Discord,
       prize: "",
       rules: "",

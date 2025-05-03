@@ -43,7 +43,7 @@ CREATE TABLE "events" (
     "location" VARCHAR,
     "location_url" VARCHAR,
     "status" "EventStatus" NOT NULL DEFAULT 'Open',
-    "category" "Category" NOT NULL DEFAULT 'VedioGame',
+    "category" "Category" NOT NULL DEFAULT 'VideoGame',
     "category_name" VARCHAR,
     "platform" "Platform" NOT NULL DEFAULT 'Discord',
     "role_id" BIGINT,

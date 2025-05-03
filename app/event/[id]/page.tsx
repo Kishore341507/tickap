@@ -73,7 +73,7 @@ export default async function EventDetailPage({ params, }: { params: Promise<{ i
   };
 
   const categoryColors = {
-    VedioGame: "bg-blue-500",
+    VideoGame: "bg-blue-500",
     ESports: "bg-purple-500",
     Music: "bg-pink-500",
     Other: "bg-gray-500",
