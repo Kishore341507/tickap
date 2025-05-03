@@ -4,16 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardImage, CardTitle } 
 import { Calendar, Gamepad2 } from 'lucide-react';
 import Link from 'next/link';
 import React from 'react'
-
-interface Event {
-  id: string | number | bigint;
-  banner: string;
-  name: string;
-  category_name: string | null;
-  date?: Date | null;
-  details?: string | null;
-  status: string;
-}
+import { Event } from '@/types';
 
 interface EventCardProps {
   event: Event;

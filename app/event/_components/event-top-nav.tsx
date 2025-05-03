@@ -46,15 +46,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 // import { redirect } from "next/navigation";
 import { revalidatePath } from 'next/cache';
 
-interface Guild {
-  id: string;
-  name: string;
-  permissions: string;
-  icon: string;
-  manager: boolean;
-  mutual: boolean;
-}
-
 export default async function EventTopNav({
   children,
 }: {

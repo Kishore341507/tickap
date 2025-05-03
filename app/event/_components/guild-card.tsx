@@ -1,11 +1,8 @@
 import { Card, CardDescription, CardImage } from '@/components/ui/image-card'
 import React from 'react'
+import { Guild } from '@/types'
 
-interface Guild {
-    name: string;
-    icon: string;
-  }
-  
+
 interface EventCardProps {
     guild: Guild;
 }

@@ -33,27 +33,7 @@ import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
-
-// Enum types recreated here to match Prisma model
-enum Category {
-  VedioGame = "VedioGame",
-  ESports = "ESports",
-  Music = "Music",
-  Other = "Other"
-}
-
-enum Platform {
-  Discord = "Discord",
-  TickAp = "TickAp",
-  Other = "Other"
-}
-
-enum EventStatus {
-  Open = "Open",
-  Closed = "Closed",
-  Cancelled = "Cancelled",
-  Live = "Live"
-}
+import { Category , Platform , EventStatus } from "@/types";
 
 // Create a Zod schema for form validation
 const eventFormSchema = z.object({

@@ -13,16 +13,7 @@ import { useSession } from "next-auth/react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { botInviteUrl } from "@/lib/discord";
-
-interface Guild {
-  id: string;
-  name: string;
-  permissions: string;
-  icon: string;
-  manager: boolean;
-  mutual: boolean;
-  approximate_member_count : number; 
-}
+import { Guild } from "@/types";
 
 export default function EventSideBar() {
   const pathname = usePathname();

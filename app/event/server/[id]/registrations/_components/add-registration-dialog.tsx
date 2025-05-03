@@ -25,30 +25,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Loader2, Search, BadgePlus, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-
-interface TeamMember {
-  user: {
-    id: string;
-    username: string;
-    avatar: string;
-    global_name: string;
-  };
-}
-
-interface RegistrationUser {
-  user_id: bigint;
-  registration_id: bigint;
-  event_id: bigint;
-  user_name: string | null;
-  pfp: string | null;
-}
-
-interface Registration {
-  id: bigint;
-  event_id: bigint;
-  team_name: string | null;
-  registrationusers: RegistrationUser[];
-}
+import { RegistrationUser , Registration , Member } from "@/types";
 
 interface AddRegistrationDialogProps {
   open: boolean;
@@ -74,8 +51,8 @@ export function AddRegistrationDialog({
   const [isLoading, setIsLoading] = useState(false);
   const [teamName, setTeamName] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<TeamMember[]>([]);
-  const [selectedMembers, setSelectedMembers] = useState<TeamMember[]>([]);
+  const [searchResults, setSearchResults] = useState<Member[]>([]);
+  const [selectedMembers, setSelectedMembers] = useState<Member[]>([]);
   const [teamNameError, setTeamNameError] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const { toast } = useToast();
@@ -138,7 +115,7 @@ export function AddRegistrationDialog({
   };
 
   // Toggle member selection
-  const toggleMemberSelection = (member: TeamMember) => {
+  const toggleMemberSelection = (member: Member) => {
     if (selectedMembers.some(m => m.user.id === member.user.id)) {
       setSelectedMembers(selectedMembers.filter(m => m.user.id !== member.user.id));
     } else {

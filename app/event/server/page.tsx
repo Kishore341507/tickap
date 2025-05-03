@@ -5,15 +5,7 @@ import React from 'react'
 import GuildCard from '../_components/guild-card';
 import Link from 'next/link';
 import { botInviteUrl } from '@/lib/discord';
-
-interface Guild {
-  id: string;
-  name: string;
-  icon: string;
-  manager: boolean;
-  mutual: boolean;
-  approximate_member_count : number; 
-}
+import { Guild } from '@/types';
 
 export default async function Servers() {
 
