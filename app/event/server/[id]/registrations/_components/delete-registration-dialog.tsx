@@ -15,21 +15,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Loader2 } from "lucide-react";
-
-interface RegistrationUser {
-  user_id: bigint;
-  registration_id: bigint;
-  event_id: bigint;
-  user_name: string | null;
-  pfp: string | null;
-}
-
-interface Registration {
-  id: bigint;
-  event_id: bigint;
-  team_name: string | null;
-  registrationusers: RegistrationUser[];
-}
+import { Registration } from "@/types";
 
 interface DeleteRegistrationDialogProps {
   open: boolean;

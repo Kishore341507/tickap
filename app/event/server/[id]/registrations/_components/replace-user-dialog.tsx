@@ -22,30 +22,8 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Loader2, RefreshCw } from "lucide-react";
+import { Member , RegistrationUser, Registration } from "@/types";
 
-interface TeamMember {
-  user: {
-    id: string;
-    username: string;
-    avatar: string;
-    global_name: string;
-  };
-}
-
-interface RegistrationUser {
-  user_id: bigint;
-  registration_id: bigint;
-  event_id: bigint;
-  user_name: string | null;
-  pfp: string | null;
-}
-
-interface Registration {
-  id: bigint;
-  event_id: bigint;
-  team_name: string | null;
-  registrationusers: RegistrationUser[];
-}
 
 interface ReplaceUserDialogProps {
   open: boolean;
@@ -68,8 +46,8 @@ export function ReplaceUserDialog({
 }: ReplaceUserDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<TeamMember[]>([]);
-  const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null);
+  const [searchResults, setSearchResults] = useState<Member[]>([]);
+  const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
@@ -114,7 +92,7 @@ export function ReplaceUserDialog({
       
       // Filter out already registered users
       const existingUserIds = registration?.registrationusers.map(u => u.user_id.toString()) || [];
-      const filteredResults = data.filter((member: TeamMember) => {
+      const filteredResults = data.filter((member: Member) => {
         return !existingUserIds.includes(member.user.id);
       });
       
@@ -132,7 +110,7 @@ export function ReplaceUserDialog({
   };
 
   // Select a member
-  const selectMember = (member: TeamMember) => {
+  const selectMember = (member: Member) => {
     setSelectedMember(member);
   };
 

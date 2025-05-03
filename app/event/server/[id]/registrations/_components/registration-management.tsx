@@ -12,32 +12,7 @@ import { RemoveUserDialog } from "./remove-user-dialog";
 import { DeleteRegistrationDialog } from "./delete-registration-dialog";
 import { ReplaceUserDialog } from "./replace-user-dialog";
 import { ExportDataDialog } from "./export-data-dialog";
-
-interface RegistrationUser {
-  user_id: bigint;
-  registration_id: bigint;
-  event_id: bigint;
-  user_name: string | null;
-  pfp: string | null;
-}
-
-interface Registration {
-  id: bigint;
-  event_id: bigint;
-  team_name: string | null;
-  registrationusers: RegistrationUser[];
-}
-
-interface Event {
-  id: bigint;
-  name: string;
-  is_solo: boolean | null;
-  max_teams: number | null;
-  min_team_player: number | null;
-  max_team_player: number | null;
-  registrations: Registration[];
-  guild_id: bigint | null;
-}
+import { RegistrationUser , Registration , Event  } from "@/types";
 
 interface RegistrationManagementProps {
   eventId: string;
@@ -181,7 +156,7 @@ export function RegistrationManagement({ eventId, guildId, event }: Registration
         guildId={guildId}
         isSolo={!!event.is_solo}
         minTeamSize={event.min_team_player || 1}
-        maxTeamSize={event.max_team_player}
+        maxTeamSize={event.max_team_player ?? null}
       />
 
       <AddUserToTeamDialog
@@ -191,7 +166,7 @@ export function RegistrationManagement({ eventId, guildId, event }: Registration
         eventId={eventId}
         guildId={guildId}
         registration={selectedRegistration}
-        maxTeamSize={event.max_team_player}
+        maxTeamSize={event.max_team_player ?? null}
       />
 
       <RemoveUserDialog

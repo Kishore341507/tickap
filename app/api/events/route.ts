@@ -95,7 +95,7 @@ export async function POST(req: NextRequest) {
       location: formData.get("location") as string || null,
       location_url: formData.get("location_url") as string || null,
       status: (formData.get("status") as EventStatus) || EventStatus.Open,
-      category: (formData.get("category") as Category) || Category.VedioGame,
+      category: (formData.get("category") as Category) || Category.VideoGame,
       category_name: formData.get("category_name") as string || null,
       platform: (formData.get("platform") as Platform) || Platform.Discord,
       role_id: formData.get("role_id") ? BigInt(formData.get("role_id") as string) : null,

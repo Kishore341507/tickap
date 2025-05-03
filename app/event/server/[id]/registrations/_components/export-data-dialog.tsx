@@ -14,21 +14,8 @@ import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Loader2, FileText, Table, FileJson, Download } from "lucide-react";
+import { RegistrationUser , Registration } from "@/types";
 
-interface RegistrationUser {
-  user_id: bigint;
-  registration_id: bigint;
-  event_id: bigint;
-  user_name: string | null;
-  pfp: string | null;
-}
-
-interface Registration {
-  id: bigint;
-  event_id: bigint;
-  team_name: string | null;
-  registrationusers: RegistrationUser[];
-}
 
 interface ExportDataDialogProps {
   open: boolean;

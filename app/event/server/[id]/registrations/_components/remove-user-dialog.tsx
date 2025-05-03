@@ -16,21 +16,7 @@ import { Loader2, UserMinus } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
-
-interface RegistrationUser {
-  user_id: bigint;
-  registration_id: bigint;
-  event_id: bigint;
-  user_name: string | null;
-  pfp: string | null;
-}
-
-interface Registration {
-  id: bigint;
-  event_id: bigint;
-  team_name: string | null;
-  registrationusers: RegistrationUser[];
-}
+import { RegistrationUser , Registration } from "@/types";
 
 interface RemoveUserDialogProps {
   open: boolean;

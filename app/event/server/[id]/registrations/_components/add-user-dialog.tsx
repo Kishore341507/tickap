@@ -22,33 +22,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Loader2, UserPlus } from "lucide-react";
-import { registrationusers } from "@prisma/client";
-
-interface TeamMember {
-  user: {
-    id: string;
-    username: string;
-    avatar: string;
-    global_name: string;
-  };
-}
-
-interface RegistrationUser {
-  user_id: bigint;
-  registration_id: bigint;
-  event_id: bigint;
-  user_name: string | null;
-  pfp: string | null;
-}
-
-interface Registration {
-  id: bigint;
-  event_id: bigint;
-  team_name: string | null;
-  registrationusers: RegistrationUser[];
-}
-
-// (registration: Registration) => void;
+import { Registration , Member } from "@/types";
 
 interface AddUserToTeamDialogProps {
   open: boolean;
@@ -71,8 +45,8 @@ export function AddUserToTeamDialog({
 }: AddUserToTeamDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<TeamMember[]>([]);
-  const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null);
+  const [searchResults, setSearchResults] = useState<Member[]>([]);
+  const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
@@ -118,7 +92,7 @@ export function AddUserToTeamDialog({
       // Filter out already registered users
       // const existingUserIds = registration?.registrationusers.map(u => u.user_id.toString()) || [];
       const existingUserIds : any[] = [] ;
-      const filteredResults = data.filter((member: TeamMember) => {
+      const filteredResults = data.filter((member: Member) => {
         return !existingUserIds.includes(member.user.id);
       });
       setSearchResults(filteredResults);
@@ -135,7 +109,7 @@ export function AddUserToTeamDialog({
   };
 
   // Select a member
-  const selectMember = (member: TeamMember) => {
+  const selectMember = (member: Member) => {
     setSelectedMember(member);
   };
 

@@ -2,13 +2,6 @@ import prisma from "@/prisma/db";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import EventCard from "./_components/event-card";
 
-interface Guild {
-  id: string;
-  name: string;
-  permissions: string;
-  icon: string;
-}
-
 export default async function Events() {
 
   const Events = await prisma.events.findMany({});

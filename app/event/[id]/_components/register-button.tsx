@@ -37,30 +37,7 @@ import {
     AlertDialogAction
 } from "@/components/ui/alert-dialog";
 import { Card, CardContent } from "@/components/ui/card";
-
-interface TeamMember {
-    avatar?: string;
-    user: {
-        id: string;
-        username: string;
-        avatar: string;
-        global_name: string;
-    }
-}
-
-interface RegistrationUser {
-    user_id: bigint;
-    user_name: string | null;
-    pfp: string | null;
-    registration_id: bigint;
-    event_id: bigint;
-}
-
-interface Registration {
-    id: bigint;
-    team_name: string | null;
-    registrationusers: RegistrationUser[];
-}
+import { Member , RegistrationUser , Registration} from "@/types";
 
 interface RegisterButtonProps {
     eventId: string;
@@ -91,8 +68,8 @@ export function RegisterButton({
     const [isTeamDialogOpen, setIsTeamDialogOpen] = useState(false);
     const [isUnregisterDialogOpen, setIsUnregisterDialogOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
-    const [searchResults, setSearchResults] = useState<TeamMember[]>([]);
-    const [selectedMembers, setSelectedMembers] = useState<TeamMember[]>([]);
+    const [searchResults, setSearchResults] = useState<Member[]>([]);
+    const [selectedMembers, setSelectedMembers] = useState<Member[]>([]);
     const [isSearching, setIsSearching] = useState(false);
     const [teamName, setTeamName] = useState("");
     const [teamNameError, setTeamNameError] = useState("");
@@ -130,7 +107,7 @@ export function RegisterButton({
             }
 
             const data = await response.json();
-            const filteredData = data.filter((member: TeamMember) => member.user.id !== sessionData?.user.userId);
+            const filteredData = data.filter((member: Member) => member.user.id !== sessionData?.user.userId);
             setSearchResults(filteredData);
         } catch (error) {
             console.error("Error searching members:", error);
@@ -145,7 +122,7 @@ export function RegisterButton({
     };
 
     // Handle team member selection
-    const toggleMemberSelection = (member: TeamMember) => {
+    const toggleMemberSelection = (member: Member) => {
         if (selectedMembers.some(m => m.user.id === member.user.id)) {
             setSelectedMembers(selectedMembers.filter(m => m.user.id !== member.user.id));
         } else {
