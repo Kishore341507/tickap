@@ -364,7 +364,7 @@ export function RegisterButton({
                     <CardContent className="pt-4">
                         <div className="space-y-3">
                             <div className="flex justify-between items-center">
-                                <Badge variant="outline" className="bg-green-50">
+                                <Badge variant="outline" className="bg-green-500 text-white">
                                     {isSolo ? "Registered" : "Team Registered"}
                                 </Badge>
                                 <p className="text-sm font-medium">{userRegistration.team_name || "Your Registration"}</p>
