@@ -230,6 +230,18 @@ export default function EditEvent() {
   const handleBannerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      // Check file size (4MB = 4 * 1024 * 1024 bytes)
+      if (file.size > 2 * 1024 * 1024) {
+        toast({
+          title: "Error",
+          description: "Image size must be less than 2MB",
+          variant: "destructive",
+        });
+        // Reset the file input
+        e.target.value = '';
+        return;
+      }
+      
       form.setValue("banner", file);
       setNeedsBannerUpload(true);
       const reader = new FileReader();
