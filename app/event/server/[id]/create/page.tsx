@@ -175,7 +175,7 @@ export default function CreateEvent() {
     const file = e.target.files?.[0];
     console.log("File selected:", file);
     if (file) {
-      // Check file size (4MB = 4 * 1024 * 1024 bytes)
+      // Check file size (2MB = 2 * 1024 * 1024 bytes)
       if (file.size > 2 * 1024 * 1024) {
         toast({
           title: "Error",
