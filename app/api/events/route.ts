@@ -3,6 +3,8 @@ import { auth } from "@/auth";
 import prisma from "@/prisma/db";
 import { EventStatus, Platform, Category } from "@prisma/client";
 import { checkIsManager } from "@/lib/discord";
+import { createEventLog } from "@/lib/event-logger";
+import { EventLogType , EventLogTarget } from "@prisma/client";
 
 // Helper function to handle BigInt serialization
 const serializeData = (data: any): any => {
@@ -107,6 +109,13 @@ export async function POST(req: NextRequest) {
     // Create event in database
     const event = await prisma.events.create({
       data
+    });
+
+    await createEventLog({
+      event_id: event.id,
+      log_type: EventLogType.CREATE,
+      log_target: EventLogTarget.EVENT,
+      new_data: data,
     });
 
     // Serialize the event to handle BigInt values
@@ -256,6 +265,14 @@ export async function PUT(req: NextRequest) {
     const updatedEvent = await prisma.events.update({
       where: { id: parseInt(eventId) },
       data
+    });
+
+    await createEventLog({
+      event_id: updatedEvent.id,
+      log_type: EventLogType.UPDATE,
+      log_target: EventLogTarget.EVENT,
+      old_data: existingEvent,
+      new_data: data,
     });
 
     const serializedEvent = serializeData(updatedEvent);

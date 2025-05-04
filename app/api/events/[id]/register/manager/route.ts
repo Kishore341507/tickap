@@ -3,6 +3,8 @@ import { auth } from "@/auth";
 import prisma from "@/prisma/db";
 import { getMember } from "@/lib/discord";
 import { checkIsManager } from "@/lib/discord";
+import { createEventLog } from "@/lib/event-logger";
+import { EventLogType , EventLogTarget } from "@prisma/client";
 
 // Helper function to handle BigInt serialization
 const serializeData = (data: any): any => {
@@ -209,6 +211,16 @@ export async function POST(
       },
     });
 
+    await createEventLog({
+      event_id: BigInt(id),
+      log_type: EventLogType.CREATE,
+      log_target: EventLogTarget.REGISTRATION,
+      old_data: null,
+      new_data: {
+        ...completeRegistration
+      },
+    });
+
     return NextResponse.json(
       {
         message: "Registration successful",
@@ -373,6 +385,17 @@ export async function PUT(
         },
       });
 
+      await createEventLog({
+        event_id: BigInt(id),
+        log_type: EventLogType.UPDATE,
+        log_target: EventLogTarget.REGISTRATION,
+        old_data: {...registration},
+        new_data: {
+          ...updatedRegistration,
+          new_user: newRegistrationUser,
+        },
+      });
+
       return NextResponse.json(
         {
           message: "User added to team successfully",
@@ -405,6 +428,14 @@ export async function PUT(
           },
         });
 
+        await createEventLog({
+          event_id: BigInt(id),
+          log_type: EventLogType.DELETE,
+          log_target: EventLogTarget.REGISTRATION,
+          old_data: {...registration},
+          new_data: null,
+        });
+
         return NextResponse.json(
           {
             message:
@@ -430,6 +461,17 @@ export async function PUT(
         where: { id: registration.id },
         include: {
           registrationusers: true,
+        },
+      });
+
+      await createEventLog({
+        event_id: BigInt(id),
+        log_type: EventLogType.UPDATE,
+        log_target: EventLogTarget.REGISTRATION,
+        old_data: {...registration},
+        new_data: {
+          ...updatedRegistration,
+          removed_user: userToRemove,
         },
       });
 
@@ -533,6 +575,18 @@ export async function PUT(
         },
       });
 
+      await createEventLog({
+        event_id: BigInt(id),
+        log_type: EventLogType.UPDATE,
+        log_target: EventLogTarget.REGISTRATION,
+        old_data: {...registration},
+        new_data: {
+          ...updatedRegistration,
+          replaced_user: userToReplace,
+          new_user: userData,
+        },
+      });
+
       return NextResponse.json(
         {
           message: "User replaced successfully",
@@ -627,6 +681,14 @@ export async function DELETE(
       where: {
         id: BigInt(registration_id),
       },
+    });
+
+    await createEventLog({
+      event_id: BigInt(id),
+      log_type: EventLogType.DELETE,
+      log_target: EventLogTarget.REGISTRATION,
+      old_data: {...registration},
+      new_data: null,
     });
 
     return NextResponse.json(

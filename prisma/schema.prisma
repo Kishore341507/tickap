@@ -187,3 +187,34 @@ model FileStorage {
   created_at  DateTime @default(now())
   updated_at  DateTime @updatedAt
 }
+
+enum EventLogType {
+  CREATE
+  UPDATE
+  DELETE
+}
+
+enum EventLogTarget {
+  EVENT
+  REGISTRATION
+}
+
+model EventLog {
+  id            String         @id @default(cuid())
+  event_id      BigInt
+  user_id       BigInt?        // The user who made the change, nullable for system changes
+  user_name     String?        // The name of the user who made the change, nullable for system changes
+  log_type      EventLogType
+  log_target    EventLogTarget
+  old_data      Json?          // Previous state, null for CREATE
+  new_data      Json?          // New state, null for DELETE
+  registration_id BigInt?      // Only set when log_target is REGISTRATION
+  created_at    DateTime       @default(now())
+  
+  @@index([event_id])
+  @@index([user_id])
+  @@index([log_type])
+  @@index([log_target])
+  @@index([created_at])
+  @@index([registration_id])
+}

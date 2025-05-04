@@ -175,6 +175,18 @@ export default function CreateEvent() {
     const file = e.target.files?.[0];
     console.log("File selected:", file);
     if (file) {
+      // Check file size (2MB = 2 * 1024 * 1024 bytes)
+      if (file.size > 2 * 1024 * 1024) {
+        toast({
+          title: "Error",
+          description: "Image size must be less than 2MB",
+          variant: "destructive",
+        });
+        // Reset the file input
+        e.target.value = '';
+        return;
+      }
+      
       form.setValue("banner", file);
       const reader = new FileReader();
       reader.onloadend = () => {

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import prisma from "@/prisma/db";
 import { getMember } from "@/lib/discord";
+import { createEventLog } from "@/lib/event-logger";
+import { EventLogType, EventLogTarget } from "@prisma/client";
 
 export async function POST(
   request: NextRequest,
@@ -84,6 +86,17 @@ export async function POST(
             },
           },
         },
+      });
+
+      // Log the registration event
+      await createEventLog({
+        event_id: BigInt(id),
+        log_type: EventLogType.CREATE,
+        log_target: EventLogTarget.REGISTRATION,
+        new_data: {
+          ...registration,
+        },
+        registration_id: registration.id,
       });
 
       return NextResponse.json(
@@ -198,6 +211,16 @@ export async function POST(
       },
     });
 
+    await createEventLog({
+      event_id: BigInt(id),
+      log_type: EventLogType.CREATE,
+      log_target: EventLogTarget.REGISTRATION,
+      new_data: {
+        ...registration,
+      },
+      registration_id: registration.id,
+    });
+
     return NextResponse.json(
       { message: "Team registration successful" },
       { status: 201 }
@@ -268,6 +291,16 @@ export async function DELETE(
         },
       });
 
+      await createEventLog({
+        event_id: BigInt(id),
+        log_type: EventLogType.DELETE,
+        log_target: EventLogTarget.REGISTRATION,
+        old_data: {
+          ...registration,
+        },
+        registration_id: registration.id,
+      });
+
       return NextResponse.json(
         { message: "Successfully unregistered from the event" },
         { status: 200 }
@@ -290,6 +323,16 @@ export async function DELETE(
         },
       });
 
+      await createEventLog({
+        event_id: BigInt(id),
+        log_type: EventLogType.DELETE,
+        log_target: EventLogTarget.REGISTRATION,
+        old_data: {
+          ...registration,
+        },
+        registration_id: registration.id,
+      });
+
       return NextResponse.json(
         { message: "Your team has been removed from the event" },
         { status: 200 }
@@ -305,6 +348,17 @@ export async function DELETE(
             registration_id: registration.id,
           },
         },
+      });
+
+      await createEventLog({
+        event_id: BigInt(id),
+        log_type: EventLogType.UPDATE,
+        log_target: EventLogTarget.REGISTRATION,
+        old_data: {
+          ...registration,
+        },
+        new_data: {data : "one user unregistered"},
+        registration_id: registration.id,
       });
 
       return NextResponse.json(
