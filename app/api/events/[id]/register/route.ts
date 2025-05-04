@@ -1,26 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import prisma from "@/prisma/db";
-import { getMember } from "@/lib/discord";
+import {
+  getMember,
+  giveEventRole,
+  sendDMMessage,
+  takeEventRole,
+} from "@/lib/discord";
 import { createEventLog } from "@/lib/event-logger";
 import { EventLogType, EventLogTarget } from "@prisma/client";
 
 export async function POST(
   request: NextRequest,
-  { params }: {params: Promise<{ id: string }>} 
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth();
     const { id } = await params;
     const body = await request.json();
     const { teamName, teamMembers } = body;
-    
+
     // Check if user is authenticated
     if (!session || !session.user) {
-        return NextResponse.json({ message: "Not authorized" }, { status: 401 });
+      return NextResponse.json({ message: "Not authorized" }, { status: 401 });
     }
-    
-    const userId = BigInt(session!.user!.userId!) ;
+
+    const userId = BigInt(session!.user!.userId!);
     // Get the event by ID
     const event = await prisma.events.findUnique({
       where: { id: BigInt(id) },
@@ -99,16 +104,29 @@ export async function POST(
         registration_id: registration.id,
       });
 
+      if(event.role_id) {
+        await giveEventRole(
+          event.guild_id!.toString(),
+          userId.toString(),
+          event.role_id!.toString()
+        );
+      }
+
+
       return NextResponse.json(
         { message: "Registration successful" },
         { status: 201 }
       );
     }
-    
+
     // Team event registration
-    
+
     // Validate team name
-    if (!teamName || teamName.trim().length < 3 || teamName.trim().length > 40) {
+    if (
+      !teamName ||
+      teamName.trim().length < 3 ||
+      teamName.trim().length > 40
+    ) {
       return NextResponse.json(
         { message: "Team name must be between 3 and 40 characters" },
         { status: 400 }
@@ -116,16 +134,26 @@ export async function POST(
     }
 
     // Validate team size
-    if (event.min_team_player && teamMembers.length + 1 < event.min_team_player) {
+    if (
+      event.min_team_player &&
+      teamMembers.length + 1 < event.min_team_player
+    ) {
       return NextResponse.json(
-        { message: `Team must have at least ${event.min_team_player} members (including you)` },
+        {
+          message: `Team must have at least ${event.min_team_player} members (including you)`,
+        },
         { status: 400 }
       );
     }
 
-    if (event.max_team_player && teamMembers.length + 1 > event.max_team_player) {
+    if (
+      event.max_team_player &&
+      teamMembers.length + 1 > event.max_team_player
+    ) {
       return NextResponse.json(
-        { message: `Team cannot have more than ${event.max_team_player} members (including you)` },
+        {
+          message: `Team cannot have more than ${event.max_team_player} members (including you)`,
+        },
         { status: 400 }
       );
     }
@@ -142,7 +170,10 @@ export async function POST(
 
     if (existingRegistrations.length > 0) {
       return NextResponse.json(
-        { message: "One or more team members are already registered for this event" },
+        {
+          message:
+            "One or more team members are already registered for this event",
+        },
         { status: 400 }
       );
     }
@@ -158,8 +189,11 @@ export async function POST(
     // Fetch Discord information for all team members
     const teamMembersData = await Promise.all(
       teamMembers.map(async (memberId: string) => {
-        const memberData = await getMember(event.guild_id!.toString(), memberId);
-        
+        const memberData = await getMember(
+          event.guild_id!.toString(),
+          memberId
+        );
+
         // If member data couldn't be fetched, use basic information
         if (!memberData) {
           return {
@@ -169,18 +203,18 @@ export async function POST(
             event_id: BigInt(id),
           };
         }
-        
+
         // Get user data from Discord response
         const user = memberData.user;
         const username = user.global_name || user.username;
-        
+
         // Construct avatar URL
         let avatarUrl = null;
         if (user.avatar) {
           const format = user.avatar.startsWith("a_") ? "gif" : "png";
           avatarUrl = `https://cdn.discordapp.com/avatars/${memberId}/${user.avatar}.${format}`;
         }
-        
+
         return {
           user_id: BigInt(memberId),
           user_name: username,
@@ -211,6 +245,43 @@ export async function POST(
       },
     });
 
+    // Assign the event role to all team members
+
+    if( event.role_id) {
+      await Promise.all(
+        teamMembersData.map(async (member) => {
+          if (member.user_id !== userId) {
+            await giveEventRole(
+              event.guild_id!.toString(),
+              member.user_id.toString(),
+              event.role_id!.toString()
+            );
+          }
+        })
+      );
+  
+      await giveEventRole(
+        event.guild_id!.toString(),
+        userId.toString(),
+        event.role_id!.toString()
+      );
+    }
+
+
+    // sendDMMessage to all
+    await Promise.all(
+      teamMembersData.map(async (member) => {
+        if (member.user_id !== userId) {
+          await sendDMMessage(
+            member.user_id.toString(),
+            session.user.name!,
+            event.id.toString(),
+            event.name
+          );
+        }
+      })
+    );
+
     await createEventLog({
       event_id: BigInt(id),
       log_type: EventLogType.CREATE,
@@ -236,17 +307,17 @@ export async function POST(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: {params: Promise<{ id: string }>} 
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth();
     const { id } = await params;
-    
+
     // Check if user is authenticated
     if (!session || !session.user) {
       return NextResponse.json({ message: "Not authorized" }, { status: 401 });
     }
-    
+
     const userId = BigInt(session.user.userId!);
 
     // Get the event by ID with the user's registration
@@ -291,6 +362,14 @@ export async function DELETE(
         },
       });
 
+      if (event.role_id) {
+        await takeEventRole(
+          event.guild_id!.toString(),
+          userId.toString(),
+          event.role_id!.toString()
+        );
+      }
+
       await createEventLog({
         event_id: BigInt(id),
         log_type: EventLogType.DELETE,
@@ -310,18 +389,37 @@ export async function DELETE(
     // Case 2: Team event
     // Calculate the number of members in the team excluding the current user
     const remainingMembers = registration.registrationusers.filter(
-      user => user.user_id !== userId
+      (user) => user.user_id !== userId
     );
 
     // If removing the user would make the team too small based on min_team_player,
     // or if this was the last team member, delete the entire registration
-    if (!remainingMembers.length || 
-        (event.min_team_player && remainingMembers.length < event.min_team_player)) {
-      await prisma.registrations.delete({
+    if (
+      !remainingMembers.length ||
+      (event.min_team_player && remainingMembers.length < event.min_team_player)
+    ) {
+
+      const deletedRegistration = await prisma.registrations.delete({
         where: {
           id: registration.id,
         },
+        include: {
+          registrationusers: true,
+        },
       });
+
+      // Remove the event role from all users in the deleted registration
+      if (event.role_id) {
+        await Promise.all(
+          deletedRegistration.registrationusers.map(async (user) => {
+            await takeEventRole(
+              event.guild_id!.toString(),
+              user.user_id.toString(),
+              event.role_id!.toString()
+            );
+          })
+        );
+      }
 
       await createEventLog({
         event_id: BigInt(id),
@@ -337,8 +435,8 @@ export async function DELETE(
         { message: "Your team has been removed from the event" },
         { status: 200 }
       );
-    } 
-    
+    }
+
     // Otherwise, just remove this user from the team
     else {
       await prisma.registrationusers.delete({
@@ -350,6 +448,14 @@ export async function DELETE(
         },
       });
 
+      if (event.role_id) {
+        await takeEventRole(
+          event.guild_id!.toString(),
+          userId.toString(),
+          event.role_id!.toString()
+        );
+      }
+
       await createEventLog({
         event_id: BigInt(id),
         log_type: EventLogType.UPDATE,
@@ -357,7 +463,7 @@ export async function DELETE(
         old_data: {
           ...registration,
         },
-        new_data: {data : "one user unregistered"},
+        new_data: { data: "one user unregistered" },
         registration_id: registration.id,
       });
 

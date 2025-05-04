@@ -103,7 +103,7 @@ export async function checkIsManager(
     }
 
     // Get guild roles
-    const roles = guild.roles || await getGuildRoles(guildId);
+    const roles = guild.roles || (await getGuildRoles(guildId));
     if (!roles) {
       return false;
     }
@@ -123,7 +123,10 @@ export async function checkIsManager(
 
     const MANAGE_GUILD = BigInt(0x20);
     const ADMINISTRATOR = BigInt(0x00000008);
-    return (permissions & MANAGE_GUILD) === MANAGE_GUILD || (permissions & ADMINISTRATOR) === ADMINISTRATOR;
+    return (
+      (permissions & MANAGE_GUILD) === MANAGE_GUILD ||
+      (permissions & ADMINISTRATOR) === ADMINISTRATOR
+    );
   } catch (error) {
     return false;
   }
@@ -149,10 +152,14 @@ export async function getGuildMembers(guildId: string) {
   return await membersResponse.json();
 }
 
-export async function searchGuildMembers(guildId: string, query: string, limit?: number) {
+export async function searchGuildMembers(
+  guildId: string,
+  query: string,
+  limit?: number
+) {
   const searchParams = new URLSearchParams({
     query: query,
-    limit: (limit || 1).toString()
+    limit: (limit || 1).toString(),
   });
 
   const searchResponse = await fetch(
@@ -175,4 +182,125 @@ export async function searchGuildMembers(guildId: string, query: string, limit?:
 }
 
 // export a url (variable)
-export const botInviteUrl = 'https://discord.com/oauth2/authorize?client_id=1111585383705219134&permissions=17996718402624&integration_type=0&scope=bot+applications.commands'
+export const botInviteUrl =
+  "https://discord.com/oauth2/authorize?client_id=1111585383705219134&permissions=17996718402624&integration_type=0&scope=bot+applications.commands";
+
+export async function giveEventRole(
+  guildId: string,
+  userId: string,
+  roleId: string
+) {
+  try {
+    const response = await fetch(
+      `${env.DISCORD_API_URL}/guilds/${guildId}/members/${userId}/roles/${roleId}`,
+      {
+        method: "PUT",
+        headers: {
+          Authorization: `Bot ${env.DISCORD_BOT_TOKEN}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    if (!response.ok) {
+      return null;
+    }
+
+    // return await response.json();
+    return true;
+  } catch (error) {
+    return null;
+  }
+}
+
+// take event role
+export async function takeEventRole(
+  guildId: string,
+  userId: string,
+  roleId: string
+) {
+  try {
+    const response = await fetch(
+      `${env.DISCORD_API_URL}/guilds/${guildId}/members/${userId}/roles/${roleId}`,
+      {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bot ${env.DISCORD_BOT_TOKEN}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    if (!response.ok) {
+      return null;
+    }
+    // return await response.json();
+    return true;
+  } catch (error) {
+    return null;
+  }
+}
+
+export async function sendDMMessage(
+  userId: string,
+  userName: string,
+  eventId: string,
+  eventName: string
+) {
+  // Create DM channel
+
+  try {
+    const dmResponse = await fetch(
+      `${env.DISCORD_API_URL}/users/@me/channels`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bot ${env.DISCORD_BOT_TOKEN}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          recipient_id: userId,
+        }),
+      }
+    );
+
+    if (!dmResponse.ok) {
+      return null;
+    }
+
+    const dmChannel = await dmResponse.json();
+    const channelId = dmChannel.id;
+
+    // Send message to DM channel
+    const messageResponse = await fetch(
+      `${env.DISCORD_API_URL}/channels/${channelId}/messages`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bot ${env.DISCORD_BOT_TOKEN}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          embeds: [
+            {
+              title: "Your Team Has Been Registered Successfully!",
+              description: `You can check your registrations on [**${eventName}**](https://tickap.com/event/${eventId})`,
+              color: 0x2a2c30,
+              footer: {
+                text: `Registered by ${userName}`,
+              },
+            },
+          ],
+        }),
+      }
+    );
+
+    if (!messageResponse.ok) {
+      return null;
+    }
+
+    return true;
+  } catch (error) {
+    return null;
+  }
+}
