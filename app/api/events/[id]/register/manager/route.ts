@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import prisma from "@/prisma/db";
-import { getMember } from "@/lib/discord";
-import { checkIsManager } from "@/lib/discord";
+import { getMember, giveEventRole, takeEventRole, checkIsManager } from "@/lib/discord";
 import { createEventLog } from "@/lib/event-logger";
 import { EventLogType , EventLogTarget } from "@prisma/client";
 
@@ -203,6 +202,19 @@ export async function POST(
       data: teamMembersData,
     });
 
+    // Assign the event role to all team members
+    if (event.role_id) {
+      await Promise.all(
+        teamMembers.map(async (memberId: string) => {
+          await giveEventRole(
+            event.guild_id!.toString(),
+            memberId,
+            event.role_id!.toString()
+          );
+        })
+      );
+    }
+
     // Return the complete registration with users
     const completeRegistration = await prisma.registrations.findUnique({
       where: { id: registration.id },
@@ -377,6 +389,15 @@ export async function PUT(
         data: userData,
       });
 
+      // Assign Discord role if applicable
+      if (event.role_id) {
+        await giveEventRole(
+          event.guild_id.toString(),
+          userData.user_id.toString(),
+          event.role_id.toString()
+        );
+      }
+
       // Get the updated registration
       const updatedRegistration = await prisma.registrations.findUnique({
         where: { id: registration.id },
@@ -428,6 +449,19 @@ export async function PUT(
           },
         });
 
+        if(event.role_id) {
+          // Remove the role from all users in the registration
+          await Promise.all(
+            registration.registrationusers.map(async (user) => {
+              await takeEventRole(
+                event.guild_id!.toString(),
+                user.user_id.toString(),
+                event.role_id!.toString()
+              );
+            })
+          );
+        }
+
         await createEventLog({
           event_id: BigInt(id),
           log_type: EventLogType.DELETE,
@@ -455,6 +489,15 @@ export async function PUT(
           },
         },
       });
+
+      // Remove Discord role from the user if applicable
+      if (event.role_id) {
+        await takeEventRole(
+          event.guild_id.toString(),
+          user_id,
+          event.role_id.toString()
+        );
+      }
 
       // Get the updated registration
       const updatedRegistration = await prisma.registrations.findUnique({
@@ -587,6 +630,22 @@ export async function PUT(
         },
       });
 
+      if (event.role_id) {
+        // Remove the role from the user being replaced
+        await takeEventRole(
+          event.guild_id.toString(),
+          replace_id,
+          event.role_id.toString()
+        );
+
+        // Assign the role to the new user
+        await giveEventRole(
+          event.guild_id.toString(),
+          user_id,
+          event.role_id.toString()
+        );
+      }
+
       return NextResponse.json(
         {
           message: "User replaced successfully",
@@ -682,6 +741,19 @@ export async function DELETE(
         id: BigInt(registration_id),
       },
     });
+
+    if (event.role_id) {
+      // Remove the role from all users in the registration
+      await Promise.all(
+        registration.registrationusers.map(async (user) => {
+          await takeEventRole(
+            event.guild_id!.toString(),
+            user.user_id.toString(),
+            event.role_id!.toString()
+          );
+        })
+      );
+    }
 
     await createEventLog({
       event_id: BigInt(id),
