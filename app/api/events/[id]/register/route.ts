@@ -18,7 +18,7 @@ export async function POST(
     const session = await auth();
     const { id } = await params;
     const body = await request.json();
-    const { teamName, teamMembers } = body;
+    const { teamName, teamMembers, questionResponses } = body;
 
     // Check if user is authenticated
     if (!session || !session.user) {
@@ -82,6 +82,8 @@ export async function POST(
         data: {
           event_id: BigInt(id),
           team_name: teamName || `${session.user.name}'s Team`,
+          // Store custom question responses if provided
+          extra: questionResponses ? JSON.stringify(questionResponses) : undefined,
           registrationusers: {
             create: {
               user_id: userId,
@@ -229,6 +231,8 @@ export async function POST(
       data: {
         event_id: BigInt(id),
         team_name: teamName,
+        // Store custom question responses if provided
+        extra: questionResponses ? JSON.stringify(questionResponses) : undefined,
         registrationusers: {
           create: [
             // Register the current user

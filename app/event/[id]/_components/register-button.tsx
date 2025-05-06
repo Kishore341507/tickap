@@ -37,6 +37,7 @@ import {
     AlertDialogAction
 } from "@/components/ui/alert-dialog";
 import { Card, CardContent } from "@/components/ui/card";
+import { Textarea } from "@/components/ui/textarea";
 import { Member , RegistrationUser , Registration} from "@/types";
 
 interface RegisterButtonProps {
@@ -50,6 +51,21 @@ interface RegisterButtonProps {
     guildId: bigint | null;
     session: boolean;
     userRegistration: Registration | null | undefined;
+    eventExtra?: any; // Added prop for custom questions
+}
+
+// Type for custom question
+interface CustomQuestion {
+    question: string;
+    placeholder: string;
+    default: string;
+    type: 1 | 2; // 1 for short, 2 for long
+    required: boolean;
+}
+
+// Type for custom question response
+interface CustomQuestionResponse {
+    [key: string]: string;
 }
 
 export function RegisterButton({
@@ -63,9 +79,11 @@ export function RegisterButton({
     guildId,
     session,
     userRegistration,
+    eventExtra
 }: RegisterButtonProps) {
     const [isLoading, setIsLoading] = useState(false);
     const [isTeamDialogOpen, setIsTeamDialogOpen] = useState(false);
+    const [isQuestionsDialogOpen, setIsQuestionsDialogOpen] = useState(false);
     const [isUnregisterDialogOpen, setIsUnregisterDialogOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
     const [searchResults, setSearchResults] = useState<Member[]>([]);
@@ -73,10 +91,47 @@ export function RegisterButton({
     const [isSearching, setIsSearching] = useState(false);
     const [teamName, setTeamName] = useState("");
     const [teamNameError, setTeamNameError] = useState("");
+    const [customQuestions, setCustomQuestions] = useState<CustomQuestion[]>([]);
+    const [customResponses, setCustomResponses] = useState<CustomQuestionResponse>({});
+    const [customQuestionsError, setCustomQuestionsError] = useState<{[key: string]: string}>({});
     const router = useRouter();
     const { toast } = useToast();
 
     const { data: sessionData } = useSession();
+
+    // Parse custom questions from eventExtra on component mount
+    useEffect(() => {
+        if (eventExtra) {
+            try {
+                const parsedExtra = typeof eventExtra === 'string' 
+                    ? JSON.parse(eventExtra) 
+                    : eventExtra;
+                
+                const questionsList: CustomQuestion[] = [];
+                
+                // Convert from object format to array format for the UI
+                Object.entries(parsedExtra).forEach(([question, details]: [string, any]) => {
+                    questionsList.push({
+                        question,
+                        placeholder: details.placeholder || '',
+                        default: details.default || '',
+                        type: details.type || 1,
+                        required: details.required || false
+                    });
+                    
+                    // Initialize responses with default values
+                    setCustomResponses(prev => ({
+                        ...prev,
+                        [question]: details.default || ''
+                    }));
+                });
+                
+                setCustomQuestions(questionsList);
+            } catch (error) {
+                console.error('Error parsing custom questions:', error);
+            }
+        }
+    }, [eventExtra]);
 
     // Debounce search query
     useEffect(() => {
@@ -160,23 +215,30 @@ export function RegisterButton({
             return;
         }
 
+        // For solo events, if there are custom questions, show the questions dialog
+        if (customQuestions.length > 0) {
+            setIsQuestionsDialogOpen(true);
+            return;
+        }
+
+        // Otherwise, proceed with direct registration
         try {
             setIsLoading(true);
-            // Uncomment and modify this code when API is ready:
             const response = await fetch(`/api/events/${eventId}/register`, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
                 body: JSON.stringify({ 
                     teamName: null,
-                    teamMembers: null 
+                    teamMembers: null,
+                    questionResponses: undefined
                 }),
             });
             
             if (!response.ok) {
-              const error = await response.json();
-              throw new Error(error.message || "Failed to register for event");
+                const error = await response.json();
+                throw new Error(error.message || "Failed to register for event");
             }
 
             toast({
@@ -250,7 +312,24 @@ export function RegisterButton({
         return true;
     };
 
-    const submitTeamRegistration = async () => {
+    // Validate custom question responses
+    const validateCustomQuestions = () => {
+        const errors: {[key: string]: string} = {};
+        let hasError = false;
+        
+        customQuestions.forEach(question => {
+            if (question.required && (!customResponses[question.question] || customResponses[question.question].trim() === '')) {
+                errors[question.question] = 'This question is required';
+                hasError = true;
+            }
+        });
+        
+        setCustomQuestionsError(errors);
+        return !hasError;
+    };
+
+    // Handle team information submission - now a separate step before questions
+    const handleTeamSubmit = () => {
         if (!validateTeamName()) {
             return;
         }
@@ -264,41 +343,83 @@ export function RegisterButton({
             return;
         }
 
+        // If there are custom questions, proceed to the questions dialog
+        if (customQuestions.length > 0) {
+            setIsTeamDialogOpen(false);
+            setIsQuestionsDialogOpen(true);
+        } else {
+            // Otherwise submit the team registration
+            submitRegistration();
+        }
+    };
+
+    // Submit registration with team info and questions (if any)
+    const submitRegistration = async () => {
+        // Validate custom questions if they exist
+        if (customQuestions.length > 0 && !validateCustomQuestions()) {
+            toast({
+                title: "Missing required information",
+                description: "Please answer all required questions",
+                variant: "destructive",
+            });
+            return;
+        }
+
         try {
             setIsLoading(true);
-            // Uncomment and modify this code when API is ready:
             const response = await fetch(`/api/events/${eventId}/register`, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({ 
-                teamName: teamName,
-                teamMembers: selectedMembers.map(member => member.user.id),
-              }),
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ 
+                    teamName: isSolo ? null : teamName,
+                    teamMembers: isSolo ? null : selectedMembers.map(member => member.user.id),
+                    questionResponses: customQuestions.length > 0 ? customResponses : undefined
+                }),
             });
             
             if (!response.ok) {
-              const error = await response.json();
-              throw new Error(error.message || "Failed to register for event");
+                const error = await response.json();
+                throw new Error(error.message || "Failed to register for event");
             }
 
             toast({
-                title: "Team registration successful",
-                description: `Team "${teamName}" with you and ${selectedMembers.length} teammates have been registered for this event!`,
+                title: isSolo ? "Registration successful" : "Team registration successful",
+                description: isSolo 
+                    ? "You have successfully registered for this event!" 
+                    : `Team "${teamName}" with you and ${selectedMembers.length} teammates have been registered for this event!`,
                 variant: "success",
             });
 
             setIsTeamDialogOpen(false);
+            setIsQuestionsDialogOpen(false);
             router.refresh();
         } catch (error: any) {
             toast({
-                title: "Team registration failed",
+                title: isSolo ? "Registration failed" : "Team registration failed",
                 description: error.message || "Something went wrong. Please try again.",
                 variant: "destructive",
             });
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    // Handle input change for custom questions
+    const handleQuestionChange = (question: string, value: string) => {
+        setCustomResponses(prev => ({
+            ...prev,
+            [question]: value
+        }));
+        
+        // Clear error when user types
+        if (customQuestionsError[question]) {
+            setCustomQuestionsError(prev => {
+                const newErrors = {...prev};
+                delete newErrors[question];
+                return newErrors;
+            });
         }
     };
 
@@ -411,6 +532,7 @@ export function RegisterButton({
                 {buttonText}
             </Button>
 
+            {/* Team Selection Dialog */}
             <Dialog open={isTeamDialogOpen} onOpenChange={setIsTeamDialogOpen}>
                 <DialogContent className="sm:max-w-md">
                     <DialogHeader>
@@ -470,7 +592,6 @@ export function RegisterButton({
                                                     </Avatar>
 
                                                     <CommandItem
-                                                        // onSelect={() => toggleMemberSelection(member)}
                                                         className="cursor-pointer data-[selected='true']:bg-black"
                                                     >
                                                         {member.user.username}
@@ -518,8 +639,73 @@ export function RegisterButton({
                         </Button>
                         <Button
                             type="button"
-                            onClick={submitTeamRegistration}
+                            onClick={handleTeamSubmit}
                             disabled={isLoading || !!(minTeamPlayer && selectedMembers.length < minTeamPlayer - 1)}
+                        >
+                            {customQuestions.length > 0 ? "Next" : "Register Team"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+            
+            {/* Custom Questions Dialog */}
+            <Dialog open={isQuestionsDialogOpen} onOpenChange={setIsQuestionsDialogOpen}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Additional Information</DialogTitle>
+                        <DialogDescription>
+                            Please provide the following information to complete your registration.
+                        </DialogDescription>
+                    </DialogHeader>
+                    
+                    <div className="space-y-4 py-2">
+                        {customQuestions.map((question, index) => (
+                            <div key={index} className="space-y-2">
+                                <Label className="text-sm font-medium flex items-center">
+                                    {question.question} 
+                                    {question.required && <span className="text-red-500 ml-1">*</span>}
+                                </Label>
+                                {question.type === 1 ? (
+                                    <Input 
+                                        placeholder={question.placeholder} 
+                                        value={customResponses[question.question] || ''}
+                                        onChange={(e) => handleQuestionChange(question.question, e.target.value)}
+                                        className={customQuestionsError[question.question] ? "border-red-500" : ""}
+                                    />
+                                ) : (
+                                    <Textarea
+                                        placeholder={question.placeholder}
+                                        value={customResponses[question.question] || ''}
+                                        onChange={(e) => handleQuestionChange(question.question, e.target.value)}
+                                        className={customQuestionsError[question.question] ? "border-red-500" : ""}
+                                        rows={3}
+                                    />
+                                )}
+                                {customQuestionsError[question.question] && (
+                                    <p className="text-xs text-red-500">{customQuestionsError[question.question]}</p>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                    
+                    <DialogFooter>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => {
+                                setIsQuestionsDialogOpen(false);
+                                // If coming from team selection, go back to team dialog
+                                if (!isSolo) {
+                                    setIsTeamDialogOpen(true);
+                                }
+                            }}
+                        >
+                            {isSolo ? "Cancel" : "Back"}
+                        </Button>
+                        <Button
+                            type="button"
+                            onClick={submitRegistration}
+                            disabled={isLoading}
                         >
                             {isLoading ? (
                                 <>
@@ -527,12 +713,36 @@ export function RegisterButton({
                                     Registering...
                                 </>
                             ) : (
-                                "Register Team"
+                                "Register"
                             )}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+            
+            {/* Unregister Dialog - kept unchanged */}
+            <AlertDialog open={isUnregisterDialogOpen} onOpenChange={setIsUnregisterDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            {isSolo 
+                                ? "This will remove your registration from this event." 
+                                : userRegistration?.registrationusers.length! <= (minTeamPlayer || 1)
+                                    ? "This will remove you and your entire team from this event."
+                                    : "This will remove you from this team."
+                            }
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel disabled={isLoading}>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleUnregister} disabled={isLoading}>
+                            {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                            Confirm
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </>
     );
 }

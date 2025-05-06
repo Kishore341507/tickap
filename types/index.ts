@@ -49,6 +49,7 @@ export interface Registration {
   event_id: bigint;
   team_name: string | null;
   registrationusers: RegistrationUser[];
+  extra?: string | any; // Added to support custom responses
 }
 
 /**

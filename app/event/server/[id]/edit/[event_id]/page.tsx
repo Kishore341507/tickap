@@ -26,7 +26,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Loader2, Check, ChevronsUpDown } from "lucide-react";
+import { CalendarIcon, Loader2, Check, ChevronsUpDown, Plus, Trash, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -72,6 +72,15 @@ const eventFormSchema = z.object({
 // Type for our form values
 type EventFormValues = z.infer<typeof eventFormSchema>;
 
+// Type for custom questions
+type CustomQuestion = {
+  question: string;
+  placeholder: string;
+  default: string;
+  type: 1 | 2; // 1 for short, 2 for long
+  required: boolean;
+};
+
 export default function EditEvent() {
   const params = useParams();
   const router = useRouter();
@@ -88,6 +97,7 @@ export default function EditEvent() {
   const [channelOpen, setChannelOpen] = useState(false);
   const [eventData, setEventData] = useState<any>(null);
   const [needsBannerUpload, setNeedsBannerUpload] = useState(false);
+  const [customQuestions, setCustomQuestions] = useState<CustomQuestion[]>([]);
 
   // Use form with default values
   const form = useForm<EventFormValues>({
@@ -135,6 +145,34 @@ export default function EditEvent() {
         if (data.event.start_time) {
           const timeStr = data.event.start_time.toString().padStart(4, '0');
           startTimeFormatted = `${timeStr.slice(0, 2)}:${timeStr.slice(2, 4)}`;
+        }
+
+        // Load custom questions from extra field if they exist
+        if (data.event.extra) {
+          try {
+            const extraData = typeof data.event.extra === 'string' 
+              ? JSON.parse(data.event.extra) 
+              : data.event.extra;
+            
+            const loadedQuestions: CustomQuestion[] = [];
+            
+            // Convert from object format to array format for the UI
+            Object.entries(extraData).forEach(([question, details]: [string, any]) => {
+              if (loadedQuestions.length < 5) {
+                loadedQuestions.push({
+                  question,
+                  placeholder: details.placeholder || '',
+                  default: details.default || '',
+                  type: details.type || 1,
+                  required: details.required || false
+                });
+              }
+            });
+            
+            setCustomQuestions(loadedQuestions);
+          } catch (error) {
+            console.error('Error parsing custom questions:', error);
+          }
         }
 
         // Set form values
@@ -282,6 +320,37 @@ export default function EditEvent() {
           formData.append(key, String(value));
         }
       });
+
+      // Add custom questions to the extra field if any exist
+      if (customQuestions.length > 0) {
+        // Validate that all questions have text
+        const invalidQuestions = customQuestions.filter(q => !q.question.trim());
+        if (invalidQuestions.length > 0) {
+          toast({
+            title: "Invalid Questions",
+            description: "All questions must have question text",
+            variant: "destructive",
+          });
+          setIsSubmitting(false);
+          return;
+        }
+        
+        // Create a formatted object to save as extra JSON
+        const formattedQuestions = customQuestions.reduce((acc, question, index) => {
+          acc[question.question.trim()] = {
+            placeholder: question.placeholder,
+            default: question.default,
+            type: question.type,
+            required: question.required
+          };
+          return acc;
+        }, {} as Record<string, any>);
+        
+        formData.append("extra", JSON.stringify(formattedQuestions));
+      } else {
+        // If all questions were removed, set extra to an empty object
+        formData.append("extra", JSON.stringify({}));
+      }
 
       // Add guild_id from params
       formData.append("guild_id", String(params.id));
@@ -951,6 +1020,158 @@ export default function EditEvent() {
           </div>
         </form>
       </Form>
+
+      {/* Custom Questions Section */}
+      <div className="mt-8 border-t pt-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold">Custom Registration Questions</h2>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              if (customQuestions.length >= 5) {
+                toast({
+                  title: "Limit Reached",
+                  description: "You can add a maximum of 5 custom questions.",
+                  variant: "destructive",
+                });
+                return;
+              }
+              setCustomQuestions([
+                ...customQuestions,
+                {
+                  question: "",
+                  placeholder: "",
+                  default: "",
+                  type: 1,
+                  required: false
+                }
+              ]);
+            }}
+            disabled={customQuestions.length >= 5}
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Add Question
+          </Button>
+        </div>
+
+        <div className="space-y-4">
+          {customQuestions.length === 0 ? (
+            <div className="flex flex-col items-center justify-center border border-dashed rounded-md py-8 px-4">
+              <AlertCircle className="h-10 w-10 text-muted-foreground mb-2" />
+              <p className="text-muted-foreground text-center">
+                No custom questions added yet. Add up to 5 questions that participants will need to answer during registration.
+              </p>
+            </div>
+          ) : (
+            customQuestions.map((question, index) => (
+              <div key={index} className="border rounded-md p-4 relative">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="absolute top-2 right-2"
+                  onClick={() => {
+                    const newQuestions = [...customQuestions];
+                    newQuestions.splice(index, 1);
+                    setCustomQuestions(newQuestions);
+                  }}
+                >
+                  <Trash className="h-4 w-4" />
+                </Button>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label className="text-sm font-medium">
+                      Question Text <span className="text-red-500">*</span>
+                    </label>
+                    <Input
+                      value={question.question}
+                      placeholder="Enter question (max 45 chars)"
+                      maxLength={45}
+                      onChange={(e) => {
+                        const newQuestions = [...customQuestions];
+                        newQuestions[index].question = e.target.value;
+                        setCustomQuestions(newQuestions);
+                      }}
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {question.question.length}/45 characters
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Placeholder Text</label>
+                    <Input
+                      value={question.placeholder}
+                      placeholder="Enter placeholder (max 100 chars)"
+                      maxLength={100}
+                      onChange={(e) => {
+                        const newQuestions = [...customQuestions];
+                        newQuestions[index].placeholder = e.target.value;
+                        setCustomQuestions(newQuestions);
+                      }}
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {question.placeholder.length}/100 characters
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label className="text-sm font-medium">Default Value</label>
+                    <Textarea
+                      value={question.default}
+                      placeholder="Enter default value (max 4000 chars)"
+                      maxLength={4000}
+                      rows={2}
+                      onChange={(e) => {
+                        const newQuestions = [...customQuestions];
+                        newQuestions[index].default = e.target.value;
+                        setCustomQuestions(newQuestions);
+                      }}
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {question.default.length}/4000 characters
+                    </p>
+                  </div>
+                  <div className="flex flex-col justify-between">
+                    <div>
+                      <label className="text-sm font-medium">Question Type</label>
+                      <Select
+                        value={String(question.type)}
+                        onValueChange={(value) => {
+                          const newQuestions = [...customQuestions];
+                          newQuestions[index].type = parseInt(value) as 1 | 2;
+                          setCustomQuestions(newQuestions);
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select question type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1">Short Answer</SelectItem>
+                          <SelectItem value="2">Long Answer</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex items-center space-x-2 mt-4">
+                      <Switch
+                        checked={question.required}
+                        onCheckedChange={(checked) => {
+                          const newQuestions = [...customQuestions];
+                          newQuestions[index].required = checked;
+                          setCustomQuestions(newQuestions);
+                        }}
+                      />
+                      <label className="text-sm font-medium">Required question</label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
     </div>
   );
 }

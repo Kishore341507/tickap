@@ -188,6 +188,7 @@ export default async function EventDetailPage({ params, }: { params: Promise<{ i
                     guildId={event.guild_id}
                     session={!!session}
                     userRegistration={userRegistration}
+                    eventExtra={event.extra}
                   />
                 </div>
               </CardContent>
@@ -332,6 +333,7 @@ export default async function EventDetailPage({ params, }: { params: Promise<{ i
                     guildId={event.guild_id}
                     session={!!session}
                     userRegistration={userRegistration}
+                    eventExtra={event.extra}
                   />
                 </div>
               </CardContent>
