@@ -10,8 +10,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { UserPlus, UserMinus, UserX, Trash2, RefreshCw } from "lucide-react";
+import { UserPlus, UserMinus, UserX, Trash2, RefreshCw, ListFilter } from "lucide-react";
 import { RegistrationUser , Registration } from "@/types";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 
 interface RegistrationsListProps {
   registrations: Registration[];
@@ -65,9 +67,8 @@ export function RegistrationsList({
                 </Button>
               </div>
               <AccordionContent>
-                <div className="">
+                <div className="space-y-4">
                   <div className="flex justify-between items-center mb-4">
-                    {/* <h4 className="text-sm font-medium">Team Members ({registration.registrationusers.length})</h4> */}
                     <h4 className="text-sm font-medium"></h4>
                     {!isSolo && (
                       <Button
@@ -81,6 +82,7 @@ export function RegistrationsList({
                     )}
                   </div>
 
+                  {/* Team Members Section */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {registration.registrationusers.map((user) => (
                       <div
@@ -127,6 +129,54 @@ export function RegistrationsList({
                       </div>
                     ))}
                   </div>
+
+                  {/* Custom Responses Section */}
+                  {registration.extra && (
+                    <div className="mt-6">
+                      <Card className="border-dashed">
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-md flex items-center">
+                            <ListFilter className="h-4 w-4 mr-2" />
+                            Custom Responses
+                          </CardTitle>
+                          <CardDescription>
+                            Additional information provided during registration
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-3">
+                            {(() => {
+                              try {
+                                const extraData = typeof registration.extra === 'string'
+                                  ? JSON.parse(registration.extra)
+                                  : registration.extra;
+                                
+                                return Object.entries(extraData).map(([question, answerObj], index) => {
+                                  const answer = typeof answerObj === 'string' 
+                                    ? answerObj 
+                                    : (answerObj as any)?.toString() || "No response";
+                                    
+                                  return (
+                                    <div key={index} className="space-y-1">
+                                      <h4 className="text-sm font-medium">{question}</h4>
+                                      <p className="text-sm text-muted-foreground bg-secondary/30 p-2 rounded-md whitespace-pre-wrap">
+                                        {answer}
+                                      </p>
+                                      {index < Object.entries(extraData).length - 1 && (
+                                        <Separator className="my-2" />
+                                      )}
+                                    </div>
+                                  );
+                                });
+                              } catch (e) {
+                                return <p className="text-sm text-muted-foreground">Unable to display custom responses</p>;
+                              }
+                            })()}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  )}
                 </div>
               </AccordionContent>
             </AccordionItem>
