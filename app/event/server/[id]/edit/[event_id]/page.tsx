@@ -158,7 +158,7 @@ export default function EditEvent() {
             
             // Convert from object format to array format for the UI
             Object.entries(extraData).forEach(([question, details]: [string, any]) => {
-              if (loadedQuestions.length < 5) {
+              if (loadedQuestions.length < 4) {
                 loadedQuestions.push({
                   question,
                   placeholder: details.placeholder || '',
@@ -1029,10 +1029,10 @@ export default function EditEvent() {
             type="button"
             variant="outline"
             onClick={() => {
-              if (customQuestions.length >= 5) {
+              if (customQuestions.length >= 4) {
                 toast({
                   title: "Limit Reached",
-                  description: "You can add a maximum of 5 custom questions.",
+                  description: "You can add a maximum of 4 custom questions.",
                   variant: "destructive",
                 });
                 return;
@@ -1048,7 +1048,7 @@ export default function EditEvent() {
                 }
               ]);
             }}
-            disabled={customQuestions.length >= 5}
+            disabled={customQuestions.length >= 4}
           >
             <Plus className="mr-2 h-4 w-4" />
             Add Question
@@ -1060,7 +1060,7 @@ export default function EditEvent() {
             <div className="flex flex-col items-center justify-center border border-dashed rounded-md py-8 px-4">
               <AlertCircle className="h-10 w-10 text-muted-foreground mb-2" />
               <p className="text-muted-foreground text-center">
-                No custom questions added yet. Add up to 5 questions that participants will need to answer during registration.
+                No custom questions added yet. Add up to 4 questions that participants will need to answer during registration.
               </p>
             </div>
           ) : (
