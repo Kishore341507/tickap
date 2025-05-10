@@ -6,6 +6,8 @@ import {
   giveEventRole,
   sendDMMessage,
   takeEventRole,
+  addMemberToGuild,
+  fetchMember,
 } from "@/lib/discord";
 import { createEventLog } from "@/lib/event-logger";
 import { EventLogType, EventLogTarget } from "@prisma/client";
@@ -41,6 +43,14 @@ export async function POST(
         },
       },
     });
+    
+    // Check and add current user to guild if they're not already a member
+    if (event?.guild_id) {
+      const currentMember = await getMember(event.guild_id.toString(), userId.toString());
+      if (!currentMember) {
+        await addMemberToGuild(event.guild_id.toString(), userId.toString());
+      }
+    }
 
     // Check if event exists
     if (!event) {
@@ -186,17 +196,29 @@ export async function POST(
         { message: "Event is not associated with a Discord server" },
         { status: 400 }
       );
-    }
-
-    // Fetch Discord information for all team members
+    }    // Fetch Discord information for all team members
     const teamMembersData = await Promise.all(
       teamMembers.map(async (memberId: string) => {
-        const memberData = await getMember(
+        let memberData = await getMember(
           event.guild_id!.toString(),
           memberId
         );
 
-        // If member data couldn't be fetched, use basic information
+        // If member data couldn't be fetched, try to add the member to the guild
+        if (!memberData) {
+          console.log(`User ${memberId} not found in guild. Attempting to add...`);
+          await addMemberToGuild(
+            event.guild_id!.toString(),
+            memberId
+          );
+          // Try to fetch member data again after adding
+          memberData = await fetchMember(
+            event.guild_id!.toString(),
+            memberId
+          );
+        }
+
+        // If still no member data, use basic information
         if (!memberData) {
           return {
             user_id: BigInt(memberId),
