@@ -136,7 +136,7 @@ export default async function EventTopNav({
 
               <DropdownMenuItem>
                 <LifeBuoy className="mr-2 h-4 w-4" />
-                <Link href="https://discord.gg/JEZW33uSNU" target="_blank" >Support</Link>
+                <Link href="https://discord.gg/pkVxQU2ae9" target="_blank" >Support</Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
 
