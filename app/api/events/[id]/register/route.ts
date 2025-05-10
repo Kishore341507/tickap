@@ -7,6 +7,7 @@ import {
   sendDMMessage,
   takeEventRole,
   addMemberToGuild,
+  fetchMember,
 } from "@/lib/discord";
 import { createEventLog } from "@/lib/event-logger";
 import { EventLogType, EventLogTarget } from "@prisma/client";
@@ -25,7 +26,7 @@ export async function POST(
     if (!session || !session.user) {
       return NextResponse.json({ message: "Not authorized" }, { status: 401 });
     }
-        
+
     const userId = BigInt(session!.user!.userId!);
     // Get the event by ID
     const event = await prisma.events.findUnique({
@@ -211,7 +212,7 @@ export async function POST(
             memberId
           );
           // Try to fetch member data again after adding
-          memberData = await getMember(
+          memberData = await fetchMember(
             event.guild_id!.toString(),
             memberId
           );

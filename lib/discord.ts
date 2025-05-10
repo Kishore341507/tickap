@@ -64,6 +64,24 @@ export async function getMember(guildId: string, userId: string) {
   return await memberResponse.json();
 }
 
+export async function fetchMember(guildId: string, userId: string) {
+  const memberResponse = await fetch(
+    `${env.DISCORD_API_URL}/guilds/${guildId}/members/${userId}`,
+    {
+      headers: {
+        Authorization: `Bot ${env.DISCORD_BOT_TOKEN}`,
+      },
+      cache: "no-store",
+    }
+  );
+
+  if (!memberResponse.ok) {
+    return null;
+  }
+
+  return await memberResponse.json();
+}
+
 export async function getGuildChannels(guildId: string) {
   const channelsResponse = await fetch(
     `${env.DISCORD_API_URL}/guilds/${guildId}/channels`,
@@ -295,7 +313,6 @@ export async function addMemberToGuild(
       console.error("Failed to add member to guild:", await response.text());
       return null;
     }
-
     return await response.json();
   } catch (error) {
     console.error("Error adding member to guild:", error);
