@@ -19,7 +19,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         Discord({
             clientId: process.env.DISCORD_CLIENT_ID,
             clientSecret: process.env.DISCORD_CLIENT_SECRET,
-            authorization: "https://discord.com/oauth2/authorize?scope=identify%20guilds%20email&response_type=code&prompt=consent",
+            authorization: "https://discord.com/oauth2/authorize?scope=identify%20guilds%20email%20guilds.join&response_type=code&prompt=consent",
         })
     ],
     callbacks: {
