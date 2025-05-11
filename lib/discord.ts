@@ -1,4 +1,4 @@
-import { env, title } from "process";
+import { env } from "process";
 import prisma from "@/prisma/db";
 import { Registration, RegistrationUser } from "@/types";
 
@@ -418,7 +418,8 @@ export async function sendLogMessage(
           return `<@${user.user_id}> | ${user.user_id}`;
         })
         .join("\n");
-      embed.description = `${users}`;      let extra_input = "";
+      embed.description = `${users}`;
+      let extra_input = "";
       if (data.extra) {
         const parsedExtra = JSON.parse(data.extra);
         if (typeof parsedExtra === "object" && parsedExtra !== null) {
