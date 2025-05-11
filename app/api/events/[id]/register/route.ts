@@ -8,6 +8,7 @@ import {
   takeEventRole,
   addMemberToGuild,
   fetchMember,
+  sendLogMessage,
 } from "@/lib/discord";
 import { createEventLog } from "@/lib/event-logger";
 import { EventLogType, EventLogTarget } from "@prisma/client";
@@ -103,6 +104,9 @@ export async function POST(
             },
           },
         },
+        include: {
+          registrationusers: true,
+        },
       });
 
       // Log the registration event
@@ -124,6 +128,15 @@ export async function POST(
         );
       }
 
+      if(event.channel_id) {
+        await sendLogMessage(
+          session.user.name!,
+          event.id.toString(),
+          event.guild_id!.toString(),
+          event.channel_id!.toString(),
+          'Registration',
+          registration )
+      }
 
       return NextResponse.json(
         { message: "Registration successful" },
@@ -269,6 +282,9 @@ export async function POST(
           ],
         },
       },
+      include: {
+        registrationusers: true,
+      },
     });
 
     // Assign the event role to all team members
@@ -317,6 +333,16 @@ export async function POST(
       },
       registration_id: registration.id,
     });
+
+    if(event.channel_id) {
+      await sendLogMessage(
+        session.user.name!,
+        event.id.toString(),
+        event.guild_id!.toString(),
+        event.channel_id!.toString(),
+        'Registration',
+        registration )
+    }
 
     return NextResponse.json(
       { message: "Team registration successful" },
@@ -406,6 +432,16 @@ export async function DELETE(
         registration_id: registration.id,
       });
 
+      if(event.channel_id) {
+        await sendLogMessage(
+          session.user.name!,
+          event.id.toString(),
+          event.guild_id!.toString(),
+          event.channel_id!.toString(),
+          'Unregistration',
+          registration )
+      }
+
       return NextResponse.json(
         { message: "Successfully unregistered from the event" },
         { status: 200 }
@@ -452,10 +488,20 @@ export async function DELETE(
         log_type: EventLogType.DELETE,
         log_target: EventLogTarget.REGISTRATION,
         old_data: {
-          ...registration,
+          ...deletedRegistration,
         },
         registration_id: registration.id,
       });
+
+      if(event.channel_id) {
+        await sendLogMessage(
+          session.user.name!,
+          event.id.toString(),
+          event.guild_id!.toString(),
+          event.channel_id!.toString(),
+          'Unregistration',
+          deletedRegistration )
+      }
 
       return NextResponse.json(
         { message: "Your team has been removed from the event" },
@@ -465,14 +511,24 @@ export async function DELETE(
 
     // Otherwise, just remove this user from the team
     else {
-      await prisma.registrationusers.delete({
-        where: {
-          user_id_registration_id: {
-            user_id: userId,
-            registration_id: registration.id,
+      const removedUser = await prisma.registrationusers.delete({
+          where: {
+            user_id_registration_id: {
+              user_id: userId,
+              registration_id: registration.id,
+            },
           },
+        });
+
+      const UpdatedRegistration = await prisma.registrations.findUnique({
+        where: {
+          id: registration.id,
+        },
+        include: {
+          registrationusers: true,
         },
       });
+
 
       if (event.role_id) {
         await takeEventRole(
@@ -487,11 +543,21 @@ export async function DELETE(
         log_type: EventLogType.UPDATE,
         log_target: EventLogTarget.REGISTRATION,
         old_data: {
-          ...registration,
+          ...removedUser
         },
         new_data: { data: "one user unregistered" },
         registration_id: registration.id,
       });
+
+      if(event.channel_id) {
+        await sendLogMessage(
+          session.user.name!,
+          event.id.toString(),
+          event.guild_id!.toString(),
+          event.channel_id!.toString(),
+          'Registration Update',
+          UpdatedRegistration! )
+      }
 
       return NextResponse.json(
         { message: "You have been removed from the team" },

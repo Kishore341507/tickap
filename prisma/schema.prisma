@@ -61,7 +61,8 @@ model events {
   registrations     registrations[]
   registrationusers registrationusers[]
 
-  // @@map("event")
+  is_deleted       Boolean?           @default(false)
+  is_verified     Boolean?           @default(false)
 
 }
 

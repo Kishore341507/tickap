@@ -6,13 +6,13 @@ export default async function Events() {
 
   const Events = await prisma.events.findMany({});
   const liveEvents = await prisma.events.findMany({
-    where: { status: "Live" },
+    where: { status: "Live" ,  is_verified: true , is_deleted: false }
   });
   const closedEvents = await prisma.events.findMany({
-    where: { status: "Closed" },
+    where: { status: "Closed" , is_verified: true , is_deleted: false }
   });
   const upcomingEvents = await prisma.events.findMany({
-    where: { AND: [{ status: "Open" }, { date: { gt: new Date() } }] },
+    where: { AND: [{ status: "Open" }, { date: { gt: new Date() } } , { is_verified: true , is_deleted: false }] }
   });
 
   return (
