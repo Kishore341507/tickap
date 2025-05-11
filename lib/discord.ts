@@ -1,22 +1,17 @@
 import { env } from "process";
-import auth from "next-auth";
 import prisma from "@/prisma/db";
+import { Registration, RegistrationUser } from "@/types";
 
-/**
- * Fetches the Discord OAuth2 access token for a user from the database
- * @param userId The Discord user ID
- * @returns The access token if found, otherwise null
- */
 async function fetchAccessTokenForUser(userId: string): Promise<string | null> {
   try {
     // Find the account in the database where the providerAccountId matches the Discord userId
     const account = await prisma.account.findFirst({
       where: {
         provider: "discord",
-        providerAccountId: userId
-      }
+        providerAccountId: userId,
+      },
     });
-    
+
     return account?.access_token || null;
   } catch (error) {
     console.error("Error fetching access token:", error);
@@ -220,7 +215,15 @@ export async function searchGuildMembers(
     return null;
   }
 
-  return await searchResponse.json();
+  let data = await searchResponse.json();
+  if (data.length > 0) {
+    data = data.filter((member: any) => {
+      console.log(member.user);
+      return member.user.bot != true;
+    });
+  }
+
+  return data;
 }
 
 // export a url (variable)
@@ -241,7 +244,7 @@ export async function giveEventRole(
           Authorization: `Bot ${env.DISCORD_BOT_TOKEN}`,
           "Content-Type": "application/json",
         },
-        cache : "no-store",
+        cache: "no-store",
       }
     );
 
@@ -271,7 +274,7 @@ export async function takeEventRole(
           Authorization: `Bot ${env.DISCORD_BOT_TOKEN}`,
           "Content-Type": "application/json",
         },
-        cache : "no-store",
+        cache: "no-store",
       }
     );
 
@@ -285,14 +288,11 @@ export async function takeEventRole(
   }
 }
 
-export async function addMemberToGuild(
-  guildId: string,
-  userId: string
-) {
+export async function addMemberToGuild(guildId: string, userId: string) {
   try {
     const requestBody: any = {};
     const accessToken = await fetchAccessTokenForUser(userId);
-    
+
     if (accessToken) {
       requestBody.access_token = accessToken;
     }
@@ -305,7 +305,7 @@ export async function addMemberToGuild(
           "Content-Type": "application/json",
         },
         body: JSON.stringify(requestBody),
-        cache : "no-store",
+        cache: "no-store",
       }
     );
 
@@ -371,7 +371,7 @@ export async function sendDMMessage(
             },
           ],
         }),
-        cache : "no-store",
+        cache: "no-store",
       }
     );
 
@@ -381,6 +381,113 @@ export async function sendDMMessage(
 
     return true;
   } catch (error) {
+    return null;
+  }
+}
+
+export async function sendLogMessage(
+  userName: string,
+  eventId: string,
+  guildId: string,
+  channelId: string,
+  type: string,
+  data: Registration
+) {
+  try {
+    let embed = {
+      title: userName,
+      description: "",
+      color: 0x2ecc71,
+      footer: {
+        text: `Event ID: ${eventId}`,
+        icon_url: `https://tickap.com/tickap_dark.png`,
+      },
+      fields: [
+        {
+          name: " ",
+          value: `**[Log](https://tickap.com/event/server/${guildId}/logs/${eventId})** | **[Registration](https://tickap.com/event/server/${guildId}/registrations/${eventId})**`,
+          inline: false,
+        },
+      ],
+    };
+    if (type == "Registration") {
+      embed.title = data.team_name || userName;
+      embed.color = 0x2ecc71;
+      let users = data.registrationusers
+        .map((user: RegistrationUser) => {
+          return `<@${user.user_id}> | ${user.user_id}`;
+        })
+        .join("\n");
+      embed.description = `${users}`;
+      let extra_input = "";
+      if (data.extra) {
+        const parsedExtra = JSON.parse(data.extra);
+        if (typeof parsedExtra === "object" && parsedExtra !== null) {
+          let extraLines = [];
+          for (const key in parsedExtra) {
+            if (parsedExtra[key] && parsedExtra[key] !== "") {
+              extraLines.push(`**${key}**\n${parsedExtra[key]}`);
+            }
+          }
+          extra_input = extraLines.join("\n");
+        }
+
+        embed.fields.push({
+          name: "Extra Input",
+          value: extra_input,
+          inline: false,
+        });
+      }
+    } else if (type == "Unregistration") {
+      embed.title = `Unregistered by ${userName}`;
+      embed.color = 0xe74c3c;
+      embed.description = `Unregistered from ${data.team_name}`;
+      embed.fields.push({
+        name: "Unregistered Users",
+        value: data.registrationusers
+          .map((user: RegistrationUser) => {
+            return `<@${user.user_id}> | ${user.user_id}`;
+          })
+          .join("\n"),
+        inline: false,
+      });
+    } else if (type == "Registration Update") {
+      embed.title = `Updated by ${userName}`;
+      embed.color = 0xf39c12;
+      embed.description = `Updated ${data.team_name}`;
+      embed.fields.push({
+        name: "Updated Users",
+        value: data.registrationusers
+          .map((user: RegistrationUser) => {
+            return `<@${user.user_id}> | ${user.user_id}`;
+          })
+          .join("\n"),
+        inline: false,
+      });
+    }
+
+    const messageResponse = await fetch(
+      `${env.DISCORD_API_URL}/channels/${channelId}/messages`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bot ${env.DISCORD_BOT_TOKEN}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          embeds: [embed],
+        }),
+        cache: "no-store",
+      }
+    );
+
+    if (!messageResponse.ok) {
+      return null;
+    }
+
+    return true;
+  } catch (error) {
+    console.error("Error sending log message:", error);
     return null;
   }
 }
