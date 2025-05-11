@@ -1,4 +1,4 @@
-import { env, title } from "process";
+import { env } from "process";
 import prisma from "@/prisma/db";
 import { Registration, RegistrationUser } from "@/types";
 
