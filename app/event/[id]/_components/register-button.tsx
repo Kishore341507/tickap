@@ -25,7 +25,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useSession } from "next-auth/react";
+import { useSession, signIn } from "next-auth/react";
 import { 
     AlertDialog, 
     AlertDialogContent, 
@@ -291,6 +291,12 @@ export function RegisterButton({
             setIsUnregisterDialogOpen(false);
         }
     };
+    
+    // Handle Discord login
+    const handleLogin = async () => {
+        signIn("discord", { callbackUrl: window.location.href });
+        return Promise.resolve();
+    };
 
     const validateTeamName = () => {
         if (!teamName) {
@@ -420,19 +426,19 @@ export function RegisterButton({
                 delete newErrors[question];
                 return newErrors;
             });
-        }
-    };
-
+        }    };
+    
     // Determine button text based on status
     let buttonText = "Register for Event";
     let buttonVariant: "default" | "secondary" | "destructive" | "outline" = "default";
     let disabled = false;
+    let handleClick = handleRegistration;
 
-    // If not logged in, show login button
+    // If not logged in, show Discord login button 
     if (!session) {
         buttonText = "Login to Register";
         buttonVariant = "outline";
-        disabled = true;
+        handleClick = handleLogin;
     }
     // If loading, show loading state
     else if (isLoading) {
@@ -518,12 +524,10 @@ export function RegisterButton({
                 </AlertDialog>
             </div>
         );
-    }
-
-    return (
+    }    return (
         <>
             <Button
-                onClick={handleRegistration}
+                onClick={handleClick}
                 disabled={disabled}
                 variant={buttonVariant}
                 className="w-full mt-2"
