@@ -220,7 +220,7 @@ export default async function EventDetailPage({ params, }: { params: Promise<{ i
           )}
 
           {/* Registrations Accordion */}
-          {event.registrations.length > 0 && (
+          {event.registrations.length > 0 && isManager && (
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
