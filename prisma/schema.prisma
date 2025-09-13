@@ -200,6 +200,15 @@ enum EventLogTarget {
   REGISTRATION
 }
 
+enum QuestionType {
+  SHORT_TEXT
+  LONG_TEXT
+  SELECT_SINGLE
+  SELECT_MULTI
+  NUMBER
+  CHECKBOX
+}
+
 model EventLog {
   id            String         @id @default(cuid())
   event_id      BigInt
@@ -218,4 +227,54 @@ model EventLog {
   @@index([log_target])
   @@index([created_at])
   @@index([registration_id])
+}
+
+// Forms feature models
+model forms {
+  id              BigInt        @id @default(autoincrement())
+  title           String        @db.VarChar(255)
+  guild_id        BigInt?
+  manager_id      BigInt?
+  created_at      DateTime      @default(now())
+  updated_at      DateTime      @updatedAt
+  is_active       Boolean       @default(true)
+  is_deleted      Boolean       @default(false)
+
+  form_questions  form_questions[]
+  form_responses  form_responses[]
+}
+
+model form_questions {
+  id              BigInt        @id @default(autoincrement())
+  form_id         BigInt
+  question_text   String        @db.VarChar(45)
+  description     String?       @db.VarChar(100)
+  placeholder     String?       @db.VarChar(100)
+  default_value   String?
+  question_type   QuestionType
+  is_required     Boolean       @default(false)
+  question_order  Int
+  select_options  Json?         // For select questions, stores array of options
+  created_at      DateTime      @default(now())
+  updated_at      DateTime      @updatedAt
+
+  forms           forms         @relation(fields: [form_id], references: [id], onDelete: Cascade)
+
+  @@index([form_id])
+  @@index([question_order])
+}
+
+model form_responses {
+  id              BigInt        @id @default(autoincrement())
+  form_id         BigInt
+  user_id         BigInt?
+  user_name       String?       @db.VarChar(255)
+  responses       Json          // Stores question_id -> answer mapping
+  submitted_at    DateTime      @default(now())
+
+  forms           forms         @relation(fields: [form_id], references: [id], onDelete: Cascade)
+
+  @@index([form_id])
+  @@index([user_id])
+  @@index([submitted_at])
 }
