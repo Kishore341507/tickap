@@ -72,7 +72,7 @@ export async function PUT(
     }
 
     // Update form with questions in a transaction
-    const updatedForm = await prisma.$transaction(async (tx) => {
+    const updatedForm = await prisma.$transaction(async (tx: any) => {
       // Update the form
       const form = await tx.forms.update({
         where: { id: BigInt(id) },

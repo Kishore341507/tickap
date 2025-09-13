@@ -31,7 +31,7 @@ export async function POST(
     }
 
     // Validate required questions are answered
-    const requiredQuestions = form.form_questions.filter(q => q.is_required);
+    const requiredQuestions = form.form_questions.filter((q: any) => q.is_required);
     for (const question of requiredQuestions) {
       if (!responses[question.id.toString()] || responses[question.id.toString()].trim() === "") {
         return NextResponse.json({ 

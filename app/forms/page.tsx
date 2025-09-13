@@ -8,8 +8,8 @@ export default async function Forms() {
     where: { is_deleted: false }
   });
   
-  const activeForms = forms.filter(form => form.is_active);
-  const inactiveForms = forms.filter(form => !form.is_active);
+  const activeForms = forms.filter((form: any) => form.is_active);
+  const inactiveForms = forms.filter((form: any) => !form.is_active);
 
   return (
     <>
@@ -23,7 +23,7 @@ export default async function Forms() {
         </TabsList>
         <TabsContent value="Active">
           <div className="grid lg:grid-cols-3 md:grid-cols-2 sm:grid-cols-1 gap-4 ">
-            {activeForms.map((form) => (
+            {activeForms.map((form: any) => (
               <FormCard key={form.id} form={form} />
             ))}
             { activeForms.length == 0 && <div className="col-span-3">No active forms</div> }
@@ -32,7 +32,7 @@ export default async function Forms() {
 
         <TabsContent value="Inactive">
           <div className="grid lg:grid-cols-3 md:grid-cols-2 sm:grid-cols-1 gap-4 ">
-          {inactiveForms.map((form) => (
+          {inactiveForms.map((form: any) => (
               <FormCard key={form.id} form={form} />
             ))}
           </div>

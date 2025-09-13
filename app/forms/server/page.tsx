@@ -35,11 +35,11 @@ export default async function ServerForms() {
     distinct: ['guild_id']
   });
 
-  const guildIds = formsWithGuilds.map(f => f.guild_id?.toString()).filter(Boolean);
+  const guildIds = formsWithGuilds.map((f: any) => f.guild_id?.toString()).filter(Boolean);
   
   // Get guild names for each guild_id
   const guildsWithNames = await Promise.all(
-    guildIds.map(async (guildId) => ({
+    guildIds.map(async (guildId: any) => ({
       id: guildId,
       name: await fetchGuildName(guildId!)
     }))

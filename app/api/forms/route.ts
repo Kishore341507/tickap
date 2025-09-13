@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create form with questions in a transaction
-    const form = await prisma.$transaction(async (tx) => {
+    const form = await prisma.$transaction(async (tx: any) => {
       // Create the form
       const newForm = await tx.forms.create({
         data: {

@@ -36,8 +36,8 @@ export default async function ServerForms(
     }
   });
   
-  const activeForms = forms.filter(form => form.is_active);
-  const inactiveForms = forms.filter(form => !form.is_active);
+  const activeForms = forms.filter((form: any) => form.is_active);
+  const inactiveForms = forms.filter((form: any) => !form.is_active);
 
   // Check if user is manager
   let isManager = false;
@@ -74,7 +74,7 @@ export default async function ServerForms(
         </TabsList>
         <TabsContent value="Active">
           <div className="grid lg:grid-cols-3 md:grid-cols-2 sm:grid-cols-1 gap-4 ">
-            {activeForms.map((form) => (
+            {activeForms.map((form: any) => (
               <FormCard key={form.id} form={form} showManagementButtons={isManager} guildId={id} />
             ))}
             { activeForms.length == 0 && <div className="col-span-3">No active forms</div> }
@@ -83,7 +83,7 @@ export default async function ServerForms(
 
         <TabsContent value="Inactive">
           <div className="grid lg:grid-cols-3 md:grid-cols-2 sm:grid-cols-1 gap-4 ">
-          {inactiveForms.map((form) => (
+          {inactiveForms.map((form: any) => (
               <FormCard key={form.id} form={form} showManagementButtons={isManager} guildId={id} />
             ))}
           </div>
