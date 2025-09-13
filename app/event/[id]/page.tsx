@@ -220,7 +220,7 @@ export default async function EventDetailPage({ params, }: { params: Promise<{ i
           )}
 
           {/* Registrations Accordion */}
-          {event.registrations.length > 0 && isManager && (
+          {event.registrations.length > 0 && (
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -313,13 +313,13 @@ export default async function EventDetailPage({ params, }: { params: Promise<{ i
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {/* <div>
+                  <div>
                     <p className="text-sm text-gray-500">Total Teams Registered</p>
                     <p className="text-2xl font-bold">
                       {event.registrations.length}
                       {event.max_teams && ` / ${event.max_teams}`}
                     </p>
-                  </div> */}
+                  </div>
                   
                   {/* Registration Button */}
                   <RegisterButton
