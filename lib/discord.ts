@@ -19,6 +19,80 @@ async function fetchAccessTokenForUser(userId: string): Promise<string | null> {
   }
 }
 
+export async function getValidAccessToken(userId: string): Promise<string | null> {
+  try {
+    const account = await prisma.account.findFirst({
+      where: {
+        userId: userId,
+        provider: "discord"
+      }
+    });
+
+    if (!account) {
+      console.error("No Discord account found for user");
+      return null;
+    }
+
+    // Check if token is expired (with 5 minute buffer)
+    const now = Math.floor(Date.now() / 1000);
+    const expiresAt = account.expires_at || 0;
+    
+    if (expiresAt > now + 300) {
+      // Token is still valid
+      return account.access_token;
+    }
+
+    // Token is expired or about to expire, refresh it
+    console.log("Token expired, refreshing...");
+    
+    if (!account.refresh_token) {
+      console.error("No refresh token available");
+      return null;
+    }
+
+    const tokenResponse = await fetch('https://discord.com/api/v10/oauth2/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({
+        client_id: process.env.DISCORD_CLIENT_ID!,
+        client_secret: process.env.DISCORD_CLIENT_SECRET!,
+        grant_type: 'refresh_token',
+        refresh_token: account.refresh_token,
+      }),
+    });
+
+    if (!tokenResponse.ok) {
+      console.error("Failed to refresh token:", await tokenResponse.text());
+      return null;
+    }
+
+    const tokens = await tokenResponse.json();
+    
+    // Update the database with new tokens
+    await prisma.account.update({
+      where: {
+        provider_providerAccountId: {
+          provider: account.provider,
+          providerAccountId: account.providerAccountId,
+        },
+      },
+      data: {
+        access_token: tokens.access_token,
+        expires_at: Math.floor(Date.now() / 1000) + tokens.expires_in,
+        refresh_token: tokens.refresh_token ?? account.refresh_token,
+      },
+    });
+
+    console.log("Token refreshed successfully");
+    return tokens.access_token;
+  } catch (error) {
+    console.error("Error getting valid access token:", error);
+    return null;
+  }
+}
+
 export async function getGuild(guildId: string) {
   const guildResponse = await fetch(
     `${env.DISCORD_API_URL}/guilds/${guildId}`,
