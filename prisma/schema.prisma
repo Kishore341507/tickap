@@ -284,12 +284,14 @@ model Response {
   id        String         @id @default(cuid())
   form      Form           @relation(fields: [formId], references: [id], onDelete: Cascade)
   formId    String
+  userId    BigInt?        // Discord user ID of the user who submitted the response
   userName  String?        // Store user name directly
   userEmail String?        // Store user email directly
   answers   Answer[]
   createdAt DateTime       @default(now())
   
   @@index([formId])
+  @@index([userId])
   @@index([createdAt])
 }
 
