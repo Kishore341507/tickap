@@ -320,7 +320,7 @@ export default async function EventDetailPage({ params, }: { params: Promise<{ i
                       {event.max_teams && ` / ${event.max_teams}`}
                     </p>
                   </div>
-
+                  
                   {/* Registration Button */}
                   <RegisterButton
                     eventId={id}
