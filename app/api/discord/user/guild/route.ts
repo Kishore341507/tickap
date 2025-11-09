@@ -1,5 +1,5 @@
 import { auth } from "@/auth";
-import prisma from "@/prisma/db";
+import { getValidAccessToken } from "@/lib/discord";
 import { NextRequest, NextResponse } from "next/server";
 import { env } from "process";
 
@@ -18,7 +18,12 @@ export async function GET( request : NextRequest ) {
     });
     const botGuilds = await botGuildsResponce.json();
 
-    const accessToken = (await prisma.account.findFirst({ where : { userId : (await auth())?.user?.id } }))?.access_token
+    const accessToken = await getValidAccessToken(session.user.id);
+    
+    if (!accessToken) {
+        return NextResponse.json({ "Error" : "Failed to get valid access token" } , { status : 401 } );
+    }
+
     const userGuildsResponce : Response = await fetch(env.DISCORD_API_URL + '/users/@me/guilds?with_counts=true' , {
         headers: {
             Authorization: `Bearer ${accessToken}`

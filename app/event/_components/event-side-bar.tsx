@@ -21,44 +21,44 @@ export default function EventSideBar() {
   const { status } = useSession();
   const [isLoading, setIsLoading] = useState(false);
 
-  const [mutualManagerGuilds, setMutualManagerGuilds] = useState([]);
-  const [toAddGuilds, setToAddGuilds] = useState([]);
-  useEffect(() => {
-    if (status !== "authenticated"){
-      setMutualManagerGuilds([]);
-      setToAddGuilds([]);
-      setIsLoading(false);
-      return;
-    } 
-    setIsLoading(true);
-    fetch("/api/discord/user/guild")
-      .then((res) => {
-        if (!res.ok) return;
-        return res.json();
-      })
-      .then((data) => {
-        setMutualManagerGuilds(data.filter((guild: Guild) => guild.manager &&  guild.mutual ).sort((a: any, b: any) => b.approximate_member_count - a.approximate_member_count) );
-        setToAddGuilds(data.filter((guild: Guild) => guild.manager && !guild.mutual ).sort((a: any, b: any) => b.approximate_member_count - a.approximate_member_count));
-      })
-      .finally(() => {
-        setIsLoading(false);
-      });
-  }, [status]);
+  // const [mutualManagerGuilds, setMutualManagerGuilds] = useState([]);
+  // const [toAddGuilds, setToAddGuilds] = useState([]);
+  // useEffect(() => {
+  //   if (status !== "authenticated"){
+  //     setMutualManagerGuilds([]);
+  //     setToAddGuilds([]);
+  //     setIsLoading(false);
+  //     return;
+  //   } 
+  //   setIsLoading(true);
+  //   fetch("/api/discord/user/guild")
+  //     .then((res) => {
+  //       if (!res.ok) return;
+  //       return res.json();
+  //     })
+  //     .then((data) => {
+  //       setMutualManagerGuilds(data.filter((guild: Guild) => guild.manager &&  guild.mutual ).sort((a: any, b: any) => b.approximate_member_count - a.approximate_member_count) );
+  //       setToAddGuilds(data.filter((guild: Guild) => guild.manager && !guild.mutual ).sort((a: any, b: any) => b.approximate_member_count - a.approximate_member_count));
+  //     })
+  //     .finally(() => {
+  //       setIsLoading(false);
+  //     });
+  // }, [status]);
 
-  const GuildSkeleton = () => (
-    <div className="flex items-center gap-2 rounded-lg px-3 py-2">
-      <Skeleton className="h-5 w-5 rounded-lg" />
-      <Skeleton className="h-4 w-32" />
-    </div>
-  );
+  // const GuildSkeleton = () => (
+  //   <div className="flex items-center gap-2 rounded-lg px-3 py-2">
+  //     <Skeleton className="h-5 w-5 rounded-lg" />
+  //     <Skeleton className="h-4 w-32" />
+  //   </div>
+  // );
 
-  const GuildListSkeleton = () => (
-    <div className="space-y-2">
-      {[...Array(4)].map((_, i) => (
-        <GuildSkeleton key={i} />
-      ))}
-    </div>
-  );
+  // const GuildListSkeleton = () => (
+  //   <div className="space-y-2">
+  //     {[...Array(4)].map((_, i) => (
+  //       <GuildSkeleton key={i} />
+  //     ))}
+  //   </div>
+  // );
 
   return (
     <div className="lg:block hidden border-r h-full border-secondary">
@@ -123,7 +123,7 @@ export default function EventSideBar() {
               About Us
             </Link>
 
-            {isLoading ? (
+            {/* {isLoading ? (
               <>
                 <div>
                   <Separator className="my-3" />
@@ -223,7 +223,7 @@ export default function EventSideBar() {
                   </div>
                 )}
               </>
-            )}
+            )} */}
           </nav>
         </div>
       </div>

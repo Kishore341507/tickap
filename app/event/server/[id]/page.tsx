@@ -1,10 +1,11 @@
 import prisma from "@/prisma/db";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import EventCard from "../../_components/event-card";
+import FormCard from "../../_components/form-card";
 import Link from "next/link";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import clsx from "clsx";
-import { Plus } from "lucide-react";
+import { Plus, FileText } from "lucide-react";
 import { auth } from "@/auth";
 import { env } from 'process';
 import { checkIsManager } from "@/lib/discord";
@@ -30,6 +31,21 @@ export default async function Events( {params,}: {params: Promise<{ id: string }
   const upcomingEvents = events.filter(event => 
     event.status === "Open" && event.date && event.date > new Date()
   );
+
+  // Fetch forms for this guild
+  const forms = await prisma.form.findMany({
+    where: {
+      guild_id: BigInt(id),
+      is_deleted: false,
+    },
+    include: {
+      questions: true,
+      responses: true,
+    },
+    orderBy: {
+      createdAt: 'desc'
+    }
+  });
 
   const guildResponce: Response = await fetch(env.DISCORD_API_URL + `/guilds/${id}`, {
     headers: {
@@ -65,13 +81,14 @@ export default async function Events( {params,}: {params: Promise<{ id: string }
       <h4 className="scroll-m-20 text-xl font-semibold tracking-tight">
         {guildName} Events
       </h4>
-      <Tabs defaultValue="Upcoming" >
-        <TabsList className="grid grid-cols-3 lg:w-[400px] md:w-[400px] mb-5">
-          <TabsTrigger value="Upcoming" disabled={upcomingEvents.length == 0 ? true : false}>Upcoming ({upcomingEvents.length})</TabsTrigger>
+      <Tabs defaultValue="Upcoming">
+        <TabsList className="grid grid-cols-4 lg:w-[500px] md:w-[500px] mb-5">
+          <TabsTrigger value="Upcoming">Upcoming ({upcomingEvents.length})</TabsTrigger>
           <TabsTrigger value="Live" className="animate-pulse" disabled={liveEvents.length == 0 ? true : false}>
             🔴 Live ({liveEvents.length})
           </TabsTrigger>
           <TabsTrigger value="Closed" disabled={closedEvents.length == 0 ? true : false}>Closed ({closedEvents.length}) </TabsTrigger>
+          <TabsTrigger value="Forms">Forms ({forms.length})</TabsTrigger>
         </TabsList>
         <TabsContent value="Upcoming">
           <div className="grid lg:grid-cols-3 md:grid-cols-2 sm:grid-cols-1 gap-4 ">
@@ -80,6 +97,14 @@ export default async function Events( {params,}: {params: Promise<{ id: string }
             ))}
             { upcomingEvents.length == 0 && <div className="col-span-3">No upcoming events</div> }
           </div>
+          { isManager && 
+            <Link href={`/event/server/${id}/create`} className="absolute right-2 bottom-2 z-99">
+              <Button className={clsx({ "animate-bounce": upcomingEvents.length == 0 })}>
+                <Plus className="mr-2 h-4 w-4" />
+                Create Event
+              </Button>
+            </Link>
+          }
         </TabsContent>
 
         <TabsContent value="Live">
@@ -97,16 +122,29 @@ export default async function Events( {params,}: {params: Promise<{ id: string }
             ))}
           </div>
         </TabsContent>
-      </Tabs>
 
-      { isManager && 
-        <Link href={`/event/server/${id}/create`} className="absolute right-2 bottom-2 z-99">
-          <Button className={clsx({ "animate-bounce": upcomingEvents.length == 0 })}>
-            <Plus className="mr-2 h-4 w-4" />
-            Create new
-          </Button>
-        </Link>
-      }
+        <TabsContent value="Forms">
+          <div className="grid lg:grid-cols-3 md:grid-cols-2 sm:grid-cols-1 gap-4 ">
+            {forms.map((form) => (
+              <FormCard key={form.id} form={form} showActions={isManager} guildId={id} />
+            ))}
+            {forms.length === 0 && (
+              <div className="col-span-3 text-center py-8 text-muted-foreground">
+                No forms created yet
+              </div>
+            )}
+          </div>
+
+          { isManager && 
+          <Link href={`/event/server/${id}/forms/create`} className="absolute right-2 bottom-2 z-99">
+            <Button className={clsx({ "animate-bounce": forms.length == 0 })}>
+              <FileText className="mr-2 h-4 w-4" />
+              Create Form
+            </Button>
+          </Link>
+        }
+        </TabsContent>
+      </Tabs>
 
     </>
   );

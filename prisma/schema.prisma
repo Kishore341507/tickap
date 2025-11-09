@@ -27,6 +27,17 @@ enum Category {
   Other
 }
 
+enum QuestionType {
+  SHORT_TEXT
+  PARAGRAPH
+  MULTIPLE_CHOICE
+  CHECKBOXES
+  DROPDOWN
+  DATE
+  TIME
+  NUMBER
+}
+
 model events {
   id                BigInt              @id @default(autoincrement())
   name              String              @db.VarChar
@@ -218,4 +229,79 @@ model EventLog {
   @@index([log_target])
   @@index([created_at])
   @@index([registration_id])
+}
+
+model Form {
+  id          String     @id @default(cuid())
+  title       String
+  description String?
+  userId      String?    // Discord user ID of the user who created the form (not a relation to User table)
+  
+  // Discord integration fields (similar to events table)
+  guild_id    BigInt     // Required: Discord guild/server ID where this form belongs
+  channel_id  BigInt?
+  role_id     BigInt?
+  manager_id  BigInt?
+  
+  questions   Question[]
+  responses   Response[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  
+  is_deleted  Boolean?   @default(false)
+  
+  @@index([userId])     // Add index for faster lookups by userId
+  @@index([guild_id])   // Add index for guild lookups
+}
+
+model Question {
+  id          String     @id @default(cuid())
+  text        String
+  description String?
+  placeholder String?
+  type        QuestionType
+  form        Form       @relation(fields: [formId], references: [id], onDelete: Cascade)
+  formId      String
+  options     Option[]   
+  required    Boolean    @default(false)
+  order       Int
+  answers     Answer[]
+  
+  @@index([formId])
+  @@index([order])
+}
+
+model Option {
+  id         String   @id @default(cuid())
+  text       String
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  questionId String
+  
+  @@index([questionId])
+}
+
+model Response {
+  id        String         @id @default(cuid())
+  form      Form           @relation(fields: [formId], references: [id], onDelete: Cascade)
+  formId    String
+  userName  String?        // Store user name directly
+  userEmail String?        // Store user email directly
+  answers   Answer[]
+  createdAt DateTime       @default(now())
+  
+  @@index([formId])
+  @@index([createdAt])
+}
+
+model Answer {
+  id         String    @id @default(cuid())
+  question   Question  @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  questionId String
+  response   Response  @relation(fields: [responseId], references: [id], onDelete: Cascade)
+  responseId String
+  value      String    // text answer or option id(s) (comma-separated for multi-select)
+   
+  @@index([questionId])
+  @@index([responseId])
+  @@unique([responseId, questionId]) // Each response can have only one answer per question
 }
