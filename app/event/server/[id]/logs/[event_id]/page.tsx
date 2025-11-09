@@ -14,7 +14,7 @@ export default async function EventLogsPage({ params }: { params: Promise<{ id: 
   
   // Check if user is authenticated
   if (!session) {
-    redirect("/auth/signin");
+    redirect("/api/auth/signin");
   }
 
   // Fetch event data

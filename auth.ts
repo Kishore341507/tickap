@@ -71,8 +71,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             authorization: {
                 params: {
                     scope: "identify guilds email guilds.join",
-                    prompt: "consent"
+                    prompt: "consent",
+                    access_type: "offline"
                 }
+            },
+            token: {
+                url: "https://discord.com/api/oauth2/token",
             }
         })
     ],

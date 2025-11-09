@@ -14,7 +14,7 @@ export default async function EventRegistrationsPage( {params,}: {params: Promis
   
   // Check if user is authenticated
   if (!session) {
-    redirect("/auth/signin");
+    redirect("/api/auth/signin");
   }
 
   // Fetch event data with all registrations and users

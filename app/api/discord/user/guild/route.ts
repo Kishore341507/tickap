@@ -5,7 +5,7 @@ import { env } from "process";
 
 export async function GET( request : NextRequest ) {
     const session = await auth() ;
-    if (!session) {
+    if (!session || !session.user?.id) {
         return NextResponse.json({ "Error" : "Unauthorized" } , { status : 401 } );
     }
 

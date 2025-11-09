@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, Download, ArrowLeft, Eye, Trash2 } from "lucide-react";
+import { Loader2, Download, ArrowLeft, Eye, Trash2, ShieldAlert } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 import {
@@ -57,13 +58,60 @@ export default async function ResponsesViewerPage({ params }: { params: Promise<
 function ResponsesViewerClient({ guildId, formId }: { guildId: string; formId: string }) {
   const router = useRouter();
   const { toast } = useToast();
+  const { data: session, status } = useSession();
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
   const [formData, setFormData] = useState<FormData | null>(null);
+  const [isManager, setIsManager] = useState<boolean | null>(null);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+
+  // Check if user is authenticated and is a manager
+  useEffect(() => {
+    const checkAuthorization = async () => {
+      if (status === "loading") {
+        return;
+      }
+
+      if (status === "unauthenticated" || !session?.user?.userId) {
+        router.push("/api/auth/signin");
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/discord/check-manager?userId=${session.user.userId}&guildId=${guildId}`);
+        const data = await response.json();
+        
+        if (!data.isManager) {
+          toast({ 
+            title: "Access Denied", 
+            description: "Only server managers can view form responses", 
+            variant: "destructive" 
+          });
+          router.push(`/event/server/${guildId}`);
+          return;
+        }
+        
+        setIsManager(true);
+      } catch (error) {
+        toast({ 
+          title: "Error", 
+          description: "Failed to verify permissions", 
+          variant: "destructive" 
+        });
+        router.push(`/event/server/${guildId}`);
+      } finally {
+        setIsCheckingAuth(false);
+      }
+    };
+
+    checkAuthorization();
+  }, [session, status, guildId, router, toast]);
 
   useEffect(() => {
-    fetchResponses();
-  }, [formId]);
+    if (isManager) {
+      fetchResponses();
+    }
+  }, [formId, isManager]);
 
   const fetchResponses = async () => {
     try {
@@ -141,6 +189,36 @@ function ResponsesViewerClient({ guildId, formId }: { guildId: string; formId: s
     return answer?.value || "-";
   };
 
+  if (isCheckingAuth || status === "loading") {
+    return (
+      <div className="container mx-auto py-8 flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+          <p className="text-muted-foreground">Verifying permissions...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isManager) {
+    return (
+      <div className="container mx-auto py-8 flex items-center justify-center min-h-[400px]">
+        <Card className="max-w-md">
+          <CardContent className="pt-6 text-center">
+            <ShieldAlert className="h-12 w-12 mx-auto mb-4 text-destructive" />
+            <h2 className="text-xl font-semibold mb-2">Access Denied</h2>
+            <p className="text-muted-foreground mb-4">
+              Only server managers can view form responses
+            </p>
+            <Button onClick={() => router.push(`/event/server/${guildId}`)}>
+              Back to Server
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   if (isLoading) {
     return (
       <div className="container mx-auto py-8 flex items-center justify-center">
@@ -192,7 +270,7 @@ function ResponsesViewerClient({ guildId, formId }: { guildId: string; formId: s
               <AlertDialogHeader>
                 <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  This will delete the form "{formData.title}". All responses ({formData.responses.length}) will be preserved but the form will no longer be accessible.
+                  This will delete the form &quot;{formData.title}&quot;. All responses ({formData.responses.length}) will be preserved but the form will no longer be accessible.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>

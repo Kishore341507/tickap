@@ -33,18 +33,18 @@ export default async function Servers() {
     // Get a valid (refreshed if needed) access token
     const accessToken = await getValidAccessToken(session.user.id);
     
-    if (!accessToken) {
-      console.error("Failed to get valid access token");
-      // Return early with error message
-      return (
-        <div>
-          <h2 className="scroll-m-20 border-b pb-2 text-3xl font-semibold tracking-tight first:mt-0">
-            Authentication Error
-          </h2>
-          <p className="mt-4">Please try signing out and signing in again.</p>
-        </div>
-      );
-    }
+    // if (!accessToken) {
+    //   console.error("Failed to get valid access token");
+    //   // Return early with error message
+    //   return (
+    //     <div>
+    //       <h2 className="scroll-m-20 border-b pb-2 text-3xl font-semibold tracking-tight first:mt-0">
+    //         Authentication Error
+    //       </h2>
+    //       <p className="mt-4">Please try signing out and signing in again.</p>
+    //     </div>
+    //   );
+    // }
 
     const userGuildsResponce: Response = await fetch(env.DISCORD_API_URL + '/users/@me/guilds?with_counts=true', {
       headers: {
