@@ -75,6 +75,9 @@ model events {
   is_deleted       Boolean?           @default(false)
   is_verified     Boolean?           @default(false)
 
+  hide_registrations       Boolean?    @default(false)
+  hide_registration_count  Boolean?    @default(false)
+
 }
 
 model registrations {

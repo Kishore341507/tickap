@@ -105,6 +105,8 @@ export async function POST(req: NextRequest) {
       manager_id: formData.get("manager_id") ? BigInt(formData.get("manager_id") as string) : null, 
       guild_id: formData.get("guild_id") ? BigInt(formData.get("guild_id") as string) : null,
       channel_id: formData.get("channel_id") ? BigInt(formData.get("channel_id") as string) : null,
+      hide_registrations: formData.get("hide_registrations") === "true",
+      hide_registration_count: formData.get("hide_registration_count") === "true",
     };
 
     // Create event in database
@@ -260,6 +262,8 @@ export async function PUT(req: NextRequest) {
       manager_id: formData.get("manager_id") ? BigInt(formData.get("manager_id") as string) : existingEvent.manager_id,
       guild_id: formData.get("guild_id") ? BigInt(formData.get("guild_id") as string) : existingEvent.guild_id,
       channel_id: formData.get("channel_id") ? BigInt(formData.get("channel_id") as string) : existingEvent.channel_id,
+      hide_registrations: formData.has("hide_registrations") ? formData.get("hide_registrations") === "true" : existingEvent.hide_registrations,
+      hide_registration_count: formData.has("hide_registration_count") ? formData.get("hide_registration_count") === "true" : existingEvent.hide_registration_count,
       updated_at: new Date(),
     };
 
