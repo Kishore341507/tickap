@@ -59,6 +59,10 @@ export default async function EventDetailPage({ params, }: { params: Promise<{ i
     isManager = await checkIsManager(session.user.userId, event.guild_id.toString());
   }
 
+  // Determine visibility of registrations based on event settings and manager status
+  const showRegistrations = !event.hide_registrations || isManager;
+  const showRegistrationCount = !event.hide_registration_count || isManager;
+
   // Fetch guild information if the event has a guild_id
   let guildInfo = null;
   if (event.guild_id) {
@@ -168,7 +172,7 @@ export default async function EventDetailPage({ params, }: { params: Promise<{ i
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {(!event.hide_registration_count || isManager) && (
+                  {showRegistrationCount && (
                     <div>
                       <p className="text-sm text-gray-500">Total Teams Registered</p>
                       <p className="text-2xl font-bold">
@@ -222,7 +226,7 @@ export default async function EventDetailPage({ params, }: { params: Promise<{ i
           )}
 
           {/* Registrations Accordion */}
-          {event.registrations.length > 0 && (!event.hide_registrations || isManager) && (
+          {event.registrations.length > 0 && showRegistrations && (
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -315,7 +319,7 @@ export default async function EventDetailPage({ params, }: { params: Promise<{ i
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {(!event.hide_registration_count || isManager) && (
+                  {showRegistrationCount && (
                     <div>
                       <p className="text-sm text-gray-500">Total Teams Registered</p>
                       <p className="text-2xl font-bold">
