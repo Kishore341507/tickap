@@ -168,13 +168,15 @@ export default async function EventDetailPage({ params, }: { params: Promise<{ i
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <div>
-                    <p className="text-sm text-gray-500">Total Teams Registered</p>
-                    <p className="text-2xl font-bold">
-                      {event.registrations.length}
-                      {event.max_teams && ` / ${event.max_teams}`}
-                    </p>
-                  </div>
+                  {(!event.hide_registration_count || isManager) && (
+                    <div>
+                      <p className="text-sm text-gray-500">Total Teams Registered</p>
+                      <p className="text-2xl font-bold">
+                        {event.registrations.length}
+                        {event.max_teams && ` / ${event.max_teams}`}
+                      </p>
+                    </div>
+                  )}
 
                   {/* Registration Button */}
                   <RegisterButton
@@ -220,7 +222,7 @@ export default async function EventDetailPage({ params, }: { params: Promise<{ i
           )}
 
           {/* Registrations Accordion */}
-          {event.registrations.length > 0 && (
+          {event.registrations.length > 0 && (!event.hide_registrations || isManager) && (
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -313,13 +315,15 @@ export default async function EventDetailPage({ params, }: { params: Promise<{ i
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <div>
-                    <p className="text-sm text-gray-500">Total Teams Registered</p>
-                    <p className="text-2xl font-bold">
-                      {event.registrations.length}
-                      {event.max_teams && ` / ${event.max_teams}`}
-                    </p>
-                  </div>
+                  {(!event.hide_registration_count || isManager) && (
+                    <div>
+                      <p className="text-sm text-gray-500">Total Teams Registered</p>
+                      <p className="text-2xl font-bold">
+                        {event.registrations.length}
+                        {event.max_teams && ` / ${event.max_teams}`}
+                      </p>
+                    </div>
+                  )}
                   
                   {/* Registration Button */}
                   <RegisterButton

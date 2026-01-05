@@ -62,7 +62,9 @@ const eventFormSchema = z.object({
   category_name: z.string().optional(),
   role_id: z.string().optional(),
   manager_id: z.string().optional(),
-  channel_id: z.string().optional()
+  channel_id: z.string().optional(),
+  hide_registrations: z.boolean().default(false),
+  hide_registration_count: z.boolean().default(false)
 }).refine((data) => {
   // If it's not a solo event, min_team_player and max_team_player must be provided
   if (data.is_solo === false) {
@@ -176,6 +178,8 @@ export default function CreateEvent() {
       max_teams : undefined,
       min_team_player : undefined,
       max_team_player : undefined,
+      hide_registrations: false,
+      hide_registration_count: false,
     },
   });
 
@@ -429,6 +433,48 @@ export default function CreateEvent() {
                       <FormLabel className="text-base">Solo Event</FormLabel>
                       <FormDescription>
                         Toggle if this is a solo event
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="hide_registrations"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base">Hide Registrations</FormLabel>
+                      <FormDescription>
+                        Hide the list of registered teams from public view
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="hide_registration_count"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base">Hide Registration Count</FormLabel>
+                      <FormDescription>
+                        Hide the number of registered teams from public view
                       </FormDescription>
                     </div>
                     <FormControl>
