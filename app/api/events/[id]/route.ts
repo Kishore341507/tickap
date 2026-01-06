@@ -20,11 +20,9 @@ export async function GET(
   {params,}: {params: Promise<{ id: string }>}
 ) {
   try {
-    const session = await auth();
     const { id } = await params;
     
     // Validate event ID
-    // const id = params.id;
     if (!id) {
       return NextResponse.json({ error: "Event ID is required" }, { status: 400 });
     }
@@ -33,6 +31,19 @@ export async function GET(
     const event = await prisma.events.findUnique({
       where: {
         id: BigInt(id)
+      },
+      select: {
+        id: true,
+        name: true,
+        banner: true,
+        date: true,
+        status: true,
+        category: true,
+        platform: true,
+        is_solo: true,
+        guild_id: true,
+        created_at: true,
+        updated_at: true,
       }
     });
 
@@ -40,22 +51,6 @@ export async function GET(
       return NextResponse.json({ error: "Event not found" }, { status: 404 });
     }
 
-    // Check if the user is a manager for this event's guild
-    let isManager = false;
-    if (!session) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-    
-    if (session?.user && event.guild_id) {
-      const userId = session.user.userId
-      if (userId) {
-        isManager = await checkIsManager(userId, event.guild_id.toString());
-      }
-    }
-
-    if (!isManager) {
-        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
     // Serialize data to handle BigInt values
     const serializedEvent = serializeData(event);
     

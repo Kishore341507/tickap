@@ -9,6 +9,7 @@ import { getGuild, checkIsManager } from "@/lib/discord";
 import { auth } from "@/auth";
 import { RegisterButton } from "./_components/register-button";
 import ManagerActionCard from "./_components/manager-action-card";
+import EventHistoryTracker from "./_components/event-history-tracker";
 import {
   Accordion,
   AccordionContent,
@@ -85,6 +86,9 @@ export default async function EventDetailPage({ params, }: { params: Promise<{ i
 
   return (
     <div className="container mx-auto px-4 py-8">
+      {/* Track this event as recently opened */}
+      <EventHistoryTracker eventId={id} />
+      
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Main Event Info */}
         <div className="lg:col-span-2 space-y-6">
