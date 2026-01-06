@@ -17,34 +17,53 @@ export default function EventSideBar() {
   const pathname = usePathname();
   const { theme } = useTheme();
   const { status } = useSession();
-  const [recentEvent, setRecentEvent] = useState<Event | null>(null);
+  const [recentEvents, setRecentEvents] = useState<Event[]>([]);
   const [participatedEvents, setParticipatedEvents] = useState<Event[]>([]);
   const [isLoadingRecent, setIsLoadingRecent] = useState(true);
   const [isLoadingParticipated, setIsLoadingParticipated] = useState(false);
 
-  // Load recent event from localStorage
+  // Load recent events from localStorage
   useEffect(() => {
-    const loadRecentEvent = async () => {
+    const loadRecentEvents = async () => {
       try {
-        const recentEventId = localStorage.getItem("recentEventId");
-        if (recentEventId) {
-          const response = await fetch(`/api/events/${recentEventId}`);
-          if (response.ok) {
-            const data = await response.json();
-            setRecentEvent(data.event);
-          } else {
-            // Event not found or error, clear from localStorage
-            localStorage.removeItem("recentEventId");
+        const recentEventIdsJson = localStorage.getItem("recentEventIds");
+        if (recentEventIdsJson) {
+          const recentEventIds: string[] = JSON.parse(recentEventIdsJson);
+          
+          // Fetch all recent events
+          const eventPromises = recentEventIds.map(async (eventId) => {
+            try {
+              const response = await fetch(`/api/events/${eventId}`);
+              if (response.ok) {
+                const data = await response.json();
+                return data.event;
+              }
+              return null;
+            } catch (error) {
+              console.error(`Error loading event ${eventId}:`, error);
+              return null;
+            }
+          });
+          
+          const events = await Promise.all(eventPromises);
+          // Filter out any null events (failed fetches or deleted events)
+          const validEvents = events.filter(event => event !== null);
+          setRecentEvents(validEvents);
+          
+          // Update localStorage to only keep valid event IDs
+          if (validEvents.length !== recentEventIds.length) {
+            const validEventIds = validEvents.map(event => event.id.toString());
+            localStorage.setItem("recentEventIds", JSON.stringify(validEventIds));
           }
         }
       } catch (error) {
-        console.error("Error loading recent event:", error);
+        console.error("Error loading recent events:", error);
       } finally {
         setIsLoadingRecent(false);
       }
     };
 
-    loadRecentEvent();
+    loadRecentEvents();
   }, []);
 
   // Load participated events when authenticated
@@ -127,7 +146,7 @@ export default function EventSideBar() {
               About Us
             </Link>
 
-            {/* Recent Event Section */}
+            {/* Recent Events Section */}
             {isLoadingRecent ? (
               <>
                 <Separator className="my-3" />
@@ -135,36 +154,45 @@ export default function EventSideBar() {
                   <Clock className="h-4 w-4" />
                   <span className="text-xs font-semibold">Recently Opened</span>
                 </div>
-                <EventSkeleton />
+                <ScrollArea className="h-48 rounded-md">
+                  {[...Array(3)].map((_, i) => (
+                    <EventSkeleton key={i} />
+                  ))}
+                </ScrollArea>
               </>
-            ) : recentEvent ? (
+            ) : recentEvents.length > 0 ? (
               <>
                 <Separator className="my-3" />
                 <div className="flex gap-1 items-center py-2 px-3">
                   <Clock className="h-4 w-4" />
                   <span className="text-xs font-semibold">Recently Opened</span>
                 </div>
-                <Link
-                  className={clsx(
-                    "flex items-center gap-2 rounded-lg px-3 py-2 text-gray-500 transition-all hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50",
-                    {
-                      "flex items-center gap-2 rounded-lg bg-gray-100 px-3 py-2 text-gray-900  transition-all hover:text-gray-900 dark:bg-gray-800 dark:text-gray-50 dark:hover:text-gray-50":
-                        pathname === `/event/${recentEvent.id}`,
-                    }
-                  )}
-                  href={`/event/${recentEvent.id}`}
-                >
-                  <div className="border rounded-lg dark:bg-black dark:border-gray-800 border-gray-400 bg-white overflow-hidden flex-shrink-0">
-                    <Image
-                      src={recentEvent.banner || "/tickap_dark.png"}
-                      width={20}
-                      height={20}
-                      alt={recentEvent.name}
-                      className="rounded-lg"
-                    />
-                  </div>
-                  <span className="truncate text-sm">{recentEvent.name}</span>
-                </Link>
+                <ScrollArea className="h-48 rounded-md">
+                  {recentEvents.map((event) => (
+                    <Link
+                      key={event.id.toString()}
+                      className={clsx(
+                        "flex items-center gap-2 rounded-lg px-3 py-2 text-gray-500 transition-all hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50",
+                        {
+                          "flex items-center gap-2 rounded-lg bg-gray-100 px-3 py-2 text-gray-900  transition-all hover:text-gray-900 dark:bg-gray-800 dark:text-gray-50 dark:hover:text-gray-50":
+                            pathname === `/event/${event.id}`,
+                        }
+                      )}
+                      href={`/event/${event.id}`}
+                    >
+                      <div className="border rounded-lg dark:bg-black dark:border-gray-800 border-gray-400 bg-white overflow-hidden flex-shrink-0">
+                        <Image
+                          src={event.banner || "/tickap_dark.png"}
+                          width={20}
+                          height={20}
+                          alt={event.name}
+                          className="rounded-lg"
+                        />
+                      </div>
+                      <span className="truncate text-sm">{event.name}</span>
+                    </Link>
+                  ))}
+                </ScrollArea>
               </>
             ) : null}
 
