@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/prisma/db";
-import { auth } from "@/auth";
-import { checkIsManager } from "@/lib/discord";
 
 // Helper function to handle BigInt serialization
 const serializeData = (data: any): any => {
