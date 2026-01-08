@@ -10,10 +10,16 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { UserPlus, UserMinus, UserX, Trash2, RefreshCw, ListFilter } from "lucide-react";
+import { UserPlus, UserX, Trash2, RefreshCw, Copy, Check } from "lucide-react";
 import { RegistrationUser , Registration } from "@/types";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { 
+  Tooltip, 
+  TooltipContent, 
+  TooltipProvider, 
+  TooltipTrigger 
+} from "@/components/ui/tooltip";
 
 interface RegistrationsListProps {
   registrations: Registration[];
@@ -22,6 +28,33 @@ interface RegistrationsListProps {
   onRemoveUser: (registration: Registration, user: RegistrationUser) => void;
   onReplaceUser: (registration: Registration, user: RegistrationUser) => void;
   onDeleteRegistration: (registration: Registration) => void;
+}
+
+function CopyableText({ text, className }: { text: string, className?: string }) {
+  const [isCopied, setIsCopied] = useState(false);
+
+  const handleCopy = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(text);
+    setIsCopied(true);
+    setTimeout(() => setIsCopied(false), 2000);
+  };
+
+  return (
+    <div 
+      className={`flex items-center gap-1 cursor-pointer hover:opacity-80 transition-opacity ${className}`}
+      onClick={handleCopy}
+    >
+      <div className="truncate">
+        {text}
+      </div>
+      {isCopied ? (
+        <Check className="h-3 w-3 text-green-500 animate-in zoom-in duration-300 shrink-0" />
+      ) : (
+        <Copy className="h-3 w-3 text-muted-foreground shrink-0" />
+      )}
+    </div>
+  );
 }
 
 export function RegistrationsList({ 
@@ -41,7 +74,7 @@ export function RegistrationsList({
       ) : (
         <Accordion type="multiple" className="w-full">
           {registrations.map((registration) => (
-            <AccordionItem key={registration.id.toString()} value={registration.id.toString()}>
+            <AccordionItem key={registration.id.toString()} value={registration.id.toString()} className="group">
               <div className="flex items-center justify-between">
                 <AccordionTrigger className="flex-1 text-left hover:no-underline">
                   <div className="flex items-center justify-between w-full pr-4">
@@ -53,34 +86,45 @@ export function RegistrationsList({
                     </Badge>
                   </div>
                 </AccordionTrigger>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="mr-2"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDeleteRegistration(registration);
-                  }}
-                >
-                  <Trash2 className="h-4 w-4 text-destructive" />
-                  <span className="sr-only">Delete registration</span>
-                </Button>
+                <div className="flex items-center gap-1 mr-2">
+                  {!isSolo && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="hidden group-data-[state=open]:inline-flex"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onAddUser(registration);
+                            }}
+                          >
+                            <UserPlus className="h-4 w-4" />
+                            <span className="sr-only">Add member</span>
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Add Member</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDeleteRegistration(registration);
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                    <span className="sr-only">Delete registration</span>
+                  </Button>
+                </div>
               </div>
               <AccordionContent>
                 <div className="space-y-4">
-                  <div className="flex justify-between items-center mb-4">
-                    <h4 className="text-sm font-medium"></h4>
-                    {!isSolo && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => onAddUser(registration)}
-                      >
-                        <UserPlus className="h-4 w-4 mr-2" />
-                        Add Member
-                      </Button>
-                    )}
-                  </div>
 
                   {/* Team Members Section */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -100,9 +144,10 @@ export function RegistrationsList({
                           </Avatar>
                           <div>
                             <p className="font-medium">{user.user_name || "Unknown User"}</p>
-                            <p className="text-xs text-muted-foreground truncate">
-                              ID: {user.user_id.toString()}
-                            </p>
+                            <CopyableText 
+                              text={user.user_id.toString()} 
+                              className="text-xs text-muted-foreground"
+                            />
                           </div>
                         </div>
                         {!isSolo && (
@@ -134,17 +179,8 @@ export function RegistrationsList({
                   {registration.extra && (
                     <div className="mt-6">
                       <Card className="border-dashed">
-                        <CardHeader className="pb-2">
-                          <CardTitle className="text-md flex items-center">
-                            <ListFilter className="h-4 w-4 mr-2" />
-                            Custom Responses
-                          </CardTitle>
-                          <CardDescription>
-                            Additional information provided during registration
-                          </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="space-y-3">
+                        <CardContent className="p-2">
+                          <div className="space-y-0">
                             {(() => {
                               try {
                                 const extraData = typeof registration.extra === 'string'
@@ -157,13 +193,16 @@ export function RegistrationsList({
                                     : (answerObj as any)?.toString() || "No response";
                                     
                                   return (
-                                    <div key={index} className="space-y-1">
+                                    <div key={index}>
                                       <h4 className="text-sm font-medium">{question}</h4>
-                                      <p className="text-sm text-muted-foreground bg-secondary/30 p-2 rounded-md whitespace-pre-wrap">
-                                        {answer}
-                                      </p>
+                                      <div className="bg-secondary/30 p-1 rounded-md">
+                                        <CopyableText 
+                                          text={answer} 
+                                          className="text-sm text-muted-foreground whitespace-pre-wrap"
+                                        />
+                                      </div>
                                       {index < Object.entries(extraData).length - 1 && (
-                                        <Separator className="my-2" />
+                                        <Separator className="my-1" />
                                       )}
                                     </div>
                                   );
