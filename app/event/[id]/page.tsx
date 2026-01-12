@@ -1,4 +1,5 @@
 import prisma from "@/prisma/db";
+import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +19,76 @@ import {
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params;
+  
+  const event = await prisma.events.findUnique({
+    where: { id: BigInt(id) },
+    select: {
+      name: true,
+      details: true,
+      banner: true,
+      date: true,
+      prize: true,
+      location: true,
+      location_url: true,
+    }
+  });
+
+  if (!event) {
+    return {
+      title: "Event Not Found",
+    };
+  }
+
+  const title = event.name;
+  
+  const dateStr = event.date ? format(event.date, "dd MMMM yyyy, h:mm a") : "Date TBD";
+  const prizeStr = event.prize ? `🏆 ${event.prize}` : "";
+  const locationStr = event.location 
+    ? (event.location_url ? `📍 [${event.location}](${event.location_url})` : `📍 ${event.location}`)
+    : "";
+  
+  const metaInfo = [
+    `⌚ ${dateStr}`,
+    prizeStr,
+    locationStr
+  ].filter(Boolean).join(" | ");
+
+  const description = `${metaInfo}\n\n${event.details || "Join us for this event!"}`;
+  let banner = event.banner || "/tickap_dark.png";
+  
+  if (banner.startsWith("/")) {
+    banner = `https://tickap.com${banner}`;
+  }
+
+  return {
+    title: title,
+    description: description,
+    openGraph: {
+      title: title,
+      description: description,
+      url: `https://tickap.com/event/${id}`,
+      siteName: "tickap.com",
+      images: [
+        {
+          url: banner,
+          width: 1200,
+          height: 600,
+          alt: title,
+        },
+      ],
+      type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: title,
+      description: description,
+      images: [banner],
+    },
+  };
+}
 
 export default async function EventDetailPage({ params, }: { params: Promise<{ id: string }> }) {
   const session = await auth();
