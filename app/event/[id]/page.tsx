@@ -46,9 +46,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   
   const dateStr = event.date ? format(event.date, "dd MMMM yyyy, h:mm a") : "Date TBD";
   const prizeStr = event.prize ? `🏆 ${event.prize}` : "";
-  const locationStr = event.location 
-    ? (event.location_url ? `📍 [${event.location}](${event.location_url})` : `📍 ${event.location}`)
-    : "";
+  const locationStr = event.location ? `📍 ${event.location}` : "";
   
   const metaInfo = [
     `⌚ ${dateStr}`,
@@ -56,7 +54,12 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     locationStr
   ].filter(Boolean).join(" | ");
 
-  const description = `${metaInfo}\n\n${event.details || "Join us for this event!"}`;
+  let details = (event.details || "Join us for this event!").replace(/\s+/g, " ").trim();
+  if (details.length > 250) {
+    details = details.substring(0, 250) + "...";
+  }
+
+  const description = `${metaInfo}\n\n${details}`;
   let banner = event.banner || "/tickap_dark.png";
   
   if (banner.startsWith("/")) {
