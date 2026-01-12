@@ -302,6 +302,7 @@ export default async function EventDetailPage({ params, }: { params: Promise<{ i
               eventId={id}
               currentStatus={event.status}
               guildId={event.guild_id.toString()}
+              eventName={event.name}
             />
           )}
 
