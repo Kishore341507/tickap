@@ -33,6 +33,13 @@ import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { Separator } from "@/components/ui/separator";
 import { Category , Platform , EventStatus } from "@/types";
 
 // Create a Zod schema for form validation
@@ -314,6 +321,7 @@ export default function CreateEvent() {
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit as any)} className="space-y-8">
+          <h3 className="text-lg font-medium">Event Information</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-6">
               <FormField
@@ -433,48 +441,6 @@ export default function CreateEvent() {
                       <FormLabel className="text-base">Solo Event</FormLabel>
                       <FormDescription>
                         Toggle if this is a solo event
-                      </FormDescription>
-                    </div>
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="hide_registrations"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                    <div className="space-y-0.5">
-                      <FormLabel className="text-base">Hide Registrations</FormLabel>
-                      <FormDescription>
-                        Hide the list of registered teams from public view
-                      </FormDescription>
-                    </div>
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="hide_registration_count"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                    <div className="space-y-0.5">
-                      <FormLabel className="text-base">Hide Registration Count</FormLabel>
-                      <FormDescription>
-                        Hide the number of registered teams from public view
                       </FormDescription>
                     </div>
                     <FormControl>
@@ -675,16 +641,22 @@ export default function CreateEvent() {
                   )}
                 />
               </div>
+            </div>
+          </div>
 
-              <div className="space-y-4">
-                <FormLabel>Discord Settings</FormLabel>
-                <div className="grid grid-cols-3 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="role_id"
+              <Accordion type="multiple" className="w-full">
+                <AccordionItem value="discord-settings" className="border-none">
+                  <AccordionTrigger className="hover:no-underline py-2 font-semibold justify-start gap-2">
+                    Discord Settings
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4">
+                      <FormField
+                        control={form.control}
+                        name="role_id"
                     render={({ field }) => (
                       <FormItem className="flex flex-col">
-                        <FormLabel>Role</FormLabel>
+                        <FormLabel>Registration Role</FormLabel>
                         <Popover open={roleOpen} onOpenChange={setRoleOpen}>
                           <PopoverTrigger asChild>
                             <FormControl>
@@ -765,6 +737,9 @@ export default function CreateEvent() {
                             </Command>
                           </PopoverContent>
                         </Popover>
+                        <FormDescription>
+                          The role that will be assigned to a user upon registering for the event.
+                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -856,6 +831,9 @@ export default function CreateEvent() {
                             </Command>
                           </PopoverContent>
                         </Popover>
+                        <FormDescription>
+                          Users with this role can manage registrations, add/remove participants, etc.
+                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -866,7 +844,7 @@ export default function CreateEvent() {
                     name="channel_id"
                     render={({ field }) => (
                       <FormItem className="flex flex-col">
-                        <FormLabel>Channel</FormLabel>
+                        <FormLabel>Log Channel</FormLabel>
                         <Popover open={channelOpen} onOpenChange={setChannelOpen}>
                           <PopoverTrigger asChild>
                             <FormControl>
@@ -930,14 +908,57 @@ export default function CreateEvent() {
                             </Command>
                           </PopoverContent>
                         </Popover>
+                        <FormDescription>
+                          The Discord text channel where logs will be sent.
+                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                </div>
-              </div>
-            </div>
-          </div>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+
+                <AccordionItem value="advance-settings" className="border-none">
+                  <AccordionTrigger className="hover:no-underline py-2 font-semibold justify-start gap-2">
+                    Advance Settings
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 px-1">
+                      <FormField
+                        control={form.control}
+                        name="hide_registrations"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-center space-x-2 space-y-0">
+                            <FormControl>
+                              <Switch
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                            <FormLabel className="text-sm font-medium">Hide Registrations</FormLabel>
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="hide_registration_count"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-center space-x-2 space-y-0">
+                            <FormControl>
+                              <Switch
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                            <FormLabel className="text-sm font-medium">Hide Registration Count</FormLabel>
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
 
           <div className="flex justify-end">
             <Button type="submit" disabled={isSubmitting}>
