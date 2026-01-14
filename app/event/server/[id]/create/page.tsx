@@ -71,7 +71,11 @@ const eventFormSchema = z.object({
   manager_id: z.string().optional(),
   channel_id: z.string().optional(),
   hide_registrations: z.boolean().default(false),
-  hide_registration_count: z.boolean().default(false)
+  hide_registration_count: z.boolean().default(false),
+  allow_incomplete_teams: z.boolean().default(false),
+  enable_team_invites: z.boolean().default(true),
+  enable_team_requests: z.boolean().default(true),
+  register_for_other: z.boolean().default(true),
 }).refine((data) => {
   // If it's not a solo event, min_team_player and max_team_player must be provided
   if (data.is_solo === false) {
@@ -187,10 +191,21 @@ export default function CreateEvent() {
       max_team_player : undefined,
       hide_registrations: false,
       hide_registration_count: false,
+      allow_incomplete_teams: false,
+      enable_team_invites: true,
+      enable_team_requests: true,
+      register_for_other: true,
     },
   });
 
   const isSolo = form.watch("is_solo");
+  const registerForOther = form.watch("register_for_other");
+
+  useEffect(() => {
+    if (!registerForOther) {
+      form.setValue("allow_incomplete_teams", true);
+    }
+  }, [registerForOther, form]);
 
   const handleBannerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -955,6 +970,71 @@ export default function CreateEvent() {
                           </FormItem>
                         )}
                       />
+                      {!isSolo && (
+                        <>
+                          <FormField
+                            control={form.control}
+                            name="register_for_other"
+                            render={({ field }) => (
+                              <FormItem className="flex flex-row items-center space-x-2 space-y-0">
+                                <FormControl>
+                                  <Switch
+                                    checked={field.value}
+                                    onCheckedChange={field.onChange}
+                                  />
+                                </FormControl>
+                                <FormLabel className="text-sm font-medium">Register for others</FormLabel>
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="allow_incomplete_teams"
+                            render={({ field }) => (
+                              <FormItem className="flex flex-row items-center space-x-2 space-y-0">
+                                <FormControl>
+                                  <Switch
+                                    checked={field.value}
+                                    onCheckedChange={field.onChange}
+                                    disabled={!registerForOther}
+                                  />
+                                </FormControl>
+                                <FormLabel className="text-sm font-medium">Allow Incomplete Teams</FormLabel>
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="enable_team_invites"
+                            render={({ field }) => (
+                              <FormItem className="flex flex-row items-center space-x-2 space-y-0">
+                                <FormControl>
+                                  <Switch
+                                    checked={field.value}
+                                    onCheckedChange={field.onChange}
+                                  />
+                                </FormControl>
+                                <FormLabel className="text-sm font-medium">Enable Team Invites</FormLabel>
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="enable_team_requests"
+                            render={({ field }) => (
+                              <FormItem className="flex flex-row items-center space-x-2 space-y-0">
+                                <FormControl>
+                                  <Switch
+                                    checked={field.value}
+                                    onCheckedChange={field.onChange}
+                                  />
+                                </FormControl>
+                                <FormLabel className="text-sm font-medium">Enable Team Requests</FormLabel>
+                              </FormItem>
+                            )}
+                          />
+                        </>
+                      )}
                     </div>
                   </AccordionContent>
                 </AccordionItem>

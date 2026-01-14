@@ -27,6 +27,24 @@ enum Category {
   Other
 }
 
+enum TeamRole {
+  LEADER
+  MANAGER
+  MEMBER
+}
+
+enum RequestType {
+  INVITE
+  REQUEST
+}
+
+enum RequestStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  CANCELLED
+}
+
 enum QuestionType {
   SHORT_TEXT
   PARAGRAPH
@@ -39,59 +57,70 @@ enum QuestionType {
 }
 
 model events {
-  id                BigInt              @id @default(autoincrement())
-  name              String              @db.VarChar
-  banner            String              @db.VarChar  @default("/tickap_dark.png")
-  start_time        Int?
-  date              DateTime?           @db.Timestamp          
-  prize             String?             @db.VarChar
-  max_teams         Int?
-  min_team_player   Int?
-  max_team_player   Int?
-  rules             String?
-  details           String?
-  is_solo           Boolean?
-  extra             Json?
-  redirect_url      String?             @db.VarChar
-  location          String?             @db.VarChar
-  location_url      String?             @db.VarChar
-  status            EventStatus         @default(Open)      
+  id              BigInt      @id @default(autoincrement())
+  name            String      @db.VarChar
+  banner          String      @default("/tickap_dark.png") @db.VarChar
+  start_time      Int?
+  date            DateTime?   @db.Timestamp
+  prize           String?     @db.VarChar
+  max_teams       Int?
+  min_team_player Int?
+  max_team_player Int?
+  rules           String?
+  details         String?
+  is_solo         Boolean?
+  extra           Json?
+  redirect_url    String?     @db.VarChar
+  location        String?     @db.VarChar
+  location_url    String?     @db.VarChar
+  status          EventStatus @default(Open)
 
-  category          Category            @default(VideoGame)
-  category_name     String?             @db.VarChar
-  
-  platform          Platform            @default(Discord)
-  role_id           BigInt?
-  manager_id        BigInt?
-  guild_id          BigInt?
-  channel_id        BigInt?
-  
-  created_at        DateTime            @default(now())
-  updated_at        DateTime            @updatedAt
-  
+  allow_incomplete_teams Boolean? @default(false)
+  enable_team_invites    Boolean? @default(true)
+  enable_team_requests   Boolean? @default(true)
+  register_for_other     Boolean? @default(true)
+
+  category      Category @default(VideoGame)
+  category_name String?  @db.VarChar
+
+  platform   Platform @default(Discord)
+  role_id    BigInt?
+  manager_id BigInt?
+  guild_id   BigInt?
+  channel_id BigInt?
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
   registrations     registrations[]
   registrationusers registrationusers[]
+  join_requests     JoinRequest[]
 
-  is_deleted       Boolean?           @default(false)
-  is_verified     Boolean?           @default(false)
+  is_deleted  Boolean? @default(false)
+  is_verified Boolean? @default(false)
 
-  hide_registrations       Boolean?    @default(false)
-  hide_registration_count  Boolean?    @default(false)
-
+  hide_registrations      Boolean? @default(false)
+  hide_registration_count Boolean? @default(false)
 }
 
 model registrations {
-  id                BigInt              @id @default(autoincrement())
-  event_id          BigInt
-  team_name         String?             @db.VarChar
-  local_id          Int?
-  extra             Json?
-  events            events              @relation(fields: [event_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_event")
-  
-  created_at        DateTime            @default(now())
-  updated_at        DateTime            @updatedAt
-  
+  id        BigInt  @id @default(autoincrement())
+  event_id  BigInt
+  team_name String? @db.VarChar
+  local_id  Int?
+  extra     Json?
+
+  is_disqualified Boolean @default(false)
+  invites_open    Boolean @default(true)
+  requests_open   Boolean @default(true)
+
+  events events @relation(fields: [event_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_event")
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
   registrationusers registrationusers[]
+  join_requests     JoinRequest[]
 
   // @@map("regs")
 }
@@ -100,19 +129,46 @@ model registrationusers {
   user_id         BigInt
   registration_id BigInt
   event_id        BigInt
-  user_name       String?       @db.VarChar
-  pfp             String?       @db.VarChar
-  
-  created_at      DateTime      @default(now())
-  updated_at      DateTime      @updatedAt
-  
-  events          events        @relation(fields: [event_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_event")
-  registrations   registrations @relation(fields: [registration_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_reg")
-  
-  @@id([user_id, registration_id])
+  user_name       String? @db.VarChar
+  pfp             String? @db.VarChar
+
+  role TeamRole @default(MEMBER)
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  events        events        @relation(fields: [event_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_event")
+  registrations registrations @relation(fields: [registration_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_reg")
   // @@map("regusers")
+
+  @@id([user_id, registration_id])
 }
 
+model JoinRequest {
+  id String @id @default(cuid())
+
+  event_id        BigInt
+  registration_id BigInt?
+
+  user_id   BigInt
+  user_name String? @db.VarChar
+  user_pfp  String? @db.VarChar
+
+  type   RequestType
+  status RequestStatus @default(PENDING)
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  event        events         @relation(fields: [event_id], references: [id], onDelete: Cascade)
+  registration registrations? @relation(fields: [registration_id], references: [id], onDelete: Cascade)
+
+  @@unique([event_id, registration_id, user_id, type])
+  @@index([event_id])
+  @@index([registration_id])
+  @@index([user_id])
+  @@index([status])
+}
 
 // Next Auth Schema
 
@@ -126,7 +182,7 @@ model User {
   sessions      Session[]
   // Optional for WebAuthn support
   Authenticator Authenticator[]
- 
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -143,33 +199,33 @@ model Account {
   scope             String?
   id_token          String?
   session_state     String?
- 
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
- 
+
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
- 
+
   @@id([provider, providerAccountId])
 }
- 
+
 model Session {
   sessionToken String   @unique
   userId       String
   expires      DateTime
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
- 
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
- 
+
 model VerificationToken {
   identifier String
   token      String
   expires    DateTime
- 
+
   @@id([identifier, token])
 }
- 
+
 // Optional for WebAuthn support
 model Authenticator {
   credentialID         String  @unique
@@ -180,27 +236,27 @@ model Authenticator {
   credentialDeviceType String
   credentialBackedUp   Boolean
   transports           String?
- 
+
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
- 
+
   @@id([userId, credentialID])
 }
 
 model Discordauth {
-  id        String  @unique
+  id        String   @unique
   ip        String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
 model FileStorage {
-  id          String   @id @default(cuid())
-  filename    String
-  mimetype    String
-  data        Bytes
-  size        Int
-  created_at  DateTime @default(now())
-  updated_at  DateTime @updatedAt
+  id         String   @id @default(cuid())
+  filename   String
+  mimetype   String
+  data       Bytes
+  size       Int
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
 }
 
 enum EventLogType {
@@ -215,17 +271,17 @@ enum EventLogTarget {
 }
 
 model EventLog {
-  id            String         @id @default(cuid())
-  event_id      BigInt
-  user_id       BigInt?        // The user who made the change, nullable for system changes
-  user_name     String?        // The name of the user who made the change, nullable for system changes
-  log_type      EventLogType
-  log_target    EventLogTarget
-  old_data      Json?          // Previous state, null for CREATE
-  new_data      Json?          // New state, null for DELETE
-  registration_id BigInt?      // Only set when log_target is REGISTRATION
-  created_at    DateTime       @default(now())
-  
+  id              String         @id @default(cuid())
+  event_id        BigInt
+  user_id         BigInt? // The user who made the change, nullable for system changes
+  user_name       String? // The name of the user who made the change, nullable for system changes
+  log_type        EventLogType
+  log_target      EventLogTarget
+  old_data        Json? // Previous state, null for CREATE
+  new_data        Json? // New state, null for DELETE
+  registration_id BigInt? // Only set when log_target is REGISTRATION
+  created_at      DateTime       @default(now())
+
   @@index([event_id])
   @@index([user_id])
   @@index([log_type])
@@ -235,41 +291,41 @@ model EventLog {
 }
 
 model Form {
-  id          String     @id @default(cuid())
+  id          String  @id @default(cuid())
   title       String
   description String?
-  userId      String?    // Discord user ID of the user who created the form (not a relation to User table)
-  
+  userId      String? // Discord user ID of the user who created the form (not a relation to User table)
+
   // Discord integration fields (similar to events table)
-  guild_id    BigInt     // Required: Discord guild/server ID where this form belongs
-  channel_id  BigInt?
-  role_id     BigInt?
-  manager_id  BigInt?
-  
-  questions   Question[]
-  responses   Response[]
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-  
-  is_deleted  Boolean?   @default(false)
-  
-  @@index([userId])     // Add index for faster lookups by userId
-  @@index([guild_id])   // Add index for guild lookups
+  guild_id   BigInt // Required: Discord guild/server ID where this form belongs
+  channel_id BigInt?
+  role_id    BigInt?
+  manager_id BigInt?
+
+  questions Question[]
+  responses Response[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  is_deleted Boolean? @default(false)
+
+  @@index([userId]) // Add index for faster lookups by userId
+  @@index([guild_id]) // Add index for guild lookups
 }
 
 model Question {
-  id          String     @id @default(cuid())
+  id          String       @id @default(cuid())
   text        String
   description String?
   placeholder String?
   type        QuestionType
-  form        Form       @relation(fields: [formId], references: [id], onDelete: Cascade)
+  form        Form         @relation(fields: [formId], references: [id], onDelete: Cascade)
   formId      String
-  options     Option[]   
-  required    Boolean    @default(false)
+  options     Option[]
+  required    Boolean      @default(false)
   order       Int
   answers     Answer[]
-  
+
   @@index([formId])
   @@index([order])
 }
@@ -279,34 +335,34 @@ model Option {
   text       String
   question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
   questionId String
-  
+
   @@index([questionId])
 }
 
 model Response {
-  id        String         @id @default(cuid())
-  form      Form           @relation(fields: [formId], references: [id], onDelete: Cascade)
+  id        String   @id @default(cuid())
+  form      Form     @relation(fields: [formId], references: [id], onDelete: Cascade)
   formId    String
-  userId    BigInt?        // Discord user ID of the user who submitted the response
-  userName  String?        // Store user name directly
-  userEmail String?        // Store user email directly
+  userId    BigInt? // Discord user ID of the user who submitted the response
+  userName  String? // Store user name directly
+  userEmail String? // Store user email directly
   answers   Answer[]
-  createdAt DateTime       @default(now())
-  
+  createdAt DateTime @default(now())
+
   @@index([formId])
   @@index([userId])
   @@index([createdAt])
 }
 
 model Answer {
-  id         String    @id @default(cuid())
-  question   Question  @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  id         String   @id @default(cuid())
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
   questionId String
-  response   Response  @relation(fields: [responseId], references: [id], onDelete: Cascade)
+  response   Response @relation(fields: [responseId], references: [id], onDelete: Cascade)
   responseId String
-  value      String    // text answer or option id(s) (comma-separated for multi-select)
-   
+  value      String // text answer or option id(s) (comma-separated for multi-select)
+
+  @@unique([responseId, questionId]) // Each response can have only one answer per question
   @@index([questionId])
   @@index([responseId])
-  @@unique([responseId, questionId]) // Each response can have only one answer per question
 }
