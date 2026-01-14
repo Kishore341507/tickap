@@ -1094,14 +1094,19 @@ export default function EditEvent() {
                             control={form.control}
                             name="register_for_other"
                             render={({ field }) => (
-                              <FormItem className="flex flex-row items-center space-x-2 space-y-0">
-                                <FormControl>
-                                  <Switch
-                                    checked={field.value}
-                                    onCheckedChange={field.onChange}
-                                  />
-                                </FormControl>
-                                <FormLabel className="text-sm font-medium">Register for others</FormLabel>
+                              <FormItem className="rounded-md border p-3 shadow-sm">
+                                <div className="flex flex-row items-center space-x-2 mb-2">
+                                  <FormControl>
+                                    <Switch
+                                      checked={field.value}
+                                      onCheckedChange={field.onChange}
+                                    />
+                                  </FormControl>
+                                  <FormLabel className="text-sm font-medium">Register for others</FormLabel>
+                                </div>
+                                <FormDescription className="text-xs">
+                                  Allow a user to register on behalf of other users (they will be notified on Discord).
+                                </FormDescription>
                               </FormItem>
                             )}
                           />
@@ -1109,15 +1114,20 @@ export default function EditEvent() {
                             control={form.control}
                             name="allow_incomplete_teams"
                             render={({ field }) => (
-                              <FormItem className="flex flex-row items-center space-x-2 space-y-0">
-                                <FormControl>
-                                  <Switch
-                                    checked={field.value}
-                                    onCheckedChange={field.onChange}
-                                    disabled={!registerForOther}
-                                  />
-                                </FormControl>
-                                <FormLabel className="text-sm font-medium">Allow Incomplete Teams</FormLabel>
+                              <FormItem className="rounded-md border p-3 shadow-sm">
+                                <div className="flex flex-row items-center space-x-2 mb-2">
+                                  <FormControl>
+                                    <Switch
+                                      checked={field.value}
+                                      onCheckedChange={field.onChange}
+                                      disabled={!registerForOther}
+                                    />
+                                  </FormControl>
+                                  <FormLabel className="text-sm font-medium">Allow Incomplete Teams</FormLabel>
+                                </div>
+                                <FormDescription className="text-xs">
+                                  Allow registration of incomplete teams. Other users can then be invited or request to join.
+                                </FormDescription>
                               </FormItem>
                             )}
                           />
@@ -1125,14 +1135,19 @@ export default function EditEvent() {
                             control={form.control}
                             name="enable_team_invites"
                             render={({ field }) => (
-                              <FormItem className="flex flex-row items-center space-x-2 space-y-0">
-                                <FormControl>
-                                  <Switch
-                                    checked={field.value}
-                                    onCheckedChange={field.onChange}
-                                  />
-                                </FormControl>
-                                <FormLabel className="text-sm font-medium">Enable Team Invites</FormLabel>
+                              <FormItem className="rounded-md border p-3 shadow-sm">
+                                <div className="flex flex-row items-center space-x-2 mb-2">
+                                  <FormControl>
+                                    <Switch
+                                      checked={field.value}
+                                      onCheckedChange={field.onChange}
+                                    />
+                                  </FormControl>
+                                  <FormLabel className="text-sm font-medium">Enable Team Invites</FormLabel>
+                                </div>
+                                <FormDescription className="text-xs">
+                                  Allow team leaders to invite other members if there is space in the team.
+                                </FormDescription>
                               </FormItem>
                             )}
                           />
@@ -1140,14 +1155,19 @@ export default function EditEvent() {
                             control={form.control}
                             name="enable_team_requests"
                             render={({ field }) => (
-                              <FormItem className="flex flex-row items-center space-x-2 space-y-0">
-                                <FormControl>
-                                  <Switch
-                                    checked={field.value}
-                                    onCheckedChange={field.onChange}
-                                  />
-                                </FormControl>
-                                <FormLabel className="text-sm font-medium">Enable Team Requests</FormLabel>
+                              <FormItem className="rounded-md border p-3 shadow-sm">
+                                <div className="flex flex-row items-center space-x-2 mb-2">
+                                  <FormControl>
+                                    <Switch
+                                      checked={field.value}
+                                      onCheckedChange={field.onChange}
+                                    />
+                                  </FormControl>
+                                  <FormLabel className="text-sm font-medium">Enable Team Requests</FormLabel>
+                                </div>
+                                <FormDescription className="text-xs">
+                                  Allow other users to request to join a team if there is space available.
+                                </FormDescription>
                               </FormItem>
                             )}
                           />
