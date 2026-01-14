@@ -107,6 +107,10 @@ export async function POST(req: NextRequest) {
       channel_id: formData.get("channel_id") ? BigInt(formData.get("channel_id") as string) : null,
       hide_registrations: formData.get("hide_registrations") === "true",
       hide_registration_count: formData.get("hide_registration_count") === "true",
+      register_for_other: formData.get("register_for_other") === "true",
+      allow_incomplete_teams: formData.get("allow_incomplete_teams") === "true",
+      enable_team_invites: formData.get("enable_team_invites") === "true",
+      enable_team_requests: formData.get("enable_team_requests") === "true",
     };
 
     // Create event in database
@@ -264,6 +268,10 @@ export async function PUT(req: NextRequest) {
       channel_id: formData.get("channel_id") ? BigInt(formData.get("channel_id") as string) : existingEvent.channel_id,
       hide_registrations: formData.has("hide_registrations") ? formData.get("hide_registrations") === "true" : existingEvent.hide_registrations,
       hide_registration_count: formData.has("hide_registration_count") ? formData.get("hide_registration_count") === "true" : existingEvent.hide_registration_count,
+      register_for_other: formData.has("register_for_other") ? formData.get("register_for_other") === "true" : existingEvent.register_for_other,
+      allow_incomplete_teams: formData.has("allow_incomplete_teams") ? formData.get("allow_incomplete_teams") === "true" : existingEvent.allow_incomplete_teams,
+      enable_team_invites: formData.has("enable_team_invites") ? formData.get("enable_team_invites") === "true" : existingEvent.enable_team_invites,
+      enable_team_requests: formData.has("enable_team_requests") ? formData.get("enable_team_requests") === "true" : existingEvent.enable_team_requests,
       updated_at: new Date(),
     };
 

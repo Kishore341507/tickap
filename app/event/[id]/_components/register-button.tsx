@@ -52,6 +52,8 @@ interface RegisterButtonProps {
     session: boolean;
     userRegistration: Registration | null | undefined;
     eventExtra?: any; // Added prop for custom questions
+    allowIncompleteTeams?: boolean | null;
+    registerForOther?: boolean | null;
 }
 
 // Type for custom question
@@ -79,7 +81,9 @@ export function RegisterButton({
     guildId,
     session,
     userRegistration,
-    eventExtra
+    eventExtra,
+    allowIncompleteTeams,
+    registerForOther
 }: RegisterButtonProps) {
     const [isLoading, setIsLoading] = useState(false);
     const [isTeamDialogOpen, setIsTeamDialogOpen] = useState(false);
@@ -340,7 +344,7 @@ export function RegisterButton({
             return;
         }
 
-        if (minTeamPlayer && selectedMembers.length < minTeamPlayer - 1) {
+        if (minTeamPlayer && selectedMembers.length < minTeamPlayer - 1 && !allowIncompleteTeams) {
             toast({
                 title: "Not enough team members",
                 description: `You need at least ${minTeamPlayer - 1} more team members to register.`,
@@ -542,7 +546,7 @@ export function RegisterButton({
                     <DialogHeader>
                         <DialogTitle>Select Team Members</DialogTitle>
                         <DialogDescription>
-                            {minTeamPlayer ? `You need at least ${minTeamPlayer - 1} team members.` : 'Add team members for this event.'}
+                            {minTeamPlayer && !allowIncompleteTeams ? `You need at least ${minTeamPlayer - 1} team members.` : 'Add team members for this event.'}
                             {maxTeamPlayer ? ` Maximum team size is ${maxTeamPlayer}.` : ''}
                         </DialogDescription>
                     </DialogHeader>
@@ -567,6 +571,7 @@ export function RegisterButton({
                             )}
                         </div>
 
+                        {registerForOther !== false && (
                         <div className="space-y-2">
                             <Command className="rounded-md border shadow-md">
                                 <CommandInput
@@ -607,7 +612,9 @@ export function RegisterButton({
                                 </ScrollArea>
                             </Command>
                         </div>
+                        )}
 
+                        {registerForOther !== false && (
                         <div>
                             <h4 className="mb-2 text-sm font-medium">Selected Members ({selectedMembers.length})</h4>
                             <div className="flex flex-wrap gap-2">
@@ -631,6 +638,7 @@ export function RegisterButton({
                                 )}
                             </div>
                         </div>
+                        )}
                     </div>
 
                     <DialogFooter className="flex">
@@ -644,7 +652,7 @@ export function RegisterButton({
                         <Button
                             type="button"
                             onClick={handleTeamSubmit}
-                            disabled={isLoading || !!(minTeamPlayer && selectedMembers.length < minTeamPlayer - 1)}
+                            disabled={isLoading || !!(minTeamPlayer && selectedMembers.length < minTeamPlayer - 1 && !allowIncompleteTeams)}
                         >
                             {customQuestions.length > 0 ? "Next" : "Register Team"}
                         </Button>

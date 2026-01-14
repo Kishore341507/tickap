@@ -269,6 +269,8 @@ export default async function EventDetailPage({ params, }: { params: Promise<{ i
                     session={!!session}
                     userRegistration={userRegistration}
                     eventExtra={event.extra}
+                    allowIncompleteTeams={event.allow_incomplete_teams}
+                    registerForOther={event.register_for_other}
                   />
                 </div>
               </CardContent>
@@ -417,6 +419,8 @@ export default async function EventDetailPage({ params, }: { params: Promise<{ i
                     session={!!session}
                     userRegistration={userRegistration}
                     eventExtra={event.extra}
+                    allowIncompleteTeams={event.allow_incomplete_teams}
+                    registerForOther={event.register_for_other}
                   />
                 </div>
               </CardContent>

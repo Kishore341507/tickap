@@ -161,7 +161,8 @@ export async function POST(
     // Validate team size
     if (
       event.min_team_player &&
-      teamMembers.length + 1 < event.min_team_player
+      teamMembers.length + 1 < event.min_team_player &&
+      !event.allow_incomplete_teams
     ) {
       return NextResponse.json(
         {
@@ -169,6 +170,18 @@ export async function POST(
         },
         { status: 400 }
       );
+    }
+
+    if (
+        event.register_for_other === false &&
+        teamMembers.length > 0
+    ) {
+        return NextResponse.json(
+            {
+                message: "You cannot register for others in this event",
+            },
+            { status: 400 }
+        );
     }
 
     if (
