@@ -310,22 +310,6 @@ export default async function EventDetailPage({ params, }: { params: Promise<{ i
                     <Users className="h-5 w-5" />
                     Registered Teams
                   </CardTitle>
-                  {isManager && (
-                    <div className="flex gap-2">
-                      <Link href={`/event/server/${event.guild_id?.toString()}/logs/${id}`}>
-                        <Button variant="outline" size="sm">
-                          <span className="sr-only">Logs</span>
-                          Logs
-                        </Button>
-                      </Link>
-                      <Link href={`/event/server/${event.guild_id?.toString()}/registrations/${id}`}>
-                        <Button variant="outline" size="sm">
-                          <span className="sr-only">Manage</span>
-                          Manage
-                        </Button>
-                      </Link>
-                    </div>
-                  )}
                 </div>
               </CardHeader>
               <CardContent>
