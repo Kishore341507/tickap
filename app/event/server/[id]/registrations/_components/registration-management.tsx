@@ -177,6 +177,7 @@ export function RegistrationManagement({ eventId, guildId, event }: Registration
         registration={selectedRegistration}
         user={selectedUser}
         minTeamSize={event.min_team_player || 1}
+        allowIncompleteTeams={event.allow_incomplete_teams}
       />
 
       <DeleteRegistrationDialog

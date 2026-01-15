@@ -26,6 +26,7 @@ interface RemoveUserDialogProps {
   registration: Registration | null;
   user: RegistrationUser | null;
   minTeamSize: number | null;
+  allowIncompleteTeams?: boolean | null;
 }
 
 export function RemoveUserDialog({
@@ -36,6 +37,7 @@ export function RemoveUserDialog({
   registration,
   user,
   minTeamSize,
+  allowIncompleteTeams,
 }: RemoveUserDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
@@ -44,7 +46,11 @@ export function RemoveUserDialog({
   // Check if removing user would violate min team size requirement
   const wouldViolateMinTeamSize = registration && 
     minTeamSize && 
-    registration.registrationusers.length <= minTeamSize;
+    registration.registrationusers.length <= minTeamSize &&
+    !allowIncompleteTeams;
+
+  // Check if user is the last member
+  const isLastMember = registration?.registrationusers.length === 1;
 
   // Handle user removal
   const handleRemoveUser = async () => {
@@ -125,13 +131,15 @@ export function RemoveUserDialog({
             </div>
           )}
 
-          {wouldViolateMinTeamSize && (
+          {(wouldViolateMinTeamSize || isLastMember) && (
             <Alert variant="destructive" className="mb-4">
               <AlertCircle className="h-4 w-4" />
               <AlertTitle>Warning</AlertTitle>
               <AlertDescription>
-                Removing this user would leave the team below the minimum required {minTeamSize} members.
-                This will delete the entire team registration.
+                {isLastMember 
+                  ? "This user is the last member of the team. Removing them will delete the entire registration."
+                  : `Removing this user would leave the team below the minimum required ${minTeamSize} members. This will delete the entire team registration.`
+                }
               </AlertDescription>
             </Alert>
           )}

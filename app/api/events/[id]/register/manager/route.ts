@@ -437,10 +437,12 @@ export async function PUT(
         );
       }
 
-      // Check if removing this user would violate the minimum team size requirement
+      // Check if removing this user would make the team empty or violate the minimum team size requirement
       if (
-        event.min_team_player &&
-        registration.registrationusers.length <= Number(event.min_team_player)
+        registration.registrationusers.length === 1 ||
+        (event.min_team_player &&
+          registration.registrationusers.length <= Number(event.min_team_player) &&
+          !event.allow_incomplete_teams)
       ) {
         // Delete the complete registration if removing would violate minimum team size
         await prisma.registrations.delete({

@@ -511,9 +511,11 @@ export function RegisterButton({
                             <AlertDialogDescription>
                                 {isSolo 
                                     ? "This will remove your registration from this event." 
-                                    : userRegistration.registrationusers.length <= (minTeamPlayer || 1)
-                                        ? "This will remove you and your entire team from this event."
-                                        : "This will remove you from this team."
+                                    : userRegistration.registrationusers.length === 1
+                                        ? "This will remove your registration from this event."
+                                        : userRegistration.registrationusers.length <= (minTeamPlayer || 1) && !allowIncompleteTeams
+                                            ? "This will remove you and your entire team from this event."
+                                            : "This will remove you from this team."
                                 }
                             </AlertDialogDescription>
                         </AlertDialogHeader>
