@@ -11,7 +11,7 @@ import {
   sendLogMessage,
 } from "@/lib/discord";
 import { createEventLog } from "@/lib/event-logger";
-import { EventLogType, EventLogTarget } from "@prisma/client";
+import { EventLogType, EventLogTarget, TeamRole } from "@prisma/client";
 
 export async function POST(
   request: NextRequest,
@@ -289,6 +289,7 @@ export async function POST(
               user_name: session.user.name,
               pfp: session.user.image || null,
               event_id: BigInt(id),
+              role: TeamRole.LEADER,
             },
             // Register all team members with their Discord information
             ...teamMembersData,
@@ -471,7 +472,7 @@ export async function DELETE(
     // or if this was the last team member, delete the entire registration
     if (
       !remainingMembers.length ||
-      (event.min_team_player && remainingMembers.length < event.min_team_player)
+      (event.min_team_player && remainingMembers.length < event.min_team_player && !event.allow_incomplete_teams)
     ) {
 
       const deletedRegistration = await prisma.registrations.delete({
