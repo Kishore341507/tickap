@@ -27,6 +27,18 @@ export enum TeamRole {
   MEMBER = "MEMBER"
 }
 
+export enum RequestType {
+  INVITE = "INVITE",
+  REQUEST = "REQUEST"
+}
+
+export enum RequestStatus {
+  PENDING = "PENDING",
+  ACCEPTED = "ACCEPTED",
+  DECLINED = "DECLINED",
+  CANCELLED = "CANCELLED"
+}
+
 /**
  * User and member interfaces
  */
@@ -52,11 +64,25 @@ export interface RegistrationUser {
   role?: TeamRole;
 }
 
+export interface JoinRequest {
+  id: string;
+  event_id: bigint;
+  registration_id: bigint | null;
+  user_id: bigint;
+  user_name: string | null;
+  user_pfp: string | null;
+  type: RequestType;
+  status: RequestStatus;
+  created_at: Date;
+  updated_at: Date;
+}
+
 export interface Registration {
   id: bigint;
   event_id: bigint;
   team_name: string | null;
   registrationusers: RegistrationUser[];
+  join_requests?: JoinRequest[];
   extra?: string | any; // Added to support custom responses
 }
 

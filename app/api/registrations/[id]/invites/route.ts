@@ -1,0 +1,99 @@
+import { auth } from "@/auth";
+import prisma from "@/prisma/db";
+import { NextRequest, NextResponse } from "next/server";
+
+export async function POST(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await auth();
+    if (!session?.user?.userId) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    }
+
+    const { id } = await params;
+    const body = await req.json();
+    const { userId, username, pfp } = body;
+
+    const registration = await prisma.registrations.findUnique({
+      where: { id: BigInt(id) },
+      include: {
+        events: true,
+        registrationusers: true,
+      },
+    });
+
+    if (!registration) {
+      return NextResponse.json(
+        { message: "Registration not found" },
+        { status: 404 }
+      );
+    }
+
+    const currentUser = registration.registrationusers.find(
+      (u) => u.user_id === BigInt(session.user.userId!)
+    );
+
+    if (
+      !currentUser ||
+      (currentUser.role !== "LEADER" && currentUser.role !== "MANAGER")
+    ) {
+      return NextResponse.json(
+        { message: "Insufficient permissions" },
+        { status: 403 }
+      );
+    }
+
+    if (!registration.events.enable_team_invites) {
+      return NextResponse.json(
+        { message: "Event does not allow team invites" },
+        { status: 403 }
+      );
+    }
+
+    const existingRequest = await prisma.joinRequest.findFirst({
+        where: {
+            registration_id: registration.id,
+            user_id: BigInt(userId),
+            status: "PENDING"
+        }
+    });
+
+    if (existingRequest) {
+         return NextResponse.json(
+            { message: "Pending request or invite already exists" },
+            { status: 400 }
+        );
+    }
+
+    const inTeam = registration.registrationusers.some(u => u.user_id === BigInt(userId));
+    if (inTeam) {
+         return NextResponse.json(
+            { message: "User is already in the team" },
+            { status: 400 }
+        );
+    }
+
+    await prisma.joinRequest.create({
+      data: {
+        event_id: registration.event_id,
+        registration_id: registration.id,
+        user_id: BigInt(userId),
+        user_name: username || "Unknown",
+        user_pfp: pfp || null,
+        type: "INVITE",
+        status: "PENDING"
+      },
+    });
+
+    return NextResponse.json({ message: "Invite sent successfully" });
+
+  } catch (error) {
+    console.error("Error creating invite:", error);
+    return NextResponse.json(
+      { message: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}

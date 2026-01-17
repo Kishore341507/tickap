@@ -103,6 +103,12 @@ export default async function EventDetailPage({ params, }: { params: Promise<{ i
       registrations: {
         include: {
           registrationusers: true,
+          join_requests: {
+            where: {
+              type: "INVITE",
+              status: "PENDING"
+            }
+          }
         },
       },
     },
@@ -271,6 +277,7 @@ export default async function EventDetailPage({ params, }: { params: Promise<{ i
                     eventExtra={event.extra}
                     allowIncompleteTeams={event.allow_incomplete_teams}
                     registerForOther={event.register_for_other}
+                    enableTeamInvites={event.enable_team_invites}
                   />
                 </div>
               </CardContent>
@@ -405,6 +412,7 @@ export default async function EventDetailPage({ params, }: { params: Promise<{ i
                     eventExtra={event.extra}
                     allowIncompleteTeams={event.allow_incomplete_teams}
                     registerForOther={event.register_for_other}
+                    enableTeamInvites={event.enable_team_invites}
                   />
                 </div>
               </CardContent>
