@@ -651,7 +651,7 @@ export function RegisterButton({
                                             className={!isTeamIncomplete ? "bg-green-500 text-white hover:bg-green-600 border-green-600" : ""}
                                         >
                                             {isTeamIncomplete 
-                                                ? "Required Members Missing" 
+                                                ? "Incomplete Team" 
                                                 : (isSolo ? "Registered" : "Team Registered")
                                             }
                                         </Badge>
