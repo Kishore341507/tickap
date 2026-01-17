@@ -21,6 +21,12 @@ export enum EventStatus {
   Live = "Live"
 }
 
+export enum TeamRole {
+  LEADER = "LEADER",
+  MANAGER = "MANAGER",
+  MEMBER = "MEMBER"
+}
+
 /**
  * User and member interfaces
  */
@@ -43,6 +49,7 @@ export interface RegistrationUser {
   event_id: bigint;
   user_name: string | null;
   pfp: string | null;
+  role?: TeamRole;
 }
 
 export interface Registration {

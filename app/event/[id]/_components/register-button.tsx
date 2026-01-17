@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Search, UserPlus, X, UserMinus, LogOut } from "lucide-react";
+import { Loader2, Search, UserPlus, X, UserMinus, LogOut, Crown } from "lucide-react";
 import {
     Dialog,
     DialogContent,
@@ -466,30 +466,84 @@ export function RegisterButton({
     
     // If the user is registered, show current registration details
     if (isRegistered && userRegistration) {
+        const memberCount = userRegistration.registrationusers.length;
+        const isTeamIncomplete = !isSolo && minTeamPlayer && memberCount < minTeamPlayer;
+        
         return (
             <div className="space-y-4">
-                <Card className="border-green-500">
-                    <CardContent className="pt-4">
-                        <div className="space-y-3">
-                            <div className="flex justify-between items-center">
-                                <Badge variant="outline" className="bg-green-500 text-white">
-                                    {isSolo ? "Registered" : "Team Registered"}
-                                </Badge>
-                                <p className="text-sm font-medium">{userRegistration.team_name || "Your Registration"}</p>
+                <Card className={`border-2 ${isTeamIncomplete ? "border-red-500" : "border-green-500"}`}>
+                    <CardContent className="pt-4 pb-4">
+                        <div className="space-y-4">
+                            <div className="space-y-2">
+                                <div className="flex justify-between items-start">
+                                    {isSolo && userRegistration.registrationusers.length > 0 ? (
+                                        <div className="flex items-center gap-3">
+                                            <Avatar className="h-8 w-8">
+                                                <AvatarImage 
+                                                    src={userRegistration.registrationusers[0].pfp ? userRegistration.registrationusers[0].pfp : undefined} 
+                                                    alt={userRegistration.registrationusers[0].user_name || "User"} 
+                                                />
+                                                <AvatarFallback>{userRegistration.registrationusers[0].user_name?.substring(0, 2).toUpperCase() || "U"}</AvatarFallback>
+                                            </Avatar>
+                                            <h3 className="font-semibold text-lg">{userRegistration.registrationusers[0].user_name || "Registered User"}</h3>
+                                        </div>
+                                    ) : (
+                                        <h3 className="font-semibold text-lg">{userRegistration.team_name || "Your Registration"}</h3>
+                                    )}
+                                    <div className="flex flex-col items-end gap-1">
+                                        <Badge 
+                                            variant={isTeamIncomplete ? "destructive" : "outline"} 
+                                            className={!isTeamIncomplete ? "bg-green-500 text-white hover:bg-green-600 border-green-600" : ""}
+                                        >
+                                            {isTeamIncomplete 
+                                                ? "Required Members Missing" 
+                                                : (isSolo ? "Registered" : "Team Registered")
+                                            }
+                                        </Badge>
+                                    </div>
+                                </div>
+                                {isTeamIncomplete && (
+                                    <p className="text-xs text-red-500 font-medium">
+                                        You need {(minTeamPlayer || 0) - memberCount} more members to complete the team.
+                                    </p>
+                                )}
                             </div>
                             
                             {!isSolo && (
-                                <div className="mt-2">
-                                    <p className="text-xs text-muted-foreground mb-1">Team Members ({userRegistration.registrationusers.length})</p>
-                                    <div className="flex flex-wrap gap-1">
+                                <div className="space-y-2">
+                                    {/* <p className="text-sm font-medium text-muted-foreground">Team Members</p> */}
+                                    <div className="grid gap-2">
                                         {userRegistration.registrationusers.map(user => (
-                                            <Badge key={user.user_id.toString()} variant="secondary" className="text-xs">
-                                                {user.user_name || "Unknown"}
-                                            </Badge>
+                                            <div 
+                                                key={user.user_id.toString()} 
+                                                className="flex items-center gap-3 p-2 rounded-lg border bg-card/50"
+                                            >
+                                                <Avatar className="h-8 w-8">
+                                                    <AvatarImage 
+                                                        src={user.pfp ? user.pfp : undefined} 
+                                                        alt={user.user_name || "User"} 
+                                                    />
+                                                    <AvatarFallback>{user.user_name?.substring(0, 2).toUpperCase() || "U"}</AvatarFallback>
+                                                </Avatar>
+                                                <div className="flex flex-col">
+                                                    <span className="text-sm font-medium leading-none">
+                                                        {user.user_name || "Unknown User"}
+                                                    </span>
+                                                </div>
+                                                {user.role === "LEADER" && (
+                                                    <Crown className="ml-auto h-4 w-4 text-muted-foreground" />
+                                                )}
+                                            </div>
                                         ))}
+                                        {!isSolo && (
+                                            <span className="ml-auto text-xs text-muted-foreground">
+                                                {memberCount} / {maxTeamPlayer || "∞"} Members
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
                             )}
+
                         </div>
                     </CardContent>
                 </Card>
