@@ -159,6 +159,7 @@ export async function DELETE(
             where: { id: BigInt(id) },
             include: {
                 registrationusers: true,
+                events: true,
             },
         });
 
@@ -211,6 +212,18 @@ export async function DELETE(
                 user_id: BigInt(targetUserId)
             }
         });
+
+        // Check if the team becomes incomplete and incomplete teams are not allowed
+        if (!registration.events.allow_incomplete_teams && registration.events.min_team_player) {
+            const remainingMembers = registration.registrationusers.filter(u => u.user_id !== BigInt(targetUserId)).length;
+            
+            if (remainingMembers < registration.events.min_team_player) {
+                await prisma.registrations.delete({
+                    where: { id: registration.id }
+                });
+                return NextResponse.json({ message: "Registration deleted as team became incomplete" });
+            }
+        }
 
         return NextResponse.json({ message: "Member removed successfully" });
 

@@ -981,7 +981,10 @@ export function RegisterButton({
                         <AlertDialogHeader>
                             <AlertDialogTitle>Remove team member?</AlertDialogTitle>
                             <AlertDialogDescription>
-                                Are you sure you want to remove this member from the team? This action cannot be undone.
+                                {userRegistration && !allowIncompleteTeams && minTeamPlayer && (userRegistration.registrationusers.length - 1) < minTeamPlayer
+                                    ? "Removing this member will make the team incomplete and the ENTIRE registration will be deleted. This action cannot be undone."
+                                    : "Are you sure you want to remove this member from the team? This action cannot be undone."
+                                }
                             </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
