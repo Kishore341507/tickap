@@ -96,6 +96,23 @@ export async function POST(
         );
     }
 
+    const thirtyMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+    const memberAddCount = await prisma.registrationusers.count({
+      where: {
+        registration_id: registration.id,
+        created_at: {
+          gt: thirtyMinutesAgo,
+        },
+      },
+    });
+
+    if (memberAddCount >= 3) {
+      return NextResponse.json(
+        { message: "Member addition limit reached. Try again in 10 minutes." },
+        { status: 429 }
+      );
+    }
+
     await prisma.registrationusers.create({
       data: {
         registration_id: registration.id,

@@ -75,6 +75,24 @@ export async function POST(
         );
     }
 
+    const thirtyMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+    const inviteCount = await prisma.joinRequest.count({
+      where: {
+        registration_id: registration.id,
+        type: "INVITE",
+        created_at: {
+          gt: thirtyMinutesAgo,
+        },
+      },
+    });
+
+    if (inviteCount >= 3) {
+      return NextResponse.json(
+        { message: "Invite limit reached. Try again in 10 minutes." },
+        { status: 429 }
+      );
+    }
+
     await prisma.joinRequest.create({
       data: {
         event_id: registration.event_id,
