@@ -266,12 +266,13 @@ export function AddRegistrationDialog({
                     {searchQuery.length > 0 && (
                       <CommandGroup heading="Search Results">
                         {searchResults.map((member) => (
-                          <div 
+                          <CommandItem 
                             key={member.user.id} 
-                            className="flex items-center space-x-2 px-1 py-1 cursor-pointer bg-none hover:bg-muted" 
-                            onClick={() => toggleMemberSelection(member)}
+                            value={`${member.user.username} ${member.nick ?? ""} ${member.user.global_name ?? ""} ${member.user.id}`}
+                            className="cursor-pointer" 
+                            onSelect={() => toggleMemberSelection(member)}
                           >
-                            <Avatar className="h-8 w-8">
+                            <Avatar className="h-8 w-8 mr-2">
                               <AvatarImage
                                 src={member.user.avatar ? `https://cdn.discordapp.com/avatars/${member.user.id}/${member.user.avatar}.png` : undefined}
                                 alt={member.user.username}
@@ -279,13 +280,9 @@ export function AddRegistrationDialog({
                               <AvatarFallback>{member.user.global_name || member.user.username}</AvatarFallback>
                             </Avatar>
 
-                            <CommandItem
-                              className="cursor-pointer"
-                              value={member.user.username}
-                            >
-                              {member.user.username}
-                            </CommandItem>
-                          </div>
+                            <span>{member.nick || member.user.global_name || member.user.username}</span>
+                            <span className="ml-auto text-xs text-muted-foreground">{member.user.username}</span>
+                          </CommandItem>
                         ))}
                       </CommandGroup>
                     )}

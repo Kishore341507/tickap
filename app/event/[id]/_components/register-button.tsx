@@ -587,13 +587,20 @@ export function RegisterButton({
                                             <Loader2 className="h-4 w-4 animate-spin mr-2" />
                                             Searching...
                                         </div>
-                                    ) : searchResults.length === 0 && searchQuery.length > 2 ? (
+                                    ) : searchResults.length > 0 ? null : searchQuery.length > 2 ? (
                                         <CommandEmpty>No members found</CommandEmpty>
-                                    ) : <CommandEmpty>Enter at least 2 characters to search</CommandEmpty>}
+                                    ) : (
+                                        <CommandEmpty>Enter at least 2 characters to search</CommandEmpty>
+                                    )}
                                     {searchQuery.length > 0 && (
                                         <CommandGroup heading="Search Results">
                                             {searchResults.map((member) => (
-                                                <div key={member.user.username} className="flex items-center space-x-2 px-1 py-1 cursor-pointer bg-none hover:bg-muted" onClick={() => toggleMemberSelection(member)}>
+                                                <CommandItem 
+                                                    key={member.user.username} 
+                                                    value={`${member.user.username} ${member.nick ?? ""} ${member.user.global_name ?? ""} ${member.user.id}`}
+                                                    className="cursor-pointer" 
+                                                    onSelect={() => toggleMemberSelection(member)}
+                                                >
                                                     <Avatar className="h-8 w-8">
                                                         <AvatarImage
                                                             src={member.user.avatar ? `https://cdn.discordapp.com/avatars/${member.user.id}/${member.user.avatar}.png` : undefined}
@@ -602,12 +609,9 @@ export function RegisterButton({
                                                         <AvatarFallback>{member.user.global_name || member.user.username}</AvatarFallback>
                                                     </Avatar>
 
-                                                    <CommandItem
-                                                        className="cursor-pointer data-[selected='true']:bg-black"
-                                                    >
-                                                        {member.user.username}
-                                                    </CommandItem>
-                                                </div>
+                                                    <span>{member.nick || member.user.global_name || member.user.username}</span>
+                                                    <span className="ml-auto text-xs text-muted-foreground">{member.user.username}</span>
+                                                </CommandItem>
                                             ))}
                                         </CommandGroup>
                                     )}

@@ -25,6 +25,7 @@ export enum EventStatus {
  * User and member interfaces
  */
 export interface Member {
+  nick: string | null;
   user: {
     id: string;
     username: string;
