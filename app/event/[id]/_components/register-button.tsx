@@ -660,7 +660,14 @@ export function RegisterButton({
                             onClick={handleTeamSubmit}
                             disabled={isLoading || !!(minTeamPlayer && selectedMembers.length < minTeamPlayer - 1 && !allowIncompleteTeams)}
                         >
-                            {customQuestions.length > 0 ? "Next" : "Register Team"}
+                            {isLoading && customQuestions.length === 0 ? (
+                                <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Registering...
+                                </>
+                            ) : (
+                                customQuestions.length > 0 ? "Next" : "Register Team"
+                            )}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
