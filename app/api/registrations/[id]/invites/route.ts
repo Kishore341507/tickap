@@ -52,17 +52,61 @@ export async function POST(
       );
     }
 
+    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+    const inviteCount = await prisma.joinRequest.count({
+      where: {
+        registration_id: registration.id,
+        type: "INVITE",
+        updated_at: {
+          gt: tenMinutesAgo,
+        },
+      },
+    });
+
+    if (inviteCount >= 3) {
+      return NextResponse.json(
+        { message: "Invite limit reached. Try again in 10 minutes." },
+        { status: 429 }
+      );
+    }
+    
+    const existingInvite = await prisma.joinRequest.findFirst({
+        where: {
+            registration_id: registration.id,
+            user_id: BigInt(userId),
+            type: "INVITE"
+        }
+    });
+
+    if (existingInvite) {
+         if (existingInvite.status === "DECLINED") {
+             return NextResponse.json(
+                { message: "User has previously declined an invitation to this team" },
+                { status: 400 }
+            );
+         }
+
+         await prisma.joinRequest.update({
+             where: { id: existingInvite.id },
+             data: { status: "PENDING" }
+         });
+
+         return NextResponse.json({ message: "Invite sent successfully" });
+    }
+
+    // Check for pending request from user
     const existingRequest = await prisma.joinRequest.findFirst({
         where: {
             registration_id: registration.id,
             user_id: BigInt(userId),
+            type: "REQUEST",
             status: "PENDING"
         }
     });
 
     if (existingRequest) {
          return NextResponse.json(
-            { message: "Pending request or invite already exists" },
+            { message: "User has already requested to join this team" },
             { status: 400 }
         );
     }
@@ -73,24 +117,6 @@ export async function POST(
             { message: "User is already in the team" },
             { status: 400 }
         );
-    }
-
-    const thirtyMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
-    const inviteCount = await prisma.joinRequest.count({
-      where: {
-        registration_id: registration.id,
-        type: "INVITE",
-        created_at: {
-          gt: thirtyMinutesAgo,
-        },
-      },
-    });
-
-    if (inviteCount >= 3) {
-      return NextResponse.json(
-        { message: "Invite limit reached. Try again in 10 minutes." },
-        { status: 429 }
-      );
     }
 
     await prisma.joinRequest.create({

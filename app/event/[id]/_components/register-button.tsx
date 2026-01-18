@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Search, UserPlus, X, UserMinus, LogOut, Crown, Plus, Mail, Trash2 } from "lucide-react";
+import { Loader2, Search, UserPlus, X, UserMinus, LogOut, Crown, Plus, Mail, Trash2, Check } from "lucide-react";
 import {
     Dialog,
     DialogContent,
@@ -106,6 +106,8 @@ export function RegisterButton({
     // New state for revocation
     const [inviteToRevoke, setInviteToRevoke] = useState<string | null>(null);
     const [isRevokeInviteDialogOpen, setIsRevokeInviteDialogOpen] = useState(false);
+    
+    const [requestToRespond, setRequestToRespond] = useState<string | null>(null);
 
     const [searchQuery, setSearchQuery] = useState("");
     const [searchResults, setSearchResults] = useState<Member[]>([]);
@@ -332,6 +334,29 @@ export function RegisterButton({
             setIsLoading(false);
             setIsRevokeInviteDialogOpen(false);
             setInviteToRevoke(null);
+        }
+    };
+
+    const handleRespondRequest = async (requestId: string, action: "accept" | "decline") => {
+        try {
+            setRequestToRespond(requestId);
+            const response = await fetch(`/api/join-requests/${requestId}/respond`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ action }),
+            });
+            
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.message || `Failed to ${action} request`);
+            }
+
+            toast({ title: `Request ${action}ed`, variant: "success" });
+            router.refresh(); 
+        } catch (error: any) {
+            toast({ title: "Failed to respond", description: error.message, variant: "destructive" });
+        } finally {
+            setRequestToRespond(null);
         }
     };
 
@@ -623,6 +648,9 @@ export function RegisterButton({
     if (isRegistered && userRegistration) {
         const memberCount = userRegistration.registrationusers.length;
         const isTeamIncomplete = !isSolo && minTeamPlayer && memberCount < minTeamPlayer;
+
+        const pendingInvites = userRegistration.join_requests?.filter(r => r.type === "INVITE") || [];
+        const pendingRequests = userRegistration.join_requests?.filter(r => r.type === "REQUEST") || [];
         
         return (
             <div className="space-y-4">
@@ -710,15 +738,73 @@ export function RegisterButton({
                                         )}
                                     </div>
                                     
-                                    {userRegistration.join_requests && userRegistration.join_requests.length > 0 && (
+                                    {pendingRequests.length > 0 && (
                                         <Accordion type="single" collapsible className="w-full">
-                                            <AccordionItem value="invited" className="border-b-0">
+                                            <AccordionItem value="requests" className="border-b-0">
                                                 <AccordionTrigger className="py-2 hover:no-underline">
-                                                    <span className="text-sm font-medium">Invited Members ({userRegistration.join_requests.length})</span>
+                                                    <span className="text-sm font-medium">Join Requests ({pendingRequests.length})</span>
                                                 </AccordionTrigger>
                                                 <AccordionContent>
                                                     <div className="space-y-2 pt-1">
-                                                        {userRegistration.join_requests.map((request) => (
+                                                        {pendingRequests.map((request) => (
+                                                            <div 
+                                                                key={request.id} 
+                                                                className="flex items-center gap-3 p-2 rounded-lg border bg-card/50"
+                                                            >
+                                                                <Avatar className="h-8 w-8">
+                                                                    <AvatarImage 
+                                                                        src={request.user_pfp ? request.user_pfp : undefined} 
+                                                                        alt={request.user_name || "User"} 
+                                                                    />
+                                                                    <AvatarFallback>{request.user_name?.substring(0, 2).toUpperCase() || "U"}</AvatarFallback>
+                                                                </Avatar>
+                                                                <div className="flex flex-col">
+                                                                    <span className="text-sm font-medium leading-none">
+                                                                        {request.user_name || "Unknown User"}
+                                                                    </span>
+                                                                    <span className="text-xs text-muted-foreground">
+                                                                        Requested to join
+                                                                    </span>
+                                                                </div>
+                                                                {isLeaderOrManager && (
+                                                                    <div className="ml-auto flex gap-1">
+                                                                        <Button 
+                                                                            variant="ghost" 
+                                                                            size="icon" 
+                                                                            className="h-6 w-6 text-green-500 hover:text-green-600 hover:bg-green-100 dark:hover:bg-green-900/20"
+                                                                            onClick={() => handleRespondRequest(request.id, "accept")}
+                                                                            disabled={isLoading || !!requestToRespond}
+                                                                        >
+                                                                            {requestToRespond === request.id ? <Loader2 className="h-3 w-3 animate-spin"/> : <Check className="h-3 w-3" />}
+                                                                        </Button>
+                                                                        <Button 
+                                                                            variant="ghost" 
+                                                                            size="icon" 
+                                                                            className="h-6 w-6 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                                                            onClick={() => handleRespondRequest(request.id, "decline")}
+                                                                            disabled={isLoading || !!requestToRespond}
+                                                                        >
+                                                                            <X className="h-3 w-3" />
+                                                                        </Button>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </AccordionContent>
+                                            </AccordionItem>
+                                        </Accordion>
+                                    )}
+
+                                    {pendingInvites.length > 0 && (
+                                        <Accordion type="single" collapsible className="w-full">
+                                            <AccordionItem value="invited" className="border-b-0">
+                                                <AccordionTrigger className="py-2 hover:no-underline">
+                                                    <span className="text-sm font-medium">Invited Members ({pendingInvites.length})</span>
+                                                </AccordionTrigger>
+                                                <AccordionContent>
+                                                    <div className="space-y-2 pt-1">
+                                                        {pendingInvites.map((request) => (
                                                             <div 
                                                                 key={request.id} 
                                                                 className="flex items-center gap-3 p-2 rounded-lg border bg-card/50"

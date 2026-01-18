@@ -3,12 +3,17 @@ import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, MapPin, Users, Trophy, Info, UserCircle2 } from "lucide-react";
+import { Calendar, MapPin, Users, Trophy, Info, UserCircle2, UserPlus } from "lucide-react";
 import { format } from "date-fns";
 import Image from "next/image";
 import { getGuild, checkIsManager } from "@/lib/discord";
 import { auth } from "@/auth";
+import { JoinRequestButton } from "./_components/join-request-button";
 import { RegisterButton } from "./_components/register-button";
+import { RevokeRequestButton } from "./_components/revoke-request-button";
+import { RespondInviteButton } from "./_components/respond-invite-button";
+
+
 import ManagerActionCard from "./_components/manager-action-card";
 import {
   Accordion,
@@ -105,7 +110,6 @@ export default async function EventDetailPage({ params, }: { params: Promise<{ i
           registrationusers: true,
           join_requests: {
             where: {
-              type: "INVITE",
               status: "PENDING"
             }
           }
@@ -147,6 +151,67 @@ export default async function EventDetailPage({ params, }: { params: Promise<{ i
   let guildInfo = null;
   if (event.guild_id) {
     guildInfo = await getGuild(event.guild_id.toString());
+  }
+
+  // Fetch user's pending requests for this event
+  let userRequests: any[] = [];
+  let userInvites: any[] = [];
+
+  if (session?.user?.userId) {
+     userRequests = await prisma.joinRequest.findMany({
+        where: {
+           event_id: BigInt(id),
+           user_id: BigInt(session.user.userId),
+           type: "REQUEST",
+           status: "PENDING"
+        },
+        include: {
+           registration: {
+             include: {
+               registrationusers: true
+             }
+           }
+        }
+     });
+
+     userInvites = await prisma.joinRequest.findMany({
+        where: {
+            event_id: BigInt(id),
+            user_id: BigInt(session.user.userId),
+            type: "INVITE",
+            status: "PENDING"
+        },
+        include: {
+            registration: {
+                include: {
+                    registrationusers: true
+                }
+            }
+        }
+     });
+  }
+
+  // Open To Join Logic
+  let openToJoinTeams: typeof event.registrations = [];
+  if (event.enable_team_requests && !isRegistered && !event.is_solo) {
+    const minPlayers = event.min_team_player || 0;
+    const maxPlayers = event.max_team_player || Infinity;
+
+    let requestableTeams = event.registrations.filter(reg => 
+      reg.requests_open && reg.registrationusers.length < maxPlayers
+    );
+
+    // Filter out teams that user has already requested
+    const requestedRegistrationIds = new Set(userRequests.map(r => r.registration_id?.toString()));
+    requestableTeams = requestableTeams.filter(reg => !requestedRegistrationIds.has(reg.id.toString()));
+
+    const incompleteTeams = requestableTeams.filter(reg => reg.registrationusers.length < minPlayers);
+    const otherOpenTeams = requestableTeams.filter(reg => reg.registrationusers.length >= minPlayers);
+
+    incompleteTeams.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+    otherOpenTeams.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+
+    openToJoinTeams = [...incompleteTeams, ...otherOpenTeams];
   }
 
   const statusColors = {
@@ -283,6 +348,120 @@ export default async function EventDetailPage({ params, }: { params: Promise<{ i
               </CardContent>
             </Card>
           </div>
+
+          {/* Open To Join Section */}
+          {!isRegistered && (openToJoinTeams.length > 0 || userRequests.length > 0 || userInvites.length > 0) && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <UserPlus className="h-5 w-5" />
+                  Open To Join
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {/* Invitations */}
+                  {userInvites.length > 0 && (
+                      <>
+                        <div className="text-xs uppercase">
+                             <span className="bg-background pr-2 text-muted-foreground font-semibold">
+                                Your Invitations
+                             </span>
+                             <span className="w-full border-t absolute top-2 z-[-1]" />
+                        </div>
+                        {userInvites.map((invite) => {
+                             if (!invite.registration) return null;
+                             const registration = invite.registration;
+                             
+                             return (
+                                <div key={invite.id} className="flex items-center justify-between p-2 rounded-lg border bg-purple-50/50 dark:bg-purple-950/20 border-purple-200 dark:border-purple-900">
+                                   <div>
+                                     <div className="flex items-center gap-2">
+                                        <h3 className="font-semibold">{registration.team_name || "Unnamed Team"}</h3>
+                                        {/* <Badge variant="secondary" className="bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300">Invited You</Badge> */}
+                                     </div>
+                                     <p className="text-sm text-gray-500">
+                                        {registration.registrationusers.length} / {event.max_team_player || "?"} members
+                                     </p>
+                                   </div>
+                                   <RespondInviteButton
+                                      requestId={invite.id}
+                                      teamName={registration.team_name || "Unnamed Team"}
+                                   />
+                                </div>
+                             )
+                        })}
+                         {(openToJoinTeams.length > 0 || userRequests.length > 0) && (
+                             <div className="relative py-1">
+                                <div className="absolute inset-0 flex items-center">
+                                    <span className="w-full border-t" />
+                                </div>
+                            </div>
+                         )}
+                      </>
+                  )}
+
+                  {openToJoinTeams.map((registration) => {
+                    const isComplete = registration.registrationusers.length >= (event.min_team_player || 0);
+
+                    return (
+                      <div
+                        key={registration.id.toString()}
+                        className={`flex items-center justify-between p-2 rounded-lg border ${!isComplete ? 'border-orange-200 bg-orange-50/50 dark:border-orange-900 dark:bg-orange-950/20' : ''}`}
+                      >
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-semibold">{registration.team_name || "Unnamed Team"}</h3>
+                            {!isComplete && (
+                              <Badge variant="secondary" className="text-orange-600 bg-orange-100 dark:bg-orange-900/40 dark:text-orange-400 hover:bg-orange-100">
+                                Need Members
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-sm text-gray-500">
+                            {registration.registrationusers.length} / {event.max_team_player || "?"} members
+                          </p>
+                        </div>
+
+                        <JoinRequestButton
+                          registrationId={registration.id.toString()}
+                          eventName={event.name}
+                          teamName={registration.team_name || "Unnamed Team"}
+                        />
+                      </div>
+                    )
+                  })}
+
+                  {userRequests.length > 0 && (
+                      <>
+                        {userRequests.map((request) => {
+                             if (!request.registration) return null;
+                             const registration = request.registration;
+                             
+                             return (
+                                <div key={request.id} className="flex items-center justify-between p-2 rounded-lg border bg-blue-50/50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-900">
+                                   <div>
+                                     <div className="flex items-center gap-2">
+                                        <h3 className="font-semibold">{registration.team_name || "Unnamed Team"}</h3>
+                                        <Badge variant="secondary" className="bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">Request Sent</Badge>
+                                     </div>
+                                     <p className="text-sm text-gray-500">
+                                        {registration.registrationusers.length} / {event.max_team_player || "?"} members
+                                     </p>
+                                   </div>
+                                   <RevokeRequestButton
+                                      registrationId={registration.id.toString()}
+                                      teamName={registration.team_name || "Unnamed Team"}
+                                   />
+                                </div>
+                             )
+                        })}
+                      </>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Event Description */}
           {event.details && (
