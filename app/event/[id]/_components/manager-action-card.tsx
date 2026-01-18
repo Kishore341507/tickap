@@ -196,37 +196,49 @@ export default function ManagerActionCard({ eventId, currentStatus, guildId, eve
           <label htmlFor="status" className="text-sm font-medium">
             Event Status
           </label>
-          <Select value={status} onValueChange={setStatus}>
-            <SelectTrigger id="status">
-              <SelectValue placeholder="Select status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Open">Open</SelectItem>
-              <SelectItem value="Live">Live</SelectItem>
-              <SelectItem value="Closed">Closed</SelectItem>
-              <SelectItem value="Cancelled">Cancelled</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="flex gap-2">
+            <Select value={status} onValueChange={setStatus}>
+                <SelectTrigger id="status" className="flex-1">
+                <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                <SelectItem value="Open">Open</SelectItem>
+                <SelectItem value="Live">Live</SelectItem>
+                <SelectItem value="Closed">Closed</SelectItem>
+                <SelectItem value="Cancelled">Cancelled</SelectItem>
+                </SelectContent>
+            </Select>
+            <Button 
+                onClick={handleStatusChange} 
+                disabled={isUpdating || status === currentStatus}
+            >
+                <Save className="mr-2 h-4 w-4" />
+                {isUpdating ? "Updating..." : "Update"}
+            </Button>
+          </div>
         </div>
 
-      </CardContent>
-      <CardFooter className="flex flex-col gap-4">
-        <div className="flex justify-between w-full">
-          <Link href={`/event/server/${guildId}/edit/${eventId}`}>
-            <Button variant="outline">
+        <div className="grid grid-cols-2 gap-2">
+          <Link href={`/event/server/${guildId}/edit/${eventId}`} className="w-full">
+            <Button variant="outline" className="w-full">
               <Edit className="mr-2 h-4 w-4" />
               Edit Event
             </Button>
           </Link>
-          <Button 
-            onClick={handleStatusChange} 
-            disabled={isUpdating || status === currentStatus}
-          >
-            <Save className="mr-2 h-4 w-4" />
-            {isUpdating ? "Updating..." : "Update Status"}
-          </Button>
+          <Link href={`/event/server/${guildId}/logs/${eventId}`} className="w-full">
+                <Button variant="outline" className="w-full">
+                    Logs
+                </Button>
+          </Link>
+          <Link href={`/event/server/${guildId}/registrations/${eventId}`} className="col-span-2 w-full">
+                <Button variant="outline" className="w-full">
+                    Manage Registrations
+                </Button>
+          </Link>
         </div>
 
+      </CardContent>
+      <CardFooter className="flex flex-col gap-4">
         <div className="w-full pt-4 border-t border-dashed border-gray-200 dark:border-gray-800">
              <Dialog open={showDiscordModal} onOpenChange={handleDiscordModalOpen}>
                 <DialogTrigger asChild>

@@ -33,6 +33,13 @@ import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { Separator } from "@/components/ui/separator";
 import { Category , Platform , EventStatus } from "@/types";
 
 // Create a Zod schema for form validation
@@ -64,7 +71,11 @@ const eventFormSchema = z.object({
   manager_id: z.string().optional(),
   channel_id: z.string().optional(),
   hide_registrations: z.boolean().default(false),
-  hide_registration_count: z.boolean().default(false)
+  hide_registration_count: z.boolean().default(false),
+  allow_incomplete_teams: z.boolean().default(false),
+  enable_team_invites: z.boolean().default(true),
+  enable_team_requests: z.boolean().default(true),
+  register_for_other: z.boolean().default(true),
 }).refine((data) => {
   // If it's not a solo event, min_team_player and max_team_player must be provided
   if (data.is_solo === false) {
@@ -180,10 +191,21 @@ export default function CreateEvent() {
       max_team_player : undefined,
       hide_registrations: false,
       hide_registration_count: false,
+      allow_incomplete_teams: false,
+      enable_team_invites: true,
+      enable_team_requests: true,
+      register_for_other: true,
     },
   });
 
   const isSolo = form.watch("is_solo");
+  const registerForOther = form.watch("register_for_other");
+
+  useEffect(() => {
+    if (!registerForOther) {
+      form.setValue("allow_incomplete_teams", true);
+    }
+  }, [registerForOther, form]);
 
   const handleBannerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -314,6 +336,7 @@ export default function CreateEvent() {
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit as any)} className="space-y-8">
+          <h3 className="text-lg font-medium">Event Information</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-6">
               <FormField
@@ -433,48 +456,6 @@ export default function CreateEvent() {
                       <FormLabel className="text-base">Solo Event</FormLabel>
                       <FormDescription>
                         Toggle if this is a solo event
-                      </FormDescription>
-                    </div>
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="hide_registrations"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                    <div className="space-y-0.5">
-                      <FormLabel className="text-base">Hide Registrations</FormLabel>
-                      <FormDescription>
-                        Hide the list of registered teams from public view
-                      </FormDescription>
-                    </div>
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="hide_registration_count"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                    <div className="space-y-0.5">
-                      <FormLabel className="text-base">Hide Registration Count</FormLabel>
-                      <FormDescription>
-                        Hide the number of registered teams from public view
                       </FormDescription>
                     </div>
                     <FormControl>
@@ -675,16 +656,22 @@ export default function CreateEvent() {
                   )}
                 />
               </div>
+            </div>
+          </div>
 
-              <div className="space-y-4">
-                <FormLabel>Discord Settings</FormLabel>
-                <div className="grid grid-cols-3 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="role_id"
+              <Accordion type="multiple" className="w-full">
+                <AccordionItem value="discord-settings" className="border-none">
+                  <AccordionTrigger className="hover:no-underline py-2 font-semibold justify-start gap-2">
+                    Discord Settings
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4">
+                      <FormField
+                        control={form.control}
+                        name="role_id"
                     render={({ field }) => (
                       <FormItem className="flex flex-col">
-                        <FormLabel>Role</FormLabel>
+                        <FormLabel>Registration Role</FormLabel>
                         <Popover open={roleOpen} onOpenChange={setRoleOpen}>
                           <PopoverTrigger asChild>
                             <FormControl>
@@ -765,6 +752,9 @@ export default function CreateEvent() {
                             </Command>
                           </PopoverContent>
                         </Popover>
+                        <FormDescription>
+                          The role that will be assigned to a user upon registering for the event.
+                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -856,6 +846,9 @@ export default function CreateEvent() {
                             </Command>
                           </PopoverContent>
                         </Popover>
+                        <FormDescription>
+                          Users with this role can manage registrations, add/remove participants, etc.
+                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -866,7 +859,7 @@ export default function CreateEvent() {
                     name="channel_id"
                     render={({ field }) => (
                       <FormItem className="flex flex-col">
-                        <FormLabel>Channel</FormLabel>
+                        <FormLabel>Log Channel</FormLabel>
                         <Popover open={channelOpen} onOpenChange={setChannelOpen}>
                           <PopoverTrigger asChild>
                             <FormControl>
@@ -930,14 +923,142 @@ export default function CreateEvent() {
                             </Command>
                           </PopoverContent>
                         </Popover>
+                        <FormDescription>
+                          The Discord text channel where logs will be sent.
+                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                </div>
-              </div>
-            </div>
-          </div>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+
+                <AccordionItem value="advance-settings" className="border-none">
+                  <AccordionTrigger className="hover:no-underline py-2 font-semibold justify-start gap-2">
+                    Advance Settings
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 px-1">
+                      <FormField
+                        control={form.control}
+                        name="hide_registrations"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-center space-x-2 space-y-0">
+                            <FormControl>
+                              <Switch
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                            <FormLabel className="text-sm font-medium">Hide Registrations</FormLabel>
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="hide_registration_count"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-center space-x-2 space-y-0">
+                            <FormControl>
+                              <Switch
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                            <FormLabel className="text-sm font-medium">Hide Registration Count</FormLabel>
+                          </FormItem>
+                        )}
+                      />
+                      {!isSolo && (
+                        <>
+                          <FormField
+                            control={form.control}
+                            name="register_for_other"
+                            render={({ field }) => (
+                              <FormItem className="rounded-md border p-3 shadow-sm">
+                                <div className="flex flex-row items-center space-x-2 mb-2">
+                                  <FormControl>
+                                    <Switch
+                                      checked={field.value}
+                                      onCheckedChange={field.onChange}
+                                    />
+                                  </FormControl>
+                                  <FormLabel className="text-sm font-medium">Register for others</FormLabel>
+                                </div>
+                                <FormDescription className="text-xs">
+                                  Allow a user to register on behalf of other users (they will be notified on Discord).
+                                </FormDescription>
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="allow_incomplete_teams"
+                            render={({ field }) => (
+                              <FormItem className="rounded-md border p-3 shadow-sm">
+                                <div className="flex flex-row items-center space-x-2 mb-2">
+                                  <FormControl>
+                                    <Switch
+                                      checked={field.value}
+                                      onCheckedChange={field.onChange}
+                                      disabled={!registerForOther}
+                                    />
+                                  </FormControl>
+                                  <FormLabel className="text-sm font-medium">Allow Incomplete Teams</FormLabel>
+                                </div>
+                                <FormDescription className="text-xs">
+                                  Allow registration of incomplete teams. Other users can then be invited or request to join.
+                                </FormDescription>
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="enable_team_invites"
+                            render={({ field }) => (
+                              <FormItem className="rounded-md border p-3 shadow-sm">
+                                <div className="flex flex-row items-center space-x-2 mb-2">
+                                  <FormControl>
+                                    <Switch
+                                      checked={field.value}
+                                      onCheckedChange={field.onChange}
+                                    />
+                                  </FormControl>
+                                  <FormLabel className="text-sm font-medium">Enable Team Invites</FormLabel>
+                                </div>
+                                <FormDescription className="text-xs">
+                                  Allow team leaders to invite other members if there is space in the team.
+                                </FormDescription>
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="enable_team_requests"
+                            render={({ field }) => (
+                              <FormItem className="rounded-md border p-3 shadow-sm">
+                                <div className="flex flex-row items-center space-x-2 mb-2">
+                                  <FormControl>
+                                    <Switch
+                                      checked={field.value}
+                                      onCheckedChange={field.onChange}
+                                    />
+                                  </FormControl>
+                                  <FormLabel className="text-sm font-medium">Enable Team Requests</FormLabel>
+                                </div>
+                                <FormDescription className="text-xs">
+                                  Allow other users to request to join a team if there is space available.
+                                </FormDescription>
+                              </FormItem>
+                            )}
+                          />
+                        </>
+                      )}
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
 
           <div className="flex justify-end">
             <Button type="submit" disabled={isSubmitting}>

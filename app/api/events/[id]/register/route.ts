@@ -11,7 +11,8 @@ import {
   sendLogMessage,
 } from "@/lib/discord";
 import { createEventLog } from "@/lib/event-logger";
-import { EventLogType, EventLogTarget } from "@prisma/client";
+import { EventLogType, EventLogTarget, TeamRole } from "@prisma/client";
+import { Registration } from "@/types";
 
 export async function POST(
   request: NextRequest,
@@ -135,7 +136,7 @@ export async function POST(
           event.guild_id!.toString(),
           event.channel_id!.toString(),
           'Registration',
-          registration )
+          registration as unknown as Registration )
       }
 
       return NextResponse.json(
@@ -161,7 +162,8 @@ export async function POST(
     // Validate team size
     if (
       event.min_team_player &&
-      teamMembers.length + 1 < event.min_team_player
+      teamMembers.length + 1 < event.min_team_player &&
+      !event.allow_incomplete_teams
     ) {
       return NextResponse.json(
         {
@@ -169,6 +171,18 @@ export async function POST(
         },
         { status: 400 }
       );
+    }
+
+    if (
+        event.register_for_other === false &&
+        teamMembers.length > 0
+    ) {
+        return NextResponse.json(
+            {
+                message: "You cannot register for others in this event",
+            },
+            { status: 400 }
+        );
     }
 
     if (
@@ -276,6 +290,7 @@ export async function POST(
               user_name: session.user.name,
               pfp: session.user.image || null,
               event_id: BigInt(id),
+              role: TeamRole.LEADER,
             },
             // Register all team members with their Discord information
             ...teamMembersData,
@@ -341,14 +356,14 @@ export async function POST(
         event.guild_id!.toString(),
         event.channel_id!.toString(),
         'Registration',
-        registration )
-    }
+          registration as unknown as Registration )
+      }
 
-    return NextResponse.json(
-      { message: "Team registration successful" },
-      { status: 201 }
-    );
-  } catch (error) {
+      return NextResponse.json(
+        { message: "Team registration successful" },
+        { status: 201 }
+      );
+    } catch (error) {
     console.error("Registration error:", error);
     return NextResponse.json(
       { message: "Failed to register for event" },
@@ -439,7 +454,7 @@ export async function DELETE(
           event.guild_id!.toString(),
           event.channel_id!.toString(),
           'Unregistration',
-          registration )
+          registration as unknown as Registration )
       }
 
       return NextResponse.json(
@@ -458,7 +473,7 @@ export async function DELETE(
     // or if this was the last team member, delete the entire registration
     if (
       !remainingMembers.length ||
-      (event.min_team_player && remainingMembers.length < event.min_team_player)
+      (event.min_team_player && remainingMembers.length < event.min_team_player && !event.allow_incomplete_teams)
     ) {
 
       const deletedRegistration = await prisma.registrations.delete({
@@ -500,7 +515,7 @@ export async function DELETE(
           event.guild_id!.toString(),
           event.channel_id!.toString(),
           'Unregistration',
-          deletedRegistration )
+          deletedRegistration as unknown as Registration )
       }
 
       return NextResponse.json(
@@ -556,7 +571,7 @@ export async function DELETE(
           event.guild_id!.toString(),
           event.channel_id!.toString(),
           'Registration Update',
-          UpdatedRegistration! )
+          UpdatedRegistration! as unknown as Registration )
       }
 
       return NextResponse.json(

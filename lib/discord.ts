@@ -268,6 +268,13 @@ export async function searchGuildMembers(
   query: string,
   limit?: number
 ) {
+  if (query.match(/^\d{17,20}$/)) {
+    const member = await getMember(guildId, query);
+    if (member) {
+      return member.user.bot ? [] : [member];
+    }
+  }
+
   const searchParams = new URLSearchParams({
     query: query,
     limit: (limit || 1).toString(),
@@ -296,6 +303,8 @@ export async function searchGuildMembers(
       return member.user.bot != true;
     });
   }
+
+  console.log("Search results:", data);
 
   return data;
 }

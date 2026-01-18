@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Search, UserPlus, X, UserMinus, LogOut } from "lucide-react";
+import { Loader2, Search, UserPlus, X, UserMinus, LogOut, Crown, Plus, Mail, Trash2, Check , Users } from "lucide-react";
 import {
     Dialog,
     DialogContent,
@@ -16,10 +16,17 @@ import {
 import {
     Command,
     CommandEmpty,
+    CommandList,
     CommandGroup,
     CommandInput,
     CommandItem,
 } from "@/components/ui/command";
+import {
+    Accordion,
+    AccordionContent,
+    AccordionItem,
+    AccordionTrigger,
+} from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -52,6 +59,10 @@ interface RegisterButtonProps {
     session: boolean;
     userRegistration: Registration | null | undefined;
     eventExtra?: any; // Added prop for custom questions
+    allowIncompleteTeams?: boolean | null;
+    registerForOther?: boolean | null;
+    enableTeamInvites?: boolean | null;
+    openToJoinCount?: number;
 }
 
 // Type for custom question
@@ -79,12 +90,27 @@ export function RegisterButton({
     guildId,
     session,
     userRegistration,
-    eventExtra
+    eventExtra,
+    allowIncompleteTeams,
+    registerForOther,
+    enableTeamInvites,
+    openToJoinCount = 0,
 }: RegisterButtonProps) {
     const [isLoading, setIsLoading] = useState(false);
     const [isTeamDialogOpen, setIsTeamDialogOpen] = useState(false);
     const [isQuestionsDialogOpen, setIsQuestionsDialogOpen] = useState(false);
     const [isUnregisterDialogOpen, setIsUnregisterDialogOpen] = useState(false);
+    const [isRemoveMemberDialogOpen, setIsRemoveMemberDialogOpen] = useState(false);
+    const [memberToRemove, setMemberToRemove] = useState<string | null>(null);
+    const [isAddMemberDialogOpen, setIsAddMemberDialogOpen] = useState(false);
+    const [isInviteMemberDialogOpen, setIsInviteMemberDialogOpen] = useState(false);
+    
+    // New state for revocation
+    const [inviteToRevoke, setInviteToRevoke] = useState<string | null>(null);
+    const [isRevokeInviteDialogOpen, setIsRevokeInviteDialogOpen] = useState(false);
+    
+    const [requestToRespond, setRequestToRespond] = useState<string | null>(null);
+
     const [searchQuery, setSearchQuery] = useState("");
     const [searchResults, setSearchResults] = useState<Member[]>([]);
     const [selectedMembers, setSelectedMembers] = useState<Member[]>([]);
@@ -99,6 +125,119 @@ export function RegisterButton({
 
     const { data: sessionData } = useSession();
 
+     // Helper to get current user role
+     const currentUserRole = userRegistration?.registrationusers.find(
+        u => u.user_id.toString() === sessionData?.user?.userId
+    )?.role;
+
+    const isLeaderOrManager = currentUserRole === "LEADER" || currentUserRole === "MANAGER";
+
+    const handleAddMember = async (member: Member) => {
+        if (!userRegistration) return;
+        try {
+            setIsLoading(true);
+            const response = await fetch(`/api/registrations/${userRegistration.id}/members`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    userId: member.user.id,
+                    username: member.user.global_name || member.user.username,
+                    pfp: member.user.avatar 
+                        ? `https://cdn.discordapp.com/avatars/${member.user.id}/${member.user.avatar}.png`
+                        : undefined
+                }),
+            });
+            
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.message);
+            }
+
+            toast({ title: "Member added", variant: "success" });
+            setIsAddMemberDialogOpen(false);
+            setSearchQuery("");
+            setSearchResults([]);
+            router.refresh();
+        } catch (error: any) {
+            toast({ title: "Failed to add member", description: error.message, variant: "destructive" });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleInviteMember = async (member: Member) => {
+        if (!userRegistration) return;
+        try {
+            setIsLoading(true);
+            const response = await fetch(`/api/registrations/${userRegistration.id}/invites`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    userId: member.user.id,
+                    username: member.user.global_name || member.user.username,
+                    pfp: member.user.avatar 
+                        ? `https://cdn.discordapp.com/avatars/${member.user.id}/${member.user.avatar}.png`
+                        : undefined
+                }),
+            });
+            
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.message);
+            }
+
+            toast({ title: "Invite sent", variant: "success" });
+            setIsInviteMemberDialogOpen(false);
+            setSearchQuery("");
+            setSearchResults([]);
+            router.refresh();
+        } catch (error: any) {
+            toast({ title: "Failed to invite", description: error.message, variant: "destructive" });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleRemoveMember = async (userId: string) => {
+        if (!userRegistration) return;
+        
+        // Don't remove self through this function (use unregister instead)
+        if (userId === sessionData?.user?.userId) {
+            setIsUnregisterDialogOpen(true);
+            return;
+        }
+
+        setMemberToRemove(userId);
+        setIsRemoveMemberDialogOpen(true);
+    };
+
+    const confirmRemoveMember = async () => {
+        if (!userRegistration || !memberToRemove) return;
+
+        try {
+            setIsLoading(true);
+            const response = await fetch(`/api/registrations/${userRegistration.id}/members`, {
+                method: "DELETE",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ targetUserId: memberToRemove }),
+            });
+            
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.message);
+            }
+
+            toast({ title: "Member removed", variant: "success" });
+            router.refresh();
+        } catch (error: any) {
+            toast({ title: "Failed to remove member", description: error.message, variant: "destructive" });
+        } finally {
+            setIsLoading(false);
+            setIsRemoveMemberDialogOpen(false);
+            setMemberToRemove(null);
+        }
+    };
+    
     // Parse custom questions from eventExtra on component mount
     useEffect(() => {
         if (eventExtra) {
@@ -173,6 +312,53 @@ export function RegisterButton({
             });
         } finally {
             setIsSearching(false);
+        }
+    };
+
+    const handleRevokeInvite = async () => {
+        if (!userRegistration || !inviteToRevoke) return;
+        try {
+            setIsLoading(true);
+            const response = await fetch(`/api/registrations/${userRegistration.id}/invites/${inviteToRevoke}`, {
+                method: "DELETE",
+            });
+            
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.message || "Failed to revoke invite");
+            }
+
+            toast({ title: "Invite revoked", variant: "success" });
+            router.refresh(); 
+        } catch (error: any) {
+            toast({ title: "Failed to revoke invite", description: error.message, variant: "destructive" });
+        } finally {
+            setIsLoading(false);
+            setIsRevokeInviteDialogOpen(false);
+            setInviteToRevoke(null);
+        }
+    };
+
+    const handleRespondRequest = async (requestId: string, action: "accept" | "decline") => {
+        try {
+            setRequestToRespond(requestId);
+            const response = await fetch(`/api/join-requests/${requestId}/respond`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ action }),
+            });
+            
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.message || `Failed to ${action} request`);
+            }
+
+            toast({ title: `Request ${action}ed`, variant: "success" });
+            router.refresh(); 
+        } catch (error: any) {
+            toast({ title: "Failed to respond", description: error.message, variant: "destructive" });
+        } finally {
+            setRequestToRespond(null);
         }
     };
 
@@ -340,7 +526,7 @@ export function RegisterButton({
             return;
         }
 
-        if (minTeamPlayer && selectedMembers.length < minTeamPlayer - 1) {
+        if (minTeamPlayer && selectedMembers.length < minTeamPlayer - 1 && !allowIncompleteTeams) {
             toast({
                 title: "Not enough team members",
                 description: `You need at least ${minTeamPlayer - 1} more team members to register.`,
@@ -462,30 +648,233 @@ export function RegisterButton({
     
     // If the user is registered, show current registration details
     if (isRegistered && userRegistration) {
+        const memberCount = userRegistration.registrationusers.length;
+        const isTeamIncomplete = !isSolo && minTeamPlayer && memberCount < minTeamPlayer;
+
+        const pendingInvites = userRegistration.join_requests?.filter(r => r.type === "INVITE") || [];
+        const pendingRequests = userRegistration.join_requests?.filter(r => r.type === "REQUEST") || [];
+        
         return (
             <div className="space-y-4">
-                <Card className="border-green-500">
-                    <CardContent className="pt-4">
-                        <div className="space-y-3">
-                            <div className="flex justify-between items-center">
-                                <Badge variant="outline" className="bg-green-500 text-white">
-                                    {isSolo ? "Registered" : "Team Registered"}
-                                </Badge>
-                                <p className="text-sm font-medium">{userRegistration.team_name || "Your Registration"}</p>
+                <Card className={`border-2 ${isTeamIncomplete ? "border-red-500" : "border-green-500"}`}>
+                    <CardContent className="pt-4 pb-4">
+                        <div className="space-y-4">
+                            <div className="space-y-2">
+                                <div className="flex justify-between items-start">
+                                    {isSolo && userRegistration.registrationusers.length > 0 ? (
+                                        <div className="flex items-center gap-3">
+                                            <Avatar className="h-8 w-8">
+                                                <AvatarImage 
+                                                    src={userRegistration.registrationusers[0].pfp ? userRegistration.registrationusers[0].pfp : undefined} 
+                                                    alt={userRegistration.registrationusers[0].user_name || "User"} 
+                                                />
+                                                <AvatarFallback>{userRegistration.registrationusers[0].user_name?.substring(0, 2).toUpperCase() || "U"}</AvatarFallback>
+                                            </Avatar>
+                                            <h3 className="font-semibold text-lg">{userRegistration.registrationusers[0].user_name || "Registered User"}</h3>
+                                        </div>
+                                    ) : (
+                                        <h3 className="font-semibold text-lg">{userRegistration.team_name || "Your Registration"}</h3>
+                                    )}
+                                    <div className="flex flex-col items-end gap-1">
+                                        <Badge 
+                                            variant={isTeamIncomplete ? "destructive" : "outline"} 
+                                            className={!isTeamIncomplete ? "bg-green-500 text-white hover:bg-green-600 border-green-600" : ""}
+                                        >
+                                            {isTeamIncomplete 
+                                                ? "Incomplete Team" 
+                                                : (isSolo ? "Registered" : "Team Registered")
+                                            }
+                                        </Badge>
+                                    </div>
+                                </div>
+                                {isTeamIncomplete && (
+                                    <p className="text-xs text-red-500 font-medium">
+                                        You need {(minTeamPlayer || 0) - memberCount} more members to complete the team.
+                                    </p>
+                                )}
                             </div>
                             
                             {!isSolo && (
-                                <div className="mt-2">
-                                    <p className="text-xs text-muted-foreground mb-1">Team Members ({userRegistration.registrationusers.length})</p>
-                                    <div className="flex flex-wrap gap-1">
+                                <div className="space-y-2">
+                                    {/* <p className="text-sm font-medium text-muted-foreground">Team Members</p> */}
+                                    <div className="grid gap-2">
                                         {userRegistration.registrationusers.map(user => (
-                                            <Badge key={user.user_id.toString()} variant="secondary" className="text-xs">
-                                                {user.user_name || "Unknown"}
-                                            </Badge>
+                                            <div 
+                                                key={user.user_id.toString()} 
+                                                className="flex items-center gap-3 p-2 rounded-lg border bg-card/50"
+                                            >
+                                                <Avatar className="h-8 w-8">
+                                                    <AvatarImage 
+                                                        src={user.pfp ? user.pfp : undefined} 
+                                                        alt={user.user_name || "User"} 
+                                                    />
+                                                    <AvatarFallback>{user.user_name?.substring(0, 2).toUpperCase() || "U"}</AvatarFallback>
+                                                </Avatar>
+                                                <div className="flex flex-col">
+                                                    <span className="text-sm font-medium leading-none">
+                                                        {user.user_name || "Unknown User"}
+                                                    </span>
+                                                </div>
+                                                <div className="ml-auto flex items-center gap-2">
+                                                    {user.role === "LEADER" && (
+                                                        <Crown className="h-4 w-4 text-muted-foreground" />
+                                                    )}
+                                                    {isLeaderOrManager && user.user_id.toString() !== sessionData?.user?.userId && user.role !== "LEADER" && (user.role !== "MANAGER" || currentUserRole === "LEADER") && (
+                                                        <Button 
+                                                            variant="ghost" 
+                                                            size="icon" 
+                                                            className="h-6 w-6 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                                            onClick={() => handleRemoveMember(user.user_id.toString())}
+                                                            disabled={isLoading}
+                                                        >
+                                                            {isLoading ? <Loader2 className="h-3 w-3 animate-spin"/> : <Trash2 className="h-3 w-3" />}
+                                                        </Button>
+                                                    )}
+                                                </div>
+                                            </div>
                                         ))}
+                                        {!isSolo && (
+                                            <span className="ml-auto text-xs text-muted-foreground">
+                                                {memberCount} / {maxTeamPlayer || "∞"} Members
+                                            </span>
+                                        )}
                                     </div>
+                                    
+                                    {pendingRequests.length > 0 && (
+                                        <Accordion type="single" collapsible className="w-full">
+                                            <AccordionItem value="requests" className="border-b-0">
+                                                <AccordionTrigger className="py-2 hover:no-underline">
+                                                    <span className="text-sm font-medium">Join Requests ({pendingRequests.length})</span>
+                                                </AccordionTrigger>
+                                                <AccordionContent>
+                                                    <div className="space-y-2 pt-1">
+                                                        {pendingRequests.map((request) => (
+                                                            <div 
+                                                                key={request.id} 
+                                                                className="flex items-center gap-3 p-2 rounded-lg border bg-card/50"
+                                                            >
+                                                                <Avatar className="h-8 w-8">
+                                                                    <AvatarImage 
+                                                                        src={request.user_pfp ? request.user_pfp : undefined} 
+                                                                        alt={request.user_name || "User"} 
+                                                                    />
+                                                                    <AvatarFallback>{request.user_name?.substring(0, 2).toUpperCase() || "U"}</AvatarFallback>
+                                                                </Avatar>
+                                                                <div className="flex flex-col">
+                                                                    <span className="text-sm font-medium leading-none">
+                                                                        {request.user_name || "Unknown User"}
+                                                                    </span>
+                                                                    <span className="text-xs text-muted-foreground">
+                                                                        Requested to join
+                                                                    </span>
+                                                                </div>
+                                                                {isLeaderOrManager && (
+                                                                    <div className="ml-auto flex gap-1">
+                                                                        <Button 
+                                                                            variant="ghost" 
+                                                                            size="icon" 
+                                                                            className="h-6 w-6 text-green-500 hover:text-green-600 hover:bg-green-100 dark:hover:bg-green-900/20"
+                                                                            onClick={() => handleRespondRequest(request.id, "accept")}
+                                                                            disabled={isLoading || !!requestToRespond}
+                                                                        >
+                                                                            {requestToRespond === request.id ? <Loader2 className="h-3 w-3 animate-spin"/> : <Check className="h-3 w-3" />}
+                                                                        </Button>
+                                                                        <Button 
+                                                                            variant="ghost" 
+                                                                            size="icon" 
+                                                                            className="h-6 w-6 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                                                            onClick={() => handleRespondRequest(request.id, "decline")}
+                                                                            disabled={isLoading || !!requestToRespond}
+                                                                        >
+                                                                            <X className="h-3 w-3" />
+                                                                        </Button>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </AccordionContent>
+                                            </AccordionItem>
+                                        </Accordion>
+                                    )}
+
+                                    {pendingInvites.length > 0 && (
+                                        <Accordion type="single" collapsible className="w-full">
+                                            <AccordionItem value="invited" className="border-b-0">
+                                                <AccordionTrigger className="py-2 hover:no-underline">
+                                                    <span className="text-sm font-medium">Invited Members ({pendingInvites.length})</span>
+                                                </AccordionTrigger>
+                                                <AccordionContent>
+                                                    <div className="space-y-2 pt-1">
+                                                        {pendingInvites.map((request) => (
+                                                            <div 
+                                                                key={request.id} 
+                                                                className="flex items-center gap-3 p-2 rounded-lg border bg-card/50"
+                                                            >
+                                                                <Avatar className="h-8 w-8">
+                                                                    <AvatarImage 
+                                                                        src={request.user_pfp ? request.user_pfp : undefined} 
+                                                                        alt={request.user_name || "User"} 
+                                                                    />
+                                                                    <AvatarFallback>{request.user_name?.substring(0, 2).toUpperCase() || "U"}</AvatarFallback>
+                                                                </Avatar>
+                                                                <div className="flex flex-col">
+                                                                    <span className="text-sm font-medium leading-none">
+                                                                        {request.user_name || "Unknown User"}
+                                                                    </span>
+                                                                    <span className="text-xs text-muted-foreground">
+                                                                        Invited
+                                                                    </span>
+                                                                </div>
+                                                                {isLeaderOrManager && (
+                                                                    <div className="ml-auto">
+                                                                        <Button 
+                                                                            variant="ghost" 
+                                                                            size="icon" 
+                                                                            className="h-6 w-6 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                                                            onClick={() => {
+                                                                                setInviteToRevoke(request.id);
+                                                                                setIsRevokeInviteDialogOpen(true);
+                                                                            }}
+                                                                            disabled={isLoading}
+                                                                        >
+                                                                            {isLoading && inviteToRevoke === request.id ? <Loader2 className="h-3 w-3 animate-spin"/> : <X className="h-3 w-3" />}
+                                                                        </Button>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </AccordionContent>
+                                            </AccordionItem>
+                                        </Accordion>
+                                    )}
+                                    
+                                    {isLeaderOrManager && (
+                                        <div className="flex gap-2 mt-4">
+                                            {registerForOther && (!maxTeamPlayer || memberCount < maxTeamPlayer) && (
+                                                <Button size="sm" variant="outline" onClick={() => {
+                                                    setSearchQuery("");
+                                                    setSearchResults([]);
+                                                    setIsAddMemberDialogOpen(true);
+                                                }} className="flex-1">
+                                                    <Plus className="w-4 h-4 mr-2" /> Add Member
+                                                </Button>
+                                            )}
+                                            {enableTeamInvites && (!maxTeamPlayer || memberCount < maxTeamPlayer) && (
+                                                 <Button size="sm" variant="outline" onClick={() => {
+                                                    setSearchQuery("");
+                                                    setSearchResults([]);
+                                                    setIsInviteMemberDialogOpen(true);
+                                                 }} className="flex-1">
+                                                    <Mail className="w-4 h-4 mr-2" /> Invite Member
+                                                </Button>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
                             )}
+
                         </div>
                     </CardContent>
                 </Card>
@@ -507,9 +896,11 @@ export function RegisterButton({
                             <AlertDialogDescription>
                                 {isSolo 
                                     ? "This will remove your registration from this event." 
-                                    : userRegistration.registrationusers.length <= (minTeamPlayer || 1)
-                                        ? "This will remove you and your entire team from this event."
-                                        : "This will remove you from this team."
+                                    : userRegistration.registrationusers.length === 1
+                                        ? "This will remove your registration from this event."
+                                        : userRegistration.registrationusers.length <= (minTeamPlayer || 1) && !allowIncompleteTeams
+                                            ? "This will remove you and your entire team from this event."
+                                            : "This will remove you from this team."
                                 }
                             </AlertDialogDescription>
                         </AlertDialogHeader>
@@ -522,10 +913,195 @@ export function RegisterButton({
                         </AlertDialogFooter>
                     </AlertDialogContent>
                 </AlertDialog>
+
+                <AlertDialog open={isRevokeInviteDialogOpen} onOpenChange={setIsRevokeInviteDialogOpen}>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>Revoke Invitation</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                Are you sure you want to revoke this invitation? The user will not be able to join the team via this invite.
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel disabled={isLoading}>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleRevokeInvite} disabled={isLoading} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                                Revoke
+                            </AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+
+                {/* Add Member Dialog */}
+                <Dialog open={isAddMemberDialogOpen} onOpenChange={setIsAddMemberDialogOpen}>
+                    <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                            <DialogTitle>Add Team Member</DialogTitle>
+                            <DialogDescription>
+                                Search and add a member to your team immediately.
+                            </DialogDescription>
+                        </DialogHeader>
+
+                        <div className="space-y-4 py-2">
+                            <div className="space-y-2">
+                                <Command className="rounded-md border shadow-md">
+                                    <CommandInput
+                                        placeholder="Search for users..."
+                                        value={searchQuery}
+                                        onValueChange={setSearchQuery}
+                                    />
+                                    <CommandList className="h-64">
+                                        {isSearching ? (
+                                            <div className="flex items-center justify-center py-2">
+                                                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                                Searching...
+                                            </div>
+                                        ) : searchResults.length > 0 ? null : searchQuery.length > 2 ? (
+                                            <CommandEmpty>No users found</CommandEmpty>
+                                        ) : (
+                                            <CommandEmpty>Enter at least 2 characters to search</CommandEmpty>
+                                        )}
+                                        {searchQuery.length > 0 && (
+                                            <CommandGroup heading="Search Results">
+                                                {searchResults.map((member) => (
+                                                    <CommandItem 
+                                                        key={member.user.username} 
+                                                        value={`${member.user.username} ${member.nick ?? ""} ${member.user.global_name ?? ""} ${member.user.id}`}
+                                                        className="cursor-pointer flex items-center justify-between" 
+                                                        onSelect={() => handleAddMember(member)}
+                                                    >
+                                                        <div className="flex items-center gap-2">
+                                                            <Avatar className="h-8 w-8">
+                                                                <AvatarImage
+                                                                    src={member.user.avatar ? `https://cdn.discordapp.com/avatars/${member.user.id}/${member.user.avatar}.png` : undefined}
+                                                                    alt={member.user.username}
+                                                                />
+                                                                <AvatarFallback>{member.user.global_name || member.user.username}</AvatarFallback>
+                                                            </Avatar>
+                                                            <div className="flex flex-col">
+                                                                <span>{member.nick || member.user.global_name || member.user.username}</span>
+                                                                <span className="text-xs text-muted-foreground">{member.user.username}</span>
+                                                            </div>
+                                                        </div>
+                                                        <Button size="sm" variant="ghost" disabled={isLoading} className="pointer-events-none">
+                                                            <Plus className="h-4 w-4" />
+                                                        </Button>
+                                                    </CommandItem>
+                                                ))}
+                                            </CommandGroup>
+                                        )}
+                                    </CommandList>
+                                </Command>
+                            </div>
+                        </div>
+                    </DialogContent>
+                </Dialog>
+
+                {/* Invite Member Dialog */}
+                <Dialog open={isInviteMemberDialogOpen} onOpenChange={setIsInviteMemberDialogOpen}>
+                    <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                            <DialogTitle>Invite Team Member</DialogTitle>
+                            <DialogDescription>
+                                Send an invitation to join your team. They must accept to join.
+                            </DialogDescription>
+                        </DialogHeader>
+
+                        <div className="space-y-4 py-2">
+                            <div className="space-y-2">
+                                <Command className="rounded-md border shadow-md">
+                                    <CommandInput
+                                        placeholder="Search for users..."
+                                        value={searchQuery}
+                                        onValueChange={setSearchQuery}
+                                    />
+                                    <CommandList className="h-64">
+                                        {isSearching ? (
+                                            <div className="flex items-center justify-center py-2">
+                                                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                                Searching...
+                                            </div>
+                                        ) : searchResults.length > 0 ? null : searchQuery.length > 2 ? (
+                                            <CommandEmpty>No users found</CommandEmpty>
+                                        ) : (
+                                            <CommandEmpty>Enter at least 2 characters to search</CommandEmpty>
+                                        )}
+                                        {searchQuery.length > 0 && (
+                                            <CommandGroup heading="Search Results">
+                                                {searchResults.map((member) => (
+                                                    <CommandItem 
+                                                        key={member.user.username} 
+                                                        value={`${member.user.username} ${member.nick ?? ""} ${member.user.global_name ?? ""} ${member.user.id}`}
+                                                        className="cursor-pointer flex items-center justify-between" 
+                                                        onSelect={() => handleInviteMember(member)}
+                                                    >
+                                                        <div className="flex items-center gap-2">
+                                                            <Avatar className="h-8 w-8">
+                                                                <AvatarImage
+                                                                    src={member.user.avatar ? `https://cdn.discordapp.com/avatars/${member.user.id}/${member.user.avatar}.png` : undefined}
+                                                                    alt={member.user.username}
+                                                                />
+                                                                <AvatarFallback>{member.user.global_name || member.user.username}</AvatarFallback>
+                                                            </Avatar>
+                                                            <div className="flex flex-col">
+                                                                <span>{member.nick || member.user.global_name || member.user.username}</span>
+                                                                <span className="text-xs text-muted-foreground">{member.user.username}</span>
+                                                            </div>
+                                                        </div>
+                                                        <Button size="sm" variant="ghost" disabled={isLoading} className="pointer-events-none">
+                                                            <Mail className="h-4 w-4" />
+                                                        </Button>
+                                                    </CommandItem>
+                                                ))}
+                                            </CommandGroup>
+                                        )}
+                                    </CommandList>
+                                </Command>
+                            </div>
+                        </div>
+                    </DialogContent>
+                </Dialog>
+
+                {/* Remove Member Dialog */}
+                <AlertDialog open={isRemoveMemberDialogOpen} onOpenChange={setIsRemoveMemberDialogOpen}>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>Remove team member?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                {userRegistration && !allowIncompleteTeams && minTeamPlayer && (userRegistration.registrationusers.length - 1) < minTeamPlayer
+                                    ? "Removing this member will make the team incomplete and the ENTIRE registration will be deleted. This action cannot be undone."
+                                    : "Are you sure you want to remove this member from the team? This action cannot be undone."
+                                }
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel disabled={isLoading}>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={confirmRemoveMember} disabled={isLoading} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                                Remove
+                            </AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
             </div>
         );
     }    return (
         <>
+            {session && !isRegistered && openToJoinCount > 0 && (
+                <Button
+                    onClick={() => {
+                        const element = document.getElementById("open-to-join-section");
+                        if (element) {
+                            element.scrollIntoView({ behavior: "smooth" });
+                        }
+                    }}
+                    variant="secondary"
+                    className="w-full mb-2"
+                >
+                    <Users className="mr-2 h-4 w-4" />
+                    Join a Team
+                </Button>
+            )}
             <Button
                 onClick={handleClick}
                 disabled={disabled}
@@ -542,7 +1118,7 @@ export function RegisterButton({
                     <DialogHeader>
                         <DialogTitle>Select Team Members</DialogTitle>
                         <DialogDescription>
-                            {minTeamPlayer ? `You need at least ${minTeamPlayer - 1} team members.` : 'Add team members for this event.'}
+                            {minTeamPlayer && !allowIncompleteTeams ? `You need at least ${minTeamPlayer - 1} team members.` : 'Add team members for this event.'}
                             {maxTeamPlayer ? ` Maximum team size is ${maxTeamPlayer}.` : ''}
                         </DialogDescription>
                     </DialogHeader>
@@ -567,6 +1143,7 @@ export function RegisterButton({
                             )}
                         </div>
 
+                        {registerForOther !== false && (
                         <div className="space-y-2">
                             <Command className="rounded-md border shadow-md">
                                 <CommandInput
@@ -580,13 +1157,20 @@ export function RegisterButton({
                                             <Loader2 className="h-4 w-4 animate-spin mr-2" />
                                             Searching...
                                         </div>
-                                    ) : searchResults.length === 0 && searchQuery.length > 2 ? (
+                                    ) : searchResults.length > 0 ? null : searchQuery.length > 2 ? (
                                         <CommandEmpty>No members found</CommandEmpty>
-                                    ) : <CommandEmpty>Enter at least 2 characters to search</CommandEmpty>}
+                                    ) : (
+                                        <CommandEmpty>Enter at least 2 characters to search</CommandEmpty>
+                                    )}
                                     {searchQuery.length > 0 && (
                                         <CommandGroup heading="Search Results">
                                             {searchResults.map((member) => (
-                                                <div key={member.user.username} className="flex items-center space-x-2 px-1 py-1 cursor-pointer bg-none hover:bg-muted" onClick={() => toggleMemberSelection(member)}>
+                                                <CommandItem 
+                                                    key={member.user.username} 
+                                                    value={`${member.user.username} ${member.nick ?? ""} ${member.user.global_name ?? ""} ${member.user.id}`}
+                                                    className="cursor-pointer" 
+                                                    onSelect={() => toggleMemberSelection(member)}
+                                                >
                                                     <Avatar className="h-8 w-8">
                                                         <AvatarImage
                                                             src={member.user.avatar ? `https://cdn.discordapp.com/avatars/${member.user.id}/${member.user.avatar}.png` : undefined}
@@ -595,19 +1179,18 @@ export function RegisterButton({
                                                         <AvatarFallback>{member.user.global_name || member.user.username}</AvatarFallback>
                                                     </Avatar>
 
-                                                    <CommandItem
-                                                        className="cursor-pointer data-[selected='true']:bg-black"
-                                                    >
-                                                        {member.user.username}
-                                                    </CommandItem>
-                                                </div>
+                                                    <span>{member.nick || member.user.global_name || member.user.username}</span>
+                                                    <span className="ml-auto text-xs text-muted-foreground">{member.user.username}</span>
+                                                </CommandItem>
                                             ))}
                                         </CommandGroup>
                                     )}
                                 </ScrollArea>
                             </Command>
                         </div>
+                        )}
 
+                        {registerForOther !== false && (
                         <div>
                             <h4 className="mb-2 text-sm font-medium">Selected Members ({selectedMembers.length})</h4>
                             <div className="flex flex-wrap gap-2">
@@ -631,6 +1214,7 @@ export function RegisterButton({
                                 )}
                             </div>
                         </div>
+                        )}
                     </div>
 
                     <DialogFooter className="flex">
@@ -644,9 +1228,16 @@ export function RegisterButton({
                         <Button
                             type="button"
                             onClick={handleTeamSubmit}
-                            disabled={isLoading || !!(minTeamPlayer && selectedMembers.length < minTeamPlayer - 1)}
+                            disabled={isLoading || !!(minTeamPlayer && selectedMembers.length < minTeamPlayer - 1 && !allowIncompleteTeams)}
                         >
-                            {customQuestions.length > 0 ? "Next" : "Register Team"}
+                            {isLoading && customQuestions.length === 0 ? (
+                                <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Registering...
+                                </>
+                            ) : (
+                                customQuestions.length > 0 ? "Next" : "Register Team"
+                            )}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

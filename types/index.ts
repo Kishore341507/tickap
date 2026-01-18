@@ -21,10 +21,29 @@ export enum EventStatus {
   Live = "Live"
 }
 
+export enum TeamRole {
+  LEADER = "LEADER",
+  MANAGER = "MANAGER",
+  MEMBER = "MEMBER"
+}
+
+export enum RequestType {
+  INVITE = "INVITE",
+  REQUEST = "REQUEST"
+}
+
+export enum RequestStatus {
+  PENDING = "PENDING",
+  ACCEPTED = "ACCEPTED",
+  DECLINED = "DECLINED",
+  CANCELLED = "CANCELLED"
+}
+
 /**
  * User and member interfaces
  */
 export interface Member {
+  nick: string | null;
   user: {
     id: string;
     username: string;
@@ -42,6 +61,20 @@ export interface RegistrationUser {
   event_id: bigint;
   user_name: string | null;
   pfp: string | null;
+  role?: TeamRole;
+}
+
+export interface JoinRequest {
+  id: string;
+  event_id: bigint;
+  registration_id: bigint | null;
+  user_id: bigint;
+  user_name: string | null;
+  user_pfp: string | null;
+  type: RequestType;
+  status: RequestStatus;
+  created_at: Date;
+  updated_at: Date;
 }
 
 export interface Registration {
@@ -49,6 +82,7 @@ export interface Registration {
   event_id: bigint;
   team_name: string | null;
   registrationusers: RegistrationUser[];
+  join_requests?: JoinRequest[];
   extra?: string | any; // Added to support custom responses
 }
 
@@ -91,6 +125,10 @@ export interface Event {
   role_id: bigint | null;
   manager_id: bigint | null;
   channel_id: bigint | null;
+  allow_incomplete_teams?: boolean | null;
+  enable_team_invites?: boolean | null;
+  enable_team_requests?: boolean | null;
+  register_for_other?: boolean | null;
 }
 
 /**
