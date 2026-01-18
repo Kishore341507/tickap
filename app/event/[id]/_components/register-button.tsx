@@ -856,7 +856,6 @@ export function RegisterButton({
                                                 <Button size="sm" variant="outline" onClick={() => {
                                                     setSearchQuery("");
                                                     setSearchResults([]);
-                                                    console.log("Opening add member dialog");
                                                     setIsAddMemberDialogOpen(true);
                                                 }} className="flex-1">
                                                     <Plus className="w-4 h-4 mr-2" /> Add Member
