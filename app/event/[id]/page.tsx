@@ -3,7 +3,7 @@ import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, MapPin, Users, Trophy, Info, UserCircle2, UserPlus } from "lucide-react";
+import { Calendar, MapPin, Users, Trophy, Info, UserCircle2, UserPlus, Link as LinkIcon } from "lucide-react";
 import { format } from "date-fns";
 import Image from "next/image";
 import { getGuild, checkIsManager } from "@/lib/discord";
@@ -343,6 +343,7 @@ export default async function EventDetailPage({ params, }: { params: Promise<{ i
                     allowIncompleteTeams={event.allow_incomplete_teams}
                     registerForOther={event.register_for_other}
                     enableTeamInvites={event.enable_team_invites}
+                    openToJoinCount={openToJoinTeams.length}
                   />
                 </div>
               </CardContent>
@@ -350,8 +351,8 @@ export default async function EventDetailPage({ params, }: { params: Promise<{ i
           </div>
 
           {/* Open To Join Section */}
-          {!isRegistered && (openToJoinTeams.length > 0 || userRequests.length > 0 || userInvites.length > 0) && (
-            <Card>
+          {session && !isRegistered && (openToJoinTeams.length > 0 || userRequests.length > 0 || userInvites.length > 0) && (
+            <Card id="open-to-join-section">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <UserPlus className="h-5 w-5" />
@@ -412,6 +413,11 @@ export default async function EventDetailPage({ params, }: { params: Promise<{ i
                         <div>
                           <div className="flex items-center gap-2">
                             <h3 className="font-semibold">{registration.team_name || "Unnamed Team"}</h3>
+                            {showRegistrations && (
+                              <a href={`#team-${registration.id.toString()}`} className="text-muted-foreground hover:text-foreground">
+                                <LinkIcon className="h-4 w-4" />
+                              </a>
+                            )}
                             {!isComplete && (
                               <Badge variant="secondary" className="text-orange-600 bg-orange-100 dark:bg-orange-900/40 dark:text-orange-400 hover:bg-orange-100">
                                 Need Members
@@ -501,7 +507,7 @@ export default async function EventDetailPage({ params, }: { params: Promise<{ i
               <CardContent>
                 <Accordion type="single" collapsible className="w-full">
                   {event.registrations.map((registration) => (
-                    <AccordionItem key={registration.id.toString()} value={registration.id.toString()}>
+                    <AccordionItem id={`team-${registration.id.toString()}`} key={registration.id.toString()} value={registration.id.toString()}>
                       <AccordionTrigger className="hover:no-underline">
                         <div className="flex items-center justify-between w-full pr-4">
                           <span className="font-medium">
@@ -592,6 +598,7 @@ export default async function EventDetailPage({ params, }: { params: Promise<{ i
                     allowIncompleteTeams={event.allow_incomplete_teams}
                     registerForOther={event.register_for_other}
                     enableTeamInvites={event.enable_team_invites}
+                    openToJoinCount={openToJoinTeams.length}
                   />
                 </div>
               </CardContent>

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Search, UserPlus, X, UserMinus, LogOut, Crown, Plus, Mail, Trash2, Check } from "lucide-react";
+import { Loader2, Search, UserPlus, X, UserMinus, LogOut, Crown, Plus, Mail, Trash2, Check , Users } from "lucide-react";
 import {
     Dialog,
     DialogContent,
@@ -62,6 +62,7 @@ interface RegisterButtonProps {
     allowIncompleteTeams?: boolean | null;
     registerForOther?: boolean | null;
     enableTeamInvites?: boolean | null;
+    openToJoinCount?: number;
 }
 
 // Type for custom question
@@ -92,7 +93,8 @@ export function RegisterButton({
     eventExtra,
     allowIncompleteTeams,
     registerForOther,
-    enableTeamInvites
+    enableTeamInvites,
+    openToJoinCount = 0,
 }: RegisterButtonProps) {
     const [isLoading, setIsLoading] = useState(false);
     const [isTeamDialogOpen, setIsTeamDialogOpen] = useState(false);
@@ -1086,6 +1088,21 @@ export function RegisterButton({
         );
     }    return (
         <>
+            {session && !isRegistered && openToJoinCount > 0 && (
+                <Button
+                    onClick={() => {
+                        const element = document.getElementById("open-to-join-section");
+                        if (element) {
+                            element.scrollIntoView({ behavior: "smooth" });
+                        }
+                    }}
+                    variant="secondary"
+                    className="w-full mb-2"
+                >
+                    <Users className="mr-2 h-4 w-4" />
+                    Join a Team
+                </Button>
+            )}
             <Button
                 onClick={handleClick}
                 disabled={disabled}
