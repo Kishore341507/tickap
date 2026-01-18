@@ -125,6 +125,10 @@ export interface Event {
   role_id: bigint | null;
   manager_id: bigint | null;
   channel_id: bigint | null;
+  allow_incomplete_teams?: boolean | null;
+  enable_team_invites?: boolean | null;
+  enable_team_requests?: boolean | null;
+  register_for_other?: boolean | null;
 }
 
 /**

@@ -6,6 +6,7 @@ import { notFound, redirect } from "next/navigation";
 import { RegistrationManagement } from "../_components/registration-management";
 import { Suspense } from "react";
 import { Loader2 } from "lucide-react";
+import { Event } from "@/types";
 
 // export default async function EventRegistrationsPage({params }: { params: { id: string, event_id: string } }) {
 export default async function EventRegistrationsPage( {params,}: {params: Promise<{ id: string, event_id: string }>} ) {
@@ -60,7 +61,7 @@ export default async function EventRegistrationsPage( {params,}: {params: Promis
           <RegistrationManagement 
             eventId={event_id}
             guildId={id}
-            event={event}
+            event={event as unknown as Event}
           />
         </Suspense>
       </div>

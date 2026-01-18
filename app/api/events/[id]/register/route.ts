@@ -12,6 +12,7 @@ import {
 } from "@/lib/discord";
 import { createEventLog } from "@/lib/event-logger";
 import { EventLogType, EventLogTarget, TeamRole } from "@prisma/client";
+import { Registration } from "@/types";
 
 export async function POST(
   request: NextRequest,
@@ -135,7 +136,7 @@ export async function POST(
           event.guild_id!.toString(),
           event.channel_id!.toString(),
           'Registration',
-          registration )
+          registration as unknown as Registration )
       }
 
       return NextResponse.json(
@@ -355,14 +356,14 @@ export async function POST(
         event.guild_id!.toString(),
         event.channel_id!.toString(),
         'Registration',
-        registration )
-    }
+          registration as unknown as Registration )
+      }
 
-    return NextResponse.json(
-      { message: "Team registration successful" },
-      { status: 201 }
-    );
-  } catch (error) {
+      return NextResponse.json(
+        { message: "Team registration successful" },
+        { status: 201 }
+      );
+    } catch (error) {
     console.error("Registration error:", error);
     return NextResponse.json(
       { message: "Failed to register for event" },
@@ -453,7 +454,7 @@ export async function DELETE(
           event.guild_id!.toString(),
           event.channel_id!.toString(),
           'Unregistration',
-          registration )
+          registration as unknown as Registration )
       }
 
       return NextResponse.json(
@@ -514,7 +515,7 @@ export async function DELETE(
           event.guild_id!.toString(),
           event.channel_id!.toString(),
           'Unregistration',
-          deletedRegistration )
+          deletedRegistration as unknown as Registration )
       }
 
       return NextResponse.json(
@@ -570,7 +571,7 @@ export async function DELETE(
           event.guild_id!.toString(),
           event.channel_id!.toString(),
           'Registration Update',
-          UpdatedRegistration! )
+          UpdatedRegistration! as unknown as Registration )
       }
 
       return NextResponse.json(

@@ -57,7 +57,7 @@ export async function POST(
     } else if (invite.type === "REQUEST") {
         // Case 2: Team Leader/Manager approving a request to join the team
         // The session user must be a leader or manager of the team
-        const currentUserRole = invite.registration.registrationusers.find(
+        const currentUserRole = invite.registration?.registrationusers.find(
             u => u.user_id === userId
         )?.role;
         

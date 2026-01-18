@@ -24,6 +24,7 @@ import {
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { Registration } from "@/types";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
@@ -338,7 +339,7 @@ export default async function EventDetailPage({ params, }: { params: Promise<{ i
                     minTeamPlayer={event.min_team_player}
                     guildId={event.guild_id}
                     session={!!session}
-                    userRegistration={userRegistration}
+                    userRegistration={userRegistration as unknown as Registration | null}
                     eventExtra={event.extra}
                     allowIncompleteTeams={event.allow_incomplete_teams}
                     registerForOther={event.register_for_other}
@@ -602,7 +603,7 @@ export default async function EventDetailPage({ params, }: { params: Promise<{ i
                     minTeamPlayer={event.min_team_player}
                     guildId={event.guild_id}
                     session={!!session}
-                    userRegistration={userRegistration}
+                    userRegistration={userRegistration as unknown as Registration | null}
                     eventExtra={event.extra}
                     allowIncompleteTeams={event.allow_incomplete_teams}
                     registerForOther={event.register_for_other}
