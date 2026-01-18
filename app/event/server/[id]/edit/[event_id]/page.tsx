@@ -1054,7 +1054,7 @@ export default function EditEvent() {
 
                 <AccordionItem value="advance-settings" className="border-none">
                   <AccordionTrigger className="hover:no-underline py-2 font-semibold justify-start gap-2">
-                    Advance Settings
+                    Advanced Settings
                   </AccordionTrigger>
                   <AccordionContent>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 px-1">
