@@ -96,12 +96,12 @@ export async function POST(
         );
     }
 
-    const thirtyMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
     const memberAddCount = await prisma.registrationusers.count({
       where: {
         registration_id: registration.id,
         created_at: {
-          gt: thirtyMinutesAgo,
+          gt: tenMinutesAgo,
         },
       },
     });
