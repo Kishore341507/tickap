@@ -129,6 +129,8 @@ export async function POST(
         event_id: registration.event_id,
         registration_id: registration.id,
         user_id: userId,
+        user_name: session.user.name,
+        user_pfp: session.user.image,
         type: "REQUEST",
         status: "PENDING",
       },
