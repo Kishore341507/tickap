@@ -10,12 +10,14 @@ interface JoinRequestButtonProps {
   registrationId: string;
   eventName: string;
   teamName: string;
+  className?: string;
 }
 
 export function JoinRequestButton({
   registrationId,
   eventName,
   teamName,
+  className,
 }: JoinRequestButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
@@ -57,6 +59,7 @@ export function JoinRequestButton({
       size="sm" 
       onClick={handleRequest} 
       disabled={isLoading}
+      className={className}
     >
       {isLoading ? (
         <Loader2 className="h-4 w-4 animate-spin mr-2" />

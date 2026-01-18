@@ -3,17 +3,20 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 import { Loader2, XCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 interface RevokeRequestButtonProps {
   registrationId: string;
   teamName: string;
+  className?: string; 
 }
 
 export function RevokeRequestButton({
   registrationId,
   teamName,
+  className,
 }: RevokeRequestButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
@@ -55,6 +58,7 @@ export function RevokeRequestButton({
       size="sm" 
       onClick={handleRevoke} 
       disabled={isLoading}
+      className={className}
     >
       {isLoading ? (
         <Loader2 className="h-4 w-4 animate-spin mr-2" />

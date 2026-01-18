@@ -3,17 +3,20 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 import { Loader2, Check, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 interface RespondInviteButtonProps {
   requestId: string; // The join request ID
   teamName: string;
+  className?: string;
 }
 
 export function RespondInviteButton({
   requestId,
   teamName,
+  className,
 }: RespondInviteButtonProps) {
   const [isAccepting, setIsAccepting] = useState(false);
   const [isDeclining, setIsDeclining] = useState(false);
@@ -57,7 +60,7 @@ export function RespondInviteButton({
   };
 
   return (
-    <div className="flex items-center gap-2">
+    <div className={cn("flex items-center gap-2", className)}>
       <Button 
         variant="default" 
         size="sm" 

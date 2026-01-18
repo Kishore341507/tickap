@@ -351,7 +351,7 @@ export default async function EventDetailPage({ params, }: { params: Promise<{ i
           </div>
 
           {/* Open To Join Section */}
-          {session && !isRegistered && (openToJoinTeams.length > 0 || userRequests.length > 0 || userInvites.length > 0) && (
+          { !isRegistered && (openToJoinTeams.length > 0 || userRequests.length > 0 || userInvites.length > 0) && (
             <Card id="open-to-join-section">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -375,9 +375,9 @@ export default async function EventDetailPage({ params, }: { params: Promise<{ i
                              const registration = invite.registration;
                              
                              return (
-                                <div key={invite.id} className="flex items-center justify-between p-2 rounded-lg border bg-purple-50/50 dark:bg-purple-950/20 border-purple-200 dark:border-purple-900">
+                                <div key={invite.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-lg border bg-purple-50/50 dark:bg-purple-950/20 border-purple-200 dark:border-purple-900">
                                    <div>
-                                     <div className="flex items-center gap-2">
+                                     <div className="flex flex-wrap items-center gap-2 mb-1 sm:mb-0">
                                         <h3 className="font-semibold">{registration.team_name || "Unnamed Team"}</h3>
                                         {/* <Badge variant="secondary" className="bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300">Invited You</Badge> */}
                                      </div>
@@ -385,10 +385,13 @@ export default async function EventDetailPage({ params, }: { params: Promise<{ i
                                         {registration.registrationusers.length} / {event.max_team_player || "?"} members
                                      </p>
                                    </div>
-                                   <RespondInviteButton
-                                      requestId={invite.id}
-                                      teamName={registration.team_name || "Unnamed Team"}
-                                   />
+                                   <div className="w-full sm:w-auto">
+                                      <RespondInviteButton
+                                         requestId={invite.id}
+                                         teamName={registration.team_name || "Unnamed Team"}
+                                         className="w-full sm:w-auto"
+                                      />
+                                   </div>
                                 </div>
                              )
                         })}
@@ -408,10 +411,10 @@ export default async function EventDetailPage({ params, }: { params: Promise<{ i
                     return (
                       <div
                         key={registration.id.toString()}
-                        className={`flex items-center justify-between p-2 rounded-lg border ${!isComplete ? 'border-orange-200 bg-orange-50/50 dark:border-orange-900 dark:bg-orange-950/20' : ''}`}
+                        className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-lg border ${!isComplete ? 'border-orange-200 bg-orange-50/50 dark:border-orange-900 dark:bg-orange-950/20' : ''}`}
                       >
                         <div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex flex-wrap items-center gap-2 mb-1 sm:mb-0">
                             <h3 className="font-semibold">{registration.team_name || "Unnamed Team"}</h3>
                             {showRegistrations && (
                               <a href={`#team-${registration.id.toString()}`} className="text-muted-foreground hover:text-foreground">
@@ -429,11 +432,14 @@ export default async function EventDetailPage({ params, }: { params: Promise<{ i
                           </p>
                         </div>
 
-                        <JoinRequestButton
-                          registrationId={registration.id.toString()}
-                          eventName={event.name}
-                          teamName={registration.team_name || "Unnamed Team"}
-                        />
+                        <div className="w-full sm:w-auto">
+                           <JoinRequestButton
+                              registrationId={registration.id.toString()}
+                              eventName={event.name}
+                              teamName={registration.team_name || "Unnamed Team"}
+                              className="w-full sm:w-auto"
+                           />
+                        </div>
                       </div>
                     )
                   })}
@@ -445,9 +451,9 @@ export default async function EventDetailPage({ params, }: { params: Promise<{ i
                              const registration = request.registration;
                              
                              return (
-                                <div key={request.id} className="flex items-center justify-between p-2 rounded-lg border bg-blue-50/50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-900">
+                                <div key={request.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-lg border bg-blue-50/50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-900">
                                    <div>
-                                     <div className="flex items-center gap-2">
+                                     <div className="flex flex-wrap items-center gap-2 mb-1 sm:mb-0">
                                         <h3 className="font-semibold">{registration.team_name || "Unnamed Team"}</h3>
                                         <Badge variant="secondary" className="bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">Request Sent</Badge>
                                      </div>
@@ -455,10 +461,13 @@ export default async function EventDetailPage({ params, }: { params: Promise<{ i
                                         {registration.registrationusers.length} / {event.max_team_player || "?"} members
                                      </p>
                                    </div>
-                                   <RevokeRequestButton
-                                      registrationId={registration.id.toString()}
-                                      teamName={registration.team_name || "Unnamed Team"}
-                                   />
+                                   <div className="w-full sm:w-auto">
+                                      <RevokeRequestButton
+                                         registrationId={registration.id.toString()}
+                                         teamName={registration.team_name || "Unnamed Team"}
+                                         className="w-full sm:w-auto"
+                                      />
+                                   </div>
                                 </div>
                              )
                         })}
