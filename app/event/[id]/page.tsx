@@ -351,7 +351,7 @@ export default async function EventDetailPage({ params, }: { params: Promise<{ i
           </div>
 
           {/* Open To Join Section */}
-          { !isRegistered && (openToJoinTeams.length > 0 || userRequests.length > 0 || userInvites.length > 0) && (
+          {session && !isRegistered && (openToJoinTeams.length > 0 || userRequests.length > 0 || userInvites.length > 0) && (
             <Card id="open-to-join-section">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
