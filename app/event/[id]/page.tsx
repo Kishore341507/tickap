@@ -242,7 +242,9 @@ export default async function EventDetailPage({ params, }: { params: Promise<{ i
               src={event.banner}
               alt={event.name}
               fill
-              className="object-cover"
+              className="h-full object-contain bg-cover bg-center backdrop-blur-lg"
+              style={{ backgroundImage: `url(${event.banner})` }}
+              unoptimized
             />
           </div>
 
