@@ -92,6 +92,7 @@ const CardImage = React.forwardRef<HTMLImageElement, CardImageProps>(
           {...props}
           width={500}
           height={500}
+          unoptimized
         />
       </AspectRatio>
     </div>
