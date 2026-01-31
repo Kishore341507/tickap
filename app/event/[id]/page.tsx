@@ -25,6 +25,8 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Registration } from "@/types";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
@@ -481,26 +483,26 @@ export default async function EventDetailPage({ params, }: { params: Promise<{ i
 
           {/* Event Description */}
           {event.details && (
-            <Card>
-              <CardHeader>
-                <CardTitle>About the Event</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="whitespace-pre-wrap">{event.details}</p>
-              </CardContent>
-            </Card>
+            <div className="relative border rounded-lg p-6 mt-6">
+              <span className="absolute -top-3 left-4 bg-background px-2 text-sm text-muted-foreground">
+                Details
+              </span>
+              <div className="prose dark:prose-invert max-w-none">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{event.details}</ReactMarkdown>
+              </div>
+            </div>
           )}
 
           {/* Event Rules */}
           {event.rules && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Rules</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="whitespace-pre-wrap">{event.rules}</p>
-              </CardContent>
-            </Card>
+            <div className="relative border rounded-lg p-6 mt-6">
+              <span className="absolute -top-3 left-4 bg-background px-2 text-sm text-muted-foreground">
+                Rules
+              </span>
+              <div className="prose dark:prose-invert max-w-none">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{event.rules}</ReactMarkdown>
+              </div>
+            </div>
           )}
 
           {/* Registrations Accordion */}
