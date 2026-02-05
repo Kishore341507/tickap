@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { title, description, questions, guild_id, channel_id, role_id, manager_id } = body;
+    const { title, description, questions, guild_id, channel_id, role_id, manager_id, maxResponsesPerUser, submissionCooldown } = body;
 
     if (!title || !questions || questions.length === 0) {
       return NextResponse.json(
@@ -95,9 +95,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate form fields
-    if (title.length > 200) {
+    if (title.length > 25) {
       return NextResponse.json(
-        { error: "Form title must be 200 characters or less" },
+        { error: "Form title must be 25 characters or less" },
         { status: 400 }
       );
     }
@@ -109,9 +109,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (questions.length > 30) {
+    if (questions.length > 25) {
       return NextResponse.json(
-        { error: "Maximum 30 questions allowed per form" },
+        { error: "Maximum 25 questions allowed per form" },
         { status: 400 }
       );
     }
@@ -127,33 +127,101 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      if (q.text.length > 200) {
+      if (q.text.length > 45) {
         return NextResponse.json(
-          { error: `Question ${i + 1} text must be 200 characters or less` },
+          { error: `Question ${i + 1} text must be 45 characters or less` },
           { status: 400 }
         );
       }
 
-      if (q.description && q.description.length > 400) {
+      if (q.description && q.description.length > 100) {
         return NextResponse.json(
-          { error: `Question ${i + 1} description must be 400 characters or less` },
+          { error: `Question ${i + 1} description must be 100 characters or less` },
           { status: 400 }
         );
       }
 
-      if (q.placeholder && q.placeholder.length > 400) {
+      if (q.placeholder && q.placeholder.length > 100) {
         return NextResponse.json(
-          { error: `Question ${i + 1} placeholder must be 400 characters or less` },
+          { error: `Question ${i + 1} placeholder must be 100 characters or less` },
           { status: 400 }
         );
       }
 
       const needsOptions = ["MULTIPLE_CHOICE", "CHECKBOXES", "DROPDOWN"].includes(q.type);
-      if (needsOptions && (!q.options || q.options.length < 2)) {
-        return NextResponse.json(
-          { error: `Question ${i + 1} must have at least 2 options` },
-          { status: 400 }
-        );
+      const isUserSelection = q.type === "USER";
+
+      // Validate Min/Max for Text/Paragraph/Number
+      if (!needsOptions && !isUserSelection) {
+         if (q.type !== "NUMBER") {
+            if (q.max !== undefined && q.max !== null && q.max > 4000) {
+                return NextResponse.json(
+                  { error: `Question ${i + 1} max length cannot exceed 4000` },
+                  { status: 400 }
+                );
+            }
+         }
+      }
+
+      // Validate Min/Max for Options and User Selection
+      if (needsOptions || isUserSelection) {
+          if (q.min !== undefined && q.min !== null) {
+              if (q.min < 0 || q.min > 25) {
+                   return NextResponse.json(
+                    { error: `Question ${i + 1} min selection must be between 0 and 25` },
+                    { status: 400 }
+                  );
+              }
+              if (needsOptions && q.options && q.min > q.options.length) {
+                   return NextResponse.json(
+                    { error: `Question ${i + 1} min selection cannot exceed number of options` },
+                    { status: 400 }
+                  );
+              }
+          }
+          if (q.max !== undefined && q.max !== null) {
+               if (q.max < 1 || q.max > 25) {
+                   return NextResponse.json(
+                    { error: `Question ${i + 1} max selection must be between 1 and 25` },
+                    { status: 400 }
+                  );
+               }
+               if (needsOptions && q.options && q.max > q.options.length) {
+                   return NextResponse.json(
+                    { error: `Question ${i + 1} max selection cannot exceed number of options` },
+                    { status: 400 }
+                  );
+               }
+          }
+          if (q.min !== undefined && q.min !== null && q.max !== undefined && q.max !== null && q.min > q.max) {
+               return NextResponse.json(
+                { error: `Question ${i + 1} min selection cannot be greater than max selection` },
+                { status: 400 }
+              );
+          }
+      }
+
+      if (needsOptions) {
+        if (!q.options || q.options.length < 2) {
+          return NextResponse.json(
+            { error: `Question ${i + 1} must have at least 2 options` },
+            { status: 400 }
+          );
+        }
+        for (const opt of q.options) {
+          if (opt.text.length > 100) {
+            return NextResponse.json(
+              { error: `Option text in Question ${i + 1} must be 100 characters or less` },
+              { status: 400 }
+            );
+          }
+          if (opt.description && opt.description.length > 100) {
+            return NextResponse.json(
+              { error: `Option description in Question ${i + 1} must be 100 characters or less` },
+              { status: 400 }
+            );
+          }
+        }
       }
     }
 
@@ -166,6 +234,8 @@ export async function POST(request: NextRequest) {
         channel_id: channel_id ? BigInt(channel_id) : null,
         role_id: role_id ? BigInt(role_id) : null,
         manager_id: manager_id ? BigInt(manager_id) : null,
+        maxResponsesPerUser: maxResponsesPerUser ? parseInt(maxResponsesPerUser) : 0,
+        submissionCooldown: submissionCooldown ? parseInt(submissionCooldown) : 0,
         questions: {
           create: questions.map((q: any) => ({
             text: q.text,
@@ -174,8 +244,13 @@ export async function POST(request: NextRequest) {
             type: q.type,
             required: q.required || false,
             order: q.order,
+            min: q.min || null,
+            max: q.max || null,
             options: {
-              create: q.options?.map((opt: string) => ({ text: opt })) || [],
+              create: q.options?.map((opt: any) => ({ 
+                text: opt.text,
+                description: opt.description || null
+              })) || [],
             },
           })),
         },

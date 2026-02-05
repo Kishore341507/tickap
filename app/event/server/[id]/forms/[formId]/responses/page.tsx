@@ -6,7 +6,7 @@ import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, Download, ArrowLeft, Eye, Trash2, ShieldAlert } from "lucide-react";
+import { Loader2, Download, ArrowLeft, Eye, Trash2, ShieldAlert, Copy } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 import {
@@ -244,6 +244,24 @@ function ResponsesViewerClient({ guildId, formId }: { guildId: string; formId: s
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">{formData.title}</h1>
+          <div className="flex items-center gap-2 my-1">
+            ID : 
+            <code className="relative rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono text-sm font-semibold">
+              {formId}
+            </code>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6"
+              onClick={() => {
+                navigator.clipboard.writeText(formId);
+                toast({ title: "Copied", description: "Form ID copied to clipboard" });
+              }}
+            >
+              <Copy className="h-3 w-3" />
+              <span className="sr-only">Copy Form ID</span>
+            </Button>
+          </div>
           <p className="text-muted-foreground">
             {formData.responses.length} response{formData.responses.length !== 1 ? 's' : ''}
           </p>
