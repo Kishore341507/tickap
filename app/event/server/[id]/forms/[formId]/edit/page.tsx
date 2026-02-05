@@ -36,6 +36,9 @@ interface FormData {
   description: string;
   questions: Question[];
   channel_id?: string;
+  maxResponsesPerUser: number;
+  submissionCooldown: number;
+  submissionCooldownUnit: string;
 }
 
 export default async function EditFormPage({ params }: { params: Promise<{ id: string; formId: string }> }) {
@@ -59,6 +62,9 @@ function EditFormClient({ guildId, formId }: { guildId: string; formId: string }
     description: "",
     questions: [],
     channel_id: "",
+    maxResponsesPerUser: 1,
+    submissionCooldown: 0,
+    submissionCooldownUnit: "seconds",
   });
   
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -75,11 +81,31 @@ function EditFormClient({ guildId, formId }: { guildId: string; formId: string }
       if (!response.ok) throw new Error("Failed to fetch form");
       
       const data = await response.json();
+      
+      let cooldown = data.submissionCooldown ?? 0;
+      let unit = "seconds";
+      
+      if (cooldown > 0) {
+        if (cooldown % 86400 === 0) {
+          cooldown = cooldown / 86400;
+          unit = "days";
+        } else if (cooldown % 3600 === 0) {
+          cooldown = cooldown / 3600;
+          unit = "hours";
+        } else if (cooldown % 60 === 0) {
+          cooldown = cooldown / 60;
+          unit = "minutes";
+        }
+      }
+
       setFormData({
         title: data.title,
         description: data.description || "",
         questions: data.questions,
         channel_id: data.channel_id ? data.channel_id.toString() : "",
+        maxResponsesPerUser: data.maxResponsesPerUser ?? 1,
+        submissionCooldown: cooldown,
+        submissionCooldownUnit: unit,
       });
       
       setQuestions(data.questions.map((q: any) => ({
@@ -235,6 +261,11 @@ function EditFormClient({ guildId, formId }: { guildId: string; formId: string }
 
     setIsSubmitting(true);
     try {
+      let cooldown = formData.submissionCooldown;
+      if (formData.submissionCooldownUnit === "minutes") cooldown *= 60;
+      else if (formData.submissionCooldownUnit === "hours") cooldown *= 3600;
+      else if (formData.submissionCooldownUnit === "days") cooldown *= 86400;
+
       const response = await fetch(`/api/forms/${formId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -243,6 +274,8 @@ function EditFormClient({ guildId, formId }: { guildId: string; formId: string }
           description: formData.description,
           guild_id: guildId,
           channel_id: formData.channel_id || null,
+          maxResponsesPerUser: formData.maxResponsesPerUser,
+          submissionCooldown: cooldown,
           questions: questions.map(q => ({
             id: q.id.startsWith("new-") ? undefined : q.id,
             text: q.text,
@@ -338,6 +371,49 @@ function EditFormClient({ guildId, formId }: { guildId: string; formId: string }
                   {formData.description.length}/1000 characters
                 </p>
               </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="maxResponses">Max Submissions per User</Label>
+                  <Input 
+                    id="maxResponses"
+                    type="number" 
+                    min="0"
+                    value={formData.maxResponsesPerUser}
+                    onChange={(e) => setFormData({...formData, maxResponsesPerUser: parseInt(e.target.value) || 0})}
+                  />
+                  <p className="text-xs text-muted-foreground">Set to 0 for unlimited submissions.</p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="cooldown">Submission Cooldown</Label>
+                  <div className="flex gap-2">
+                    <Input 
+                      id="cooldown"
+                      type="number" 
+                      min="0"
+                      value={formData.submissionCooldown}
+                      onChange={(e) => setFormData({...formData, submissionCooldown: parseInt(e.target.value) || 0})}
+                      placeholder="No cooldown"
+                    />
+                    <Select 
+                      value={formData.submissionCooldownUnit} 
+                      onValueChange={(value) => setFormData({...formData, submissionCooldownUnit: value})}
+                    >
+                      <SelectTrigger className="w-[110px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="seconds">Seconds</SelectItem>
+                        <SelectItem value="minutes">Minutes</SelectItem>
+                        <SelectItem value="hours">Hours</SelectItem>
+                        <SelectItem value="days">Days</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <p className="text-xs text-muted-foreground">Wait time between submissions.</p>
+                </div>
+              </div>
+
               <div>
                 <Label htmlFor="channel">Discord Channel (Optional)</Label>
                 <Popover open={channelOpen} onOpenChange={setChannelOpen}>

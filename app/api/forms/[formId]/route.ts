@@ -72,7 +72,7 @@ export async function PUT(
 
     const { formId } = await params;
     const body = await request.json();
-    const { title, description, questions, guild_id, channel_id, role_id, manager_id } = body;
+    const { title, description, questions, guild_id, channel_id, role_id, manager_id, maxResponsesPerUser, submissionCooldown } = body;
 
     if (!title || !questions || questions.length === 0) {
       return NextResponse.json(
@@ -182,6 +182,8 @@ export async function PUT(
         channel_id: channel_id ? BigInt(channel_id) : null,
         role_id: role_id ? BigInt(role_id) : null,
         manager_id: manager_id ? BigInt(manager_id) : null,
+        maxResponsesPerUser: maxResponsesPerUser !== undefined ? parseInt(maxResponsesPerUser) : 1,
+        submissionCooldown: submissionCooldown !== undefined ? parseInt(submissionCooldown) : 0,
         questions: {
           create: questions.map((q: any) => ({
             text: q.text,

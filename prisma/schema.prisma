@@ -54,6 +54,7 @@ enum QuestionType {
   DATE
   TIME
   NUMBER
+  USER
 }
 
 model events {
@@ -309,6 +310,9 @@ model Form {
 
   is_deleted Boolean? @default(false)
 
+  maxResponsesPerUser Int @default(1)
+  submissionCooldown  Int @default(0)
+
   @@index([userId]) // Add index for faster lookups by userId
   @@index([guild_id]) // Add index for guild lookups
 }
@@ -324,6 +328,8 @@ model Question {
   options     Option[]
   required    Boolean      @default(false)
   order       Int
+  min         Int?
+  max         Int?
   answers     Answer[]
 
   @@index([formId])
@@ -333,6 +339,7 @@ model Question {
 model Option {
   id         String   @id @default(cuid())
   text       String
+  description String?
   question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
   questionId String
 
