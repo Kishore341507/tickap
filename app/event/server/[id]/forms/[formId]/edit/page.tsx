@@ -39,6 +39,9 @@ interface FormData {
   maxResponsesPerUser: number;
   submissionCooldown: number;
   submissionCooldownUnit: string;
+  custom_response: boolean;
+  accept_response: string;
+  reject_response: string;
 }
 
 export default async function EditFormPage({ params }: { params: Promise<{ id: string; formId: string }> }) {
@@ -65,6 +68,9 @@ function EditFormClient({ guildId, formId }: { guildId: string; formId: string }
     maxResponsesPerUser: 1,
     submissionCooldown: 0,
     submissionCooldownUnit: "seconds",
+    custom_response: false,
+    accept_response: "",
+    reject_response: "",
   });
   
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -106,6 +112,9 @@ function EditFormClient({ guildId, formId }: { guildId: string; formId: string }
         maxResponsesPerUser: data.maxResponsesPerUser ?? 1,
         submissionCooldown: cooldown,
         submissionCooldownUnit: unit,
+        custom_response: data.custom_response || false,
+        accept_response: data.accept_response || "",
+        reject_response: data.reject_response || "",
       });
       
       setQuestions(data.questions.map((q: any) => ({
@@ -276,6 +285,9 @@ function EditFormClient({ guildId, formId }: { guildId: string; formId: string }
           channel_id: formData.channel_id || null,
           maxResponsesPerUser: formData.maxResponsesPerUser,
           submissionCooldown: cooldown,
+          custom_response: formData.custom_response,
+          accept_response: formData.accept_response,
+          reject_response: formData.reject_response,
           questions: questions.map(q => ({
             id: q.id.startsWith("new-") ? undefined : q.id,
             text: q.text,
@@ -480,6 +492,50 @@ function EditFormClient({ guildId, formId }: { guildId: string; formId: string }
                 <p className="text-xs text-muted-foreground mt-1">
                   Select a text channel to associate this form with (optional)
                 </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="mb-4">
+            <CardHeader>
+              <CardTitle>Response Settings</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center space-x-2">
+                <Switch 
+                  id="custom_response" 
+                  checked={formData.custom_response}
+                  onCheckedChange={(checked: boolean) => setFormData({...formData, custom_response: checked})}
+                />
+                <div>
+                  <Label htmlFor="custom_response">Enable Custom Response Dialog</Label>
+                  <p className="text-sm text-muted-foreground">
+                    If enabled, you will be prompted to edit the response message before sending.
+                  </p>
+                </div>
+              </div>
+              
+              <div className="grid gap-4 mt-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="accept_response">Default Acceptance Message</Label>
+                    <Textarea 
+                      id="accept_response"
+                      value={formData.accept_response} 
+                      onChange={(e) => setFormData({...formData, accept_response: e.target.value})}
+                      placeholder="Message sent when response is accepted..."
+                      rows={3}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="reject_response">Default Rejection Message</Label>
+                    <Textarea 
+                      id="reject_response"
+                      value={formData.reject_response} 
+                      onChange={(e) => setFormData({...formData, reject_response: e.target.value})}
+                      placeholder="Message sent when response is rejected..."
+                      rows={3}
+                    />
+                  </div>
               </div>
             </CardContent>
           </Card>

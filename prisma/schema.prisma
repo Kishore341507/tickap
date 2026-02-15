@@ -45,6 +45,12 @@ enum RequestStatus {
   CANCELLED
 }
 
+enum ResponseStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
 enum QuestionType {
   SHORT_TEXT
   PARAGRAPH
@@ -313,6 +319,11 @@ model Form {
   maxResponsesPerUser Int @default(1)
   submissionCooldown  Int @default(0)
 
+  // Custom response settings
+  custom_response Boolean? @default(false)
+  accept_response String?
+  reject_response String?
+
   @@index([userId]) // Add index for faster lookups by userId
   @@index([guild_id]) // Add index for guild lookups
 }
@@ -354,6 +365,10 @@ model Response {
   userName  String? // Store user name directly
   userEmail String? // Store user email directly
   answers   Answer[]
+  
+  status         ResponseStatus @default(PENDING)
+  custom_message String?
+
   createdAt DateTime @default(now())
 
   @@index([formId])

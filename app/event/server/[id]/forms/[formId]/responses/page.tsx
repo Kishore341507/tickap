@@ -21,6 +21,16 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
+import { 
+  CheckCircle2, 
+  XCircle, 
+  Clock, 
+  AlertCircle 
+} from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";  
 import {
   Sheet,
   SheetContent,
@@ -57,6 +67,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
 import {
   Pagination,
@@ -96,6 +107,8 @@ interface Response {
   userId: string | null;
   createdAt: string;
   answers: Answer[];
+  status: "PENDING" | "ACCEPTED" | "REJECTED";
+  custom_message: string | null;
 }
 
 interface Question {
@@ -110,6 +123,9 @@ interface FormData {
   description: string | null;
   questions: Question[];
   responses: Response[];
+  custom_response: boolean;
+  accept_response: string | null;
+  reject_response: string | null;
 }
 
 interface DateRange {
@@ -194,6 +210,20 @@ function ResponsesViewerClient({
 
   // Response Detail View State
   const [viewingResponseId, setViewingResponseId] = useState<string | null>(null);
+
+  // Status Change State
+  const [statusDialog, setStatusDialog] = useState<{
+    open: boolean;
+    responseId: string | null;
+    newStatus: "ACCEPTED" | "REJECTED" | null;
+    message: string;
+  }>({
+    open: false,
+    responseId: null,
+    newStatus: null,
+    message: "",
+  });
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
   // Initialize auth check
   useEffect(() => {
@@ -387,6 +417,83 @@ function ResponsesViewerClient({
   };
 
   // Actions
+  const handleUpdateStatus = (
+    id: string, 
+    newStatus: "PENDING" | "ACCEPTED" | "REJECTED"
+  ) => {
+    // If pending, just update directly
+    if (newStatus === "PENDING") {
+      confirmStatusUpdate(id, newStatus, null);
+      return;
+    }
+
+    // Determine the default message based on status
+    const defaultMsg = newStatus === "ACCEPTED" 
+      ? formData?.accept_response 
+      : formData?.reject_response;
+
+    // If custom_response is enabled, always open dialog
+    // It will be pre-filled with default message if available
+    if (formData?.custom_response) {
+      setStatusDialog({
+        open: true,
+        responseId: id,
+        newStatus: newStatus,
+        message: defaultMsg || "",
+      });
+      return;
+    }
+
+    // If custom_response is disabled, update directly
+    // Use default message if available, otherwise use generic message
+    const finalMsg = defaultMsg || (newStatus === "ACCEPTED" 
+      ? "Your submission has been accepted." 
+      : "Your submission has been rejected.");
+
+    confirmStatusUpdate(id, newStatus, finalMsg);
+  };
+
+  const confirmStatusUpdate = async (
+    id: string | null, 
+    status: "PENDING" | "ACCEPTED" | "REJECTED" | null, 
+    message: string | null
+  ) => {
+    if (!id || !status) return;
+
+    try {
+      setIsUpdatingStatus(true);
+      const res = await fetch(`/api/forms/${formId}/responses/${id}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          status: status,
+          custom_message: message 
+        }),
+      });
+
+      if (!res.ok) throw new Error("Failed to update status");
+      
+      const updatedResponse = await res.json();
+      
+      // Update local state
+      if (formData) {
+        setFormData({
+            ...formData,
+            responses: formData.responses.map(r => 
+                r.id === id ? { ...r, status: status, custom_message: message } : r
+            )
+        });
+      }
+
+      toast({ title: "Success", description: `Response marked as ${status.toLowerCase()}` });
+      setStatusDialog({ open: false, responseId: null, newStatus: null, message: "" });
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to update status", variant: "destructive" });
+    } finally {
+        setIsUpdatingStatus(false);
+    }
+  };
+
   const handleDelete = async (id: string) => {
     try {
       const res = await fetch(`/api/forms/${formId}/responses`, {
@@ -686,6 +793,7 @@ function ResponsesViewerClient({
                         </TableHead>
                         <TableHead className="w-[150px]">Name</TableHead>
                         <TableHead className="w-[150px]">User ID</TableHead>
+                        <TableHead className="w-[120px]">Status</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                 </TableHeader>
@@ -724,6 +832,23 @@ function ResponsesViewerClient({
                                 </TableCell>
                                 <TableCell className="py-1">{response.userName || "-"}</TableCell>
                                 <TableCell className="py-1 font-mono text-xs">{response.userId || "-"}</TableCell>
+                                <TableCell className="py-1">
+                                  {(!response.status || response.status === "PENDING") && (
+                                    <Badge variant="secondary" className="gap-1">
+                                      <Clock className="h-3 w-3" /> Pending
+                                    </Badge>
+                                  )}
+                                  {response.status === "ACCEPTED" && (
+                                    <Badge variant="default" className="bg-green-600 hover:bg-green-700 gap-1">
+                                      <CheckCircle2 className="h-3 w-3" /> Accepted
+                                    </Badge>
+                                  )}
+                                  {response.status === "REJECTED" && (
+                                    <Badge variant="destructive" className="gap-1">
+                                      <XCircle className="h-3 w-3" /> Rejected
+                                    </Badge>
+                                  )}
+                                </TableCell>
                                 <TableCell className="text-right py-1" onClick={(e) => e.stopPropagation()}>
                                     <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
@@ -733,6 +858,13 @@ function ResponsesViewerClient({
                                             </Button>
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end">
+                                            <DropdownMenuItem onClick={() => handleUpdateStatus(response.id, "ACCEPTED")}>
+                                              <CheckCircle2 className="mr-2 h-4 w-4 text-green-500" /> Accept Response
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem onClick={() => handleUpdateStatus(response.id, "REJECTED")}>
+                                              <XCircle className="mr-2 h-4 w-4 text-destructive" /> Reject Response
+                                            </DropdownMenuItem>
+                                            <DropdownMenuSeparator />
                                             <DropdownMenuItem onClick={() => {
                                                 const ids = new Set([response.id]);
                                                 setSelectedResponses(ids);
@@ -879,6 +1011,39 @@ function ResponsesViewerClient({
                     {format(new Date(selectedResponse.createdAt), "h:mm a")}
                 </div>
               </div>
+
+              <div className="flex items-center justify-between p-3 bg-muted/40 rounded-lg border">
+                <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium">Status:</span>
+                    {(!selectedResponse.status || selectedResponse.status === "PENDING") && (
+                        <Badge variant="secondary" className="gap-1">
+                            <Clock className="h-3 w-3" /> Pending
+                        </Badge>
+                    )}
+                    {selectedResponse.status === "ACCEPTED" && (
+                        <Badge variant="default" className="bg-green-600 hover:bg-green-700 gap-1">
+                            <CheckCircle2 className="h-3 w-3" /> Accepted
+                        </Badge>
+                    )}
+                    {selectedResponse.status === "REJECTED" && (
+                        <Badge variant="destructive" className="gap-1">
+                            <XCircle className="h-3 w-3" /> Rejected
+                        </Badge>
+                    )}
+                </div>
+                <div className="flex gap-2">
+                    {selectedResponse.status !== "ACCEPTED" && (
+                        <Button size="sm" variant="outline" className="h-8 text-green-600 hover:text-green-700 hover:bg-green-50" onClick={() => handleUpdateStatus(selectedResponse.id, "ACCEPTED")}>
+                            <CheckCircle2 className="mr-2 h-3.5 w-3.5" /> Accept
+                        </Button>
+                    )}
+                    {selectedResponse.status !== "REJECTED" && (
+                        <Button size="sm" variant="outline" className="h-8 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => handleUpdateStatus(selectedResponse.id, "REJECTED")}>
+                            <XCircle className="mr-2 h-3.5 w-3.5" /> Reject
+                        </Button>
+                    )}
+                </div>
+              </div>
             </SheetHeader>
             <Separator />
             
@@ -938,6 +1103,52 @@ function ResponsesViewerClient({
           </SheetContent>
         </Sheet>
       )}
+
+      {/* Status Update Dialog */}
+      <Dialog 
+        open={statusDialog.open} 
+        onOpenChange={(open) => !open && setStatusDialog({ ...statusDialog, open: false })}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {statusDialog.newStatus === "ACCEPTED" ? "Accept Response" : "Reject Response"}
+            </DialogTitle>
+            <DialogDescription>
+              Custom message to be sent to the user.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="custom-message">Reply Message</Label>
+              <Textarea
+                id="custom-message"
+                value={statusDialog.message}
+                onChange={(e) => setStatusDialog({ ...statusDialog, message: e.target.value })}
+                placeholder="Enter your message here..."
+                rows={4}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setStatusDialog({ ...statusDialog, open: false })}
+              disabled={isUpdatingStatus}
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant={statusDialog.newStatus === "ACCEPTED" ? "default" : "destructive"}
+              onClick={() => confirmStatusUpdate(statusDialog.responseId, statusDialog.newStatus, statusDialog.message)}
+              disabled={isUpdatingStatus}
+            >
+              {isUpdatingStatus && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {statusDialog.newStatus === "ACCEPTED" ? "Accept" : "Reject"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

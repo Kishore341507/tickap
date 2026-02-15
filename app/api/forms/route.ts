@@ -64,7 +64,20 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { title, description, questions, guild_id, channel_id, role_id, manager_id, maxResponsesPerUser, submissionCooldown } = body;
+    const { 
+      title, 
+      description, 
+      questions, 
+      guild_id, 
+      channel_id, 
+      role_id, 
+      manager_id, 
+      maxResponsesPerUser, 
+      submissionCooldown,
+      custom_response,
+      accept_response,
+      reject_response
+    } = body;
 
     if (!title || !questions || questions.length === 0) {
       return NextResponse.json(
@@ -236,6 +249,9 @@ export async function POST(request: NextRequest) {
         manager_id: manager_id ? BigInt(manager_id) : null,
         maxResponsesPerUser: maxResponsesPerUser ? parseInt(maxResponsesPerUser) : 0,
         submissionCooldown: submissionCooldown ? parseInt(submissionCooldown) : 0,
+        custom_response: custom_response || false,
+        accept_response: accept_response || null,
+        reject_response: reject_response || null,
         questions: {
           create: questions.map((q: any) => ({
             text: q.text,
