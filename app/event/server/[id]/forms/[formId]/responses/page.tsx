@@ -1,12 +1,74 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { use, useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { format } from "date-fns";
+import { 
+  Loader2, 
+  Trash2, 
+  Download, 
+  ArrowLeft, 
+  Calendar as CalendarIcon, 
+  MoreHorizontal,
+  ArrowUpDown,
+  Search,
+  ShieldAlert,
+  Copy,
+  Check
+} from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetFooter,
+} from "@/components/ui/sheet";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Separator } from "@/components/ui/separator";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, Download, ArrowLeft, Eye, Trash2, ShieldAlert, Copy } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 import {
@@ -21,6 +83,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
+// Interfaces
 interface Answer {
   id: string;
   questionId: string;
@@ -30,7 +93,7 @@ interface Answer {
 interface Response {
   id: string;
   userName: string | null;
-  userEmail: string | null;
+  userId: string | null;
   createdAt: string;
   answers: Answer[];
 }
@@ -49,23 +112,90 @@ interface FormData {
   responses: Response[];
 }
 
-export default async function ResponsesViewerPage({ params }: { params: Promise<{ id: string; formId: string }> }) {
-  const { id, formId } = await params;
-  
-  return <ResponsesViewerClient guildId={id} formId={formId} />;
+interface DateRange {
+  from: Date | undefined;
+  to: Date | undefined;
 }
 
-function ResponsesViewerClient({ guildId, formId }: { guildId: string; formId: string }) {
+// Helper Components
+function CopyAction({ text, className }: { text: string; className?: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <Button 
+      variant="ghost" 
+      size="icon" 
+      className={cn("h-6 w-6 ml-2 hover:bg-muted", className)} 
+      onClick={handleCopy}
+    >
+      {copied ? (
+        <Check className="h-3 w-3 text-green-500 animate-in zoom-in spin-in-180" />
+      ) : (
+        <Copy className="h-3 w-3 text-muted-foreground" />
+      )}
+      <span className="sr-only">Copy</span>
+    </Button>
+  );
+}
+
+export default function ResponsesViewerPage({
+  params,
+}: {
+  params: Promise<{ id: string; formId: string }>;
+}) {
+  const { id, formId } = use(params);
+
+  return (
+    <ResponsesViewerClient
+      guildId={id}
+      formId={formId}
+    />
+  );
+}
+
+function ResponsesViewerClient({
+  guildId,
+  formId,
+}: {
+  guildId: string;
+  formId: string;
+}) {
   const router = useRouter();
   const { toast } = useToast();
   const { data: session, status } = useSession();
+
+  // State
+  const [formData, setFormData] = useState<FormData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [formData, setFormData] = useState<FormData | null>(null);
   const [isManager, setIsManager] = useState<boolean | null>(null);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
-  // Check if user is authenticated and is a manager
+  // Filter & Sort State
+  const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
+  const [dateRange, setDateRange] = useState<DateRange>({
+    from: undefined,
+    to: undefined,
+  });
+  const [selectedResponses, setSelectedResponses] = useState<Set<string>>(
+    new Set()
+  );
+  
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState<number>(10);
+
+  // Response Detail View State
+  const [viewingResponseId, setViewingResponseId] = useState<string | null>(null);
+
+  // Initialize auth check
   useEffect(() => {
     const checkAuthorization = async () => {
       if (status === "loading") {
@@ -107,6 +237,7 @@ function ResponsesViewerClient({ guildId, formId }: { guildId: string; formId: s
     checkAuthorization();
   }, [session, status, guildId, router, toast]);
 
+  // Fetch Data
   useEffect(() => {
     if (isManager) {
       fetchResponses();
@@ -115,32 +246,223 @@ function ResponsesViewerClient({ guildId, formId }: { guildId: string; formId: s
 
   const fetchResponses = async () => {
     try {
-      const response = await fetch(`/api/forms/${formId}`);
-      if (!response.ok) throw new Error("Failed to fetch responses");
+      // Don't reset loading to true on refetch to avoid flicker, only on initial load
+      if (!formData) setIsLoading(true);
       
-      const data = await response.json();
+      const res = await fetch(`/api/forms/${formId}`);
+      if (!res.ok) throw new Error("Failed to fetch form");
+      const data = await res.json();
       setFormData(data);
     } catch (error) {
-      toast({ title: "Error", description: "Failed to load responses", variant: "destructive" });
+      toast({
+        title: "Error",
+        description: "Failed to load responses",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Derived Data (Filtering & Sorting)
+  const filteredResponses = useMemo(() => {
+    if (!formData) return [];
+
+    let result = [...formData.responses];
+
+    // Filter by Date Range
+    if (dateRange.from) {
+      result = result.filter((r) => {
+        const date = new Date(r.createdAt);
+        if (date < dateRange.from!) return false;
+        if (dateRange.to) {
+            // Add 1 day to include the end date fully
+            const endDate = new Date(dateRange.to);
+            endDate.setHours(23, 59, 59, 999);
+            if (date > endDate) return false;
+        }
+        return true;
+      });
+    }
+
+    // Sort
+    result.sort((a, b) => {
+      const dateA = new Date(a.createdAt).getTime();
+      const dateB = new Date(b.createdAt).getTime();
+      return sortOrder === "newest" ? dateB - dateA : dateA - dateB;
+    });
+
+    return result;
+  }, [formData, dateRange, sortOrder]);
+
+  // Pagination Logic
+  const totalPages = Math.ceil(filteredResponses.length / itemsPerPage);
+  
+  // Adjust current page if it exceeds total pages after filtering
+  useEffect(() => {
+    if (currentPage > totalPages && totalPages > 0) {
+        setCurrentPage(totalPages);
+    }
+  }, [totalPages, currentPage]);
+
+  const paginatedResponses = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return filteredResponses.slice(startIndex, startIndex + itemsPerPage);
+  }, [filteredResponses, currentPage, itemsPerPage]);
+
+  // Navigate Responses Logic
+  const selectedResponse = useMemo(() => {
+    if (!viewingResponseId) return null;
+    return filteredResponses.find(r => r.id === viewingResponseId);
+  }, [filteredResponses, viewingResponseId]);
+
+  const selectedIdx = useMemo(() => {
+    if (!viewingResponseId) return -1;
+    return filteredResponses.findIndex(r => r.id === viewingResponseId);
+  }, [filteredResponses, viewingResponseId]);
+
+  const handleNextResponse = () => {
+    if (selectedIdx !== -1 && selectedIdx < filteredResponses.length - 1) {
+      setViewingResponseId(filteredResponses[selectedIdx + 1].id);
+    }
+  };
+
+  const handlePrevResponse = () => {
+    if (selectedIdx > 0) {
+      setViewingResponseId(filteredResponses[selectedIdx - 1].id);
+    }
+  };
+
+  // Selection Logic
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      // Select all filtered responses
+      const allIds = new Set(filteredResponses.map((r) => r.id));
+      setSelectedResponses(allIds);
+    } else {
+      setSelectedResponses(new Set());
+    }
+  };
+
+  const handleSelectOne = (id: string, checked: boolean) => {
+    const newSelected = new Set(selectedResponses);
+    if (checked) {
+      newSelected.add(id);
+    } else {
+      newSelected.delete(id);
+    }
+    setSelectedResponses(newSelected);
+  };
+
+  const isAllSelected = filteredResponses.length > 0 && selectedResponses.size === filteredResponses.length;
+  const isIndeterminate = selectedResponses.size > 0 && selectedResponses.size < filteredResponses.length;
+
+  // Pagination Helper
+  const getPageNumbers = () => {
+    const pages = [];
+    const maxVisiblePages = 5;
+    
+    if (totalPages <= maxVisiblePages) {
+        for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+        // Always show first page
+        pages.push(1);
+        
+        if (currentPage > 3) pages.push('...');
+        
+        // Show pages around current
+        const start = Math.max(2, currentPage - 1);
+        const end = Math.min(totalPages - 1, currentPage + 1);
+        
+        for (let i = start; i <= end; i++) {
+             pages.push(i);
+        }
+        
+        if (currentPage < totalPages - 2) pages.push('...');
+        
+        // Always show last page
+        if (totalPages > 1) pages.push(totalPages);
+    }
+    return pages;
+  };
+
+  // Actions
+  const handleDelete = async (id: string) => {
+    try {
+      const res = await fetch(`/api/forms/${formId}/responses`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ responseIds: [id] }),
+      });
+
+      if (!res.ok) throw new Error("Failed to delete");
+      
+      toast({ title: "Success", description: "Response deleted" });
+      
+      // Update local state
+      if (formData) {
+        setFormData({
+            ...formData,
+            responses: formData.responses.filter(r => r.id !== id)
+        });
+        // Remove from selection if selected
+        if (selectedResponses.has(id)) {
+            const newSelected = new Set(selectedResponses);
+            newSelected.delete(id);
+            setSelectedResponses(newSelected);
+        }
+      }
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to delete response", variant: "destructive" });
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedResponses.size === 0) return;
+    
+    try {
+      const idsToDelete = Array.from(selectedResponses);
+      const res = await fetch(`/api/forms/${formId}/responses`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ responseIds: idsToDelete }),
+      });
+
+      if (!res.ok) throw new Error("Failed to delete");
+      
+      toast({ title: "Success", description: `${idsToDelete.length} responses deleted` });
+      
+      // Update local state
+      if (formData) {
+        setFormData({
+            ...formData,
+            responses: formData.responses.filter(r => !selectedResponses.has(r.id))
+        });
+        setSelectedResponses(new Set());
+      }
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to delete responses", variant: "destructive" });
     }
   };
 
   const exportToCSV = () => {
     if (!formData) return;
 
+    // Use filtered responses for export? Or all? Usually current view.
+    // Let's use filteredResponses so user can filter by date then export.
+    const dataToExport = filteredResponses;
+
     // Create CSV header
-    const headers = ["Submitted At", "Name", "Email", ...formData.questions.map(q => q.text)];
+    const headers = ["Submitted At", "Name", "User ID", ...formData.questions.map(q => q.text)];
     
     // Create CSV rows
-    const rows = formData.responses.map(response => {
+    const rows = dataToExport.map(response => {
       const answerMap = new Map(response.answers.map(a => [a.questionId, a.value]));
       
       return [
         new Date(response.createdAt).toLocaleString(),
         response.userName || "",
-        response.userEmail || "",
+        response.userId || "",
         ...formData.questions.map(q => answerMap.get(q.id) || ""),
       ];
     });
@@ -165,30 +487,7 @@ function ResponsesViewerClient({ guildId, formId }: { guildId: string; formId: s
     toast({ title: "Success", description: "Responses exported to CSV" });
   };
 
-  const deleteForm = async () => {
-    setIsDeleting(true);
-    try {
-      const response = await fetch(`/api/forms/${formId}`, {
-        method: "DELETE",
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to delete form");
-      }
-
-      toast({ title: "Success", description: "Form deleted successfully" });
-      router.push(`/event/server/${guildId}`);
-    } catch (error) {
-      toast({ title: "Error", description: "Failed to delete form", variant: "destructive" });
-      setIsDeleting(false);
-    }
-  };
-
-  const getAnswerForQuestion = (response: Response, questionId: string) => {
-    const answer = response.answers.find(a => a.questionId === questionId);
-    return answer?.value || "-";
-  };
-
+  // Render Helpers
   if (isCheckingAuth || status === "loading") {
     return (
       <div className="container mx-auto py-8 flex items-center justify-center min-h-[400px]">
@@ -239,128 +538,406 @@ function ResponsesViewerClient({ guildId, formId }: { guildId: string; formId: s
     );
   }
 
+  // Get start serial number
+  // If Newest -> Oldest, current page starts from 1? No, usually 1 is the 1st row shown.
+  // Requirement: "responses with serial numbers starting from 1 to the end"
+  // If I have 100 responses, sorted newest to oldest. Page 1 shows 1-10. Row 1 is Serial 1.
+  const getSerialNumber = (index: number) => {
+    return (currentPage - 1) * itemsPerPage + index + 1;
+  };
+
   return (
     <div className="container mx-auto py-8">
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">{formData.title}</h1>
-          <div className="flex items-center gap-2 my-1">
-            ID : 
-            <code className="relative rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono text-sm font-semibold">
-              {formId}
-            </code>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6"
-              onClick={() => {
-                navigator.clipboard.writeText(formId);
-                toast({ title: "Copied", description: "Form ID copied to clipboard" });
-              }}
-            >
-              <Copy className="h-3 w-3" />
-              <span className="sr-only">Copy Form ID</span>
-            </Button>
-          </div>
-          <p className="text-muted-foreground">
-            {formData.responses.length} response{formData.responses.length !== 1 ? 's' : ''}
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Link href={`/event/server/${guildId}/forms/${formId}/edit`}>
-            <Button variant="outline">
-              <Eye className="mr-2 h-4 w-4" />
-              Edit Form
-            </Button>
-          </Link>
-          <Button onClick={exportToCSV} disabled={formData.responses.length === 0}>
-            <Download className="mr-2 h-4 w-4" />
-            Export CSV
-          </Button>
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="destructive" disabled={isDeleting}>
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete Form
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This will delete the form &quot;{formData.title}&quot;. All responses ({formData.responses.length}) will be preserved but the form will no longer be accessible.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={deleteForm} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                  {isDeleting ? "Deleting..." : "Delete Form"}
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+      {/* Header */}
+      <div className="mb-6">
+        <div className="flex items-center justify-between mb-2">
+            <div>
+                <h1 className="text-3xl font-bold">{formData.title}</h1>
+                <p className="text-muted-foreground">
+                    {formData.responses.length} total responses
+                </p>
+            </div>
+            <div className="flex gap-2">
+                 <Button variant="outline" onClick={() => router.push(`/event/server/${guildId}`)}>
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  Back to Server
+                </Button>
+            </div>
         </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Responses</CardTitle>
-          <CardDescription>View all form submissions</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {formData.responses.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              No responses yet
+      {/* Toolbar */}
+      <Card className="mb-6">
+        <CardContent className="p-4">
+            <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center">
+                <div className="flex flex-1 flex-col md:flex-row gap-4 w-full md:w-auto">
+                    {/* Date Range Filter */}
+                    <div className="flex items-center gap-2">
+                        <Popover>
+                            <PopoverTrigger asChild>
+                            <Button
+                                variant={"outline"}
+                                className={cn(
+                                "w-[240px] justify-start text-left font-normal",
+                                !dateRange.from && "text-muted-foreground"
+                                )}
+                            >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {dateRange.from ? (
+                                dateRange.to ? (
+                                    <>
+                                    {format(dateRange.from, "LLL dd, y")} -{" "}
+                                    {format(dateRange.to, "LLL dd, y")}
+                                    </>
+                                ) : (
+                                    format(dateRange.from, "LLL dd, y")
+                                )
+                                ) : (
+                                <span>Filter by Date</span>
+                                )}
+                            </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                                initialFocus
+                                mode="range"
+                                defaultMonth={dateRange.from}
+                                selected={dateRange}
+                                onSelect={(range) => setDateRange({ from: range?.from, to: range?.to })}
+                                numberOfMonths={2}
+                            />
+                            </PopoverContent>
+                        </Popover>
+                        {(dateRange.from || dateRange.to) && (
+                             <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => setDateRange({ from: undefined, to: undefined })}
+                             >
+                                Clear
+                             </Button>
+                        )}
+                    </div>
+
+                    {/* Sort */}
+                    <Select value={sortOrder} onValueChange={(v: "newest" | "oldest") => setSortOrder(v)}>
+                        <SelectTrigger className="w-[180px]">
+                            <SelectValue placeholder="Sort by" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="newest">Newest → Oldest</SelectItem>
+                            <SelectItem value="oldest">Oldest → Newest</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+
+                <div className="flex gap-2 w-full md:w-auto justify-end">
+                    {selectedResponses.size > 0 && (
+                        <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button variant="destructive" size="sm">
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Delete ({selectedResponses.size})
+                                </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>Delete {selectedResponses.size} responses?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        This action cannot be undone. These responses will be permanently deleted.
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={handleBulkDelete} className="bg-destructive text-destructive-foreground">Delete</AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+                    )}
+                    
+                    <Button variant="outline" size="sm" onClick={exportToCSV}>
+                        <Download className="mr-2 h-4 w-4" />
+                        Export CSV
+                    </Button>
+                </div>
             </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[150px]">Submitted</TableHead>
-                    <TableHead className="w-[150px]">Name</TableHead>
-                    <TableHead className="w-[200px]">Email</TableHead>
-                    {formData.questions.map((question) => (
-                      <TableHead key={question.id} className="min-w-[200px]">
-                        {question.text}
-                      </TableHead>
-                    ))}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {formData.responses.map((response) => (
-                    <TableRow key={response.id}>
-                      <TableCell>
-                        {new Date(response.createdAt).toLocaleDateString('en-US', {
-                          month: 'short',
-                          day: 'numeric',
-                          year: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                      </TableCell>
-                      <TableCell>{response.userName || "-"}</TableCell>
-                      <TableCell>{response.userEmail || "-"}</TableCell>
-                      {formData.questions.map((question) => (
-                        <TableCell key={question.id}>
-                          {getAnswerForQuestion(response, question.id)}
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
         </CardContent>
       </Card>
 
-      <div className="mt-6">
-        <Button variant="outline" onClick={() => router.push(`/event/server/${guildId}`)}>
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Server
-        </Button>
+      {/* Main Table */}
+      <Card>
+        <CardContent className="p-0">
+            <Table>
+                <TableHeader>
+                    <TableRow>
+                        <TableHead className="w-[50px]">
+                            <Checkbox 
+                                checked={isAllSelected}
+                                onCheckedChange={handleSelectAll}
+                                aria-label="Select all"
+                            />
+                        </TableHead>
+                        <TableHead className="w-[60px]">S.No</TableHead>
+                        <TableHead className="w-[180px]">
+                            <Button variant="ghost" size="sm" className="-ml-3 h-8 hover:bg-transparent px-3" onClick={() => setSortOrder(sortOrder === "newest" ? "oldest" : "newest")}>
+                                Submitted At
+                                <ArrowUpDown className="ml-2 h-4 w-4" />
+                            </Button>
+                        </TableHead>
+                        <TableHead className="w-[150px]">Name</TableHead>
+                        <TableHead className="w-[150px]">User ID</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {paginatedResponses.length === 0 ? (
+                        <TableRow>
+                            <TableCell colSpan={7} className="h-24 text-center">
+                                No results found.
+                            </TableCell>
+                        </TableRow>
+                    ) : (
+                        paginatedResponses.map((response, index) => (
+                            <TableRow 
+                                key={response.id} 
+                                data-state={selectedResponses.has(response.id) && "selected"}
+                                className="cursor-pointer hover:bg-muted/50"
+                                onClick={() => setViewingResponseId(response.id)}
+                            >
+                                <TableCell onClick={(e) => e.stopPropagation()} className="py-1" >
+                                    <Checkbox 
+                                        checked={selectedResponses.has(response.id)}
+                                        onCheckedChange={(checked) => handleSelectOne(response.id, checked as boolean)}
+                                        aria-label="Select row"
+                                    />
+                                </TableCell>
+                                <TableCell className="py-1" >{getSerialNumber(index)}</TableCell>
+                                <TableCell className="py-1" >
+                                    <div className="flex flex-col">
+                                        <span className="font-medium">
+                                            {format(new Date(response.createdAt), "MMM d, yyyy")}
+                                        </span>
+                                        <span className="text-xs text-muted-foreground">
+                                             {format(new Date(response.createdAt), "h:mm a")}
+                                        </span>
+                                    </div>
+                                </TableCell>
+                                <TableCell className="py-1">{response.userName || "-"}</TableCell>
+                                <TableCell className="py-1 font-mono text-xs">{response.userId || "-"}</TableCell>
+                                <TableCell className="text-right py-1" onClick={(e) => e.stopPropagation()}>
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button variant="ghost" className="h-8 w-8 p-0">
+                                                <span className="sr-only">Open menu</span>
+                                                <MoreHorizontal className="h-4 w-4" />
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end">
+                                            <DropdownMenuItem onClick={() => {
+                                                const ids = new Set([response.id]);
+                                                setSelectedResponses(ids);
+                                            }} className="text-destructive">
+                                                <Trash2 className="mr-2 h-4 w-4" />
+                                                Delete Response
+                                            </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                </TableCell>
+                            </TableRow>
+                        ))
+                    )}
+                </TableBody>
+            </Table>
+        </CardContent>
+      </Card>
+
+      {/* Pagination */}
+      <div className="flex flex-col md:flex-row items-center justify-between px-2 py-4 gap-4">
+        <div className="flex-1 text-sm text-muted-foreground order-2 md:order-1">
+            Showing {filteredResponses.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0} to {Math.min(currentPage * itemsPerPage, filteredResponses.length)} of {filteredResponses.length} entries
+        </div>
+
+        <div className="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-6 lg:space-x-8 order-1 md:order-2">
+            <div className="flex items-center space-x-2">
+                <p className="text-sm font-medium">Rows per page</p>
+                <Select
+                    value={itemsPerPage.toString()}
+                    onValueChange={(value) => {
+                        setItemsPerPage(Number(value));
+                        setCurrentPage(1);
+                    }}
+                >
+                    <SelectTrigger className="h-8 w-[70px]">
+                        <SelectValue placeholder={itemsPerPage} />
+                    </SelectTrigger>
+                    <SelectContent side="top">
+                        {[10, 20, 50, 100].map((pageSize) => (
+                            <SelectItem key={pageSize} value={`${pageSize}`}>
+                                {pageSize}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            </div>
+            
+            {totalPages > 1 && (
+                <Pagination>
+                    <PaginationContent>
+                        <PaginationItem>
+                            <PaginationPrevious 
+                                href="#" 
+                                onClick={(e) => { e.preventDefault(); if (currentPage > 1) setCurrentPage(currentPage - 1); }}
+                                className={cn("cursor-pointer", currentPage <= 1 && "pointer-events-none opacity-50")}
+                            />
+                        </PaginationItem>
+                        
+                        {getPageNumbers().map((page, i) => (
+                            <PaginationItem key={i}>
+                                {page === '...' ? (
+                                    <PaginationEllipsis />
+                                ) : (
+                                    <PaginationLink 
+                                        href="#" 
+                                        isActive={currentPage === page}
+                                        onClick={(e) => { e.preventDefault(); setCurrentPage(page as number); }}
+                                        className="cursor-pointer"
+                                    >
+                                        {page}
+                                    </PaginationLink>
+                                )}
+                            </PaginationItem>
+                        ))}
+
+                        <PaginationItem>
+                            <PaginationNext 
+                                href="#"
+                                onClick={(e) => { e.preventDefault(); if (currentPage < totalPages) setCurrentPage(currentPage + 1); }}
+                                className={cn("cursor-pointer", currentPage >= totalPages ? "pointer-events-none opacity-50" : "")}
+                            />
+                        </PaginationItem>
+                    </PaginationContent>
+                </Pagination>
+            )}
+        </div>
       </div>
+
+      {selectedResponse && (
+        <Sheet open={!!viewingResponseId} onOpenChange={(open) => !open && setViewingResponseId(null)}>
+          <SheetContent className="flex flex-col h-full w-full sm:max-w-xl">
+            <SheetHeader className="pb-4 space-y-4">
+              <div className="flex items-start justify-between gap-4">
+                <div className="space-y-1">
+                   <SheetTitle>Response Details</SheetTitle>
+                   <SheetDescription>Review submitted answers</SheetDescription>
+                </div>
+                <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="h-8 shrink-0"
+                    onClick={() => {
+                        const lines = [
+                            `User: ${selectedResponse.userName || "Unknown"}`,
+                            `User ID: ${selectedResponse.userId}`,
+                            `Submitted: ${new Date(selectedResponse.createdAt).toLocaleString()}`,
+                            `--------------------`,
+                        ];
+                        
+                        formData?.questions.forEach(q => {
+                            const answer = selectedResponse.answers.find(a => a.questionId === q.id);
+                            lines.push(`Q: ${q.text}`);
+                            lines.push(`A: ${answer?.value || "No answer"}`);
+                            lines.push(``);
+                        });
+                        
+                        navigator.clipboard.writeText(lines.join('\n'));
+                        toast({ title: "Copied", description: "Full response details copied" });
+                    }}
+                >
+                    <Copy className="mr-2 h-3.5 w-3.5" />
+                    Copy All
+                </Button>
+              </div>
+
+              <div className="flex items-center gap-3 p-3 bg-muted/40 rounded-lg border">
+                <Avatar className="h-10 w-10 border bg-background">
+                  <AvatarImage />
+                  <AvatarFallback>{selectedResponse.userName?.substring(0, 2).toUpperCase() || "U"}</AvatarFallback>
+                </Avatar>
+                <div className="flex flex-col flex-1 min-w-0">
+                  <span className="font-medium truncate text-sm">{selectedResponse.userName || "Unknown User"}</span>
+                  <div className="flex items-center text-xs text-muted-foreground font-mono mt-0.5 group cursor-pointer hover:text-foreground transition-colors"
+                       onClick={() => navigator.clipboard.writeText(selectedResponse.userId || "")}
+                       title="Click to copy User ID"
+                  >
+                      <span className="truncate max-w-[180px]">{selectedResponse.userId}</span>
+                      <CopyAction text={selectedResponse.userId || ""} className="h-4 w-4 ml-1 opacity-50 group-hover:opacity-100 transition-opacity" />
+                  </div>
+                </div>
+                <div className="text-right text-xs text-muted-foreground whitespace-nowrap pl-2 border-l ml-2">
+                    {format(new Date(selectedResponse.createdAt), "MMM d, y")}
+                    <br />
+                    {format(new Date(selectedResponse.createdAt), "h:mm a")}
+                </div>
+              </div>
+            </SheetHeader>
+            <Separator />
+            
+            <ScrollArea className="flex-1 -mx-6 px-6">
+              <div className="space-y-6 py-6">
+                {formData?.questions.map((question) => {
+                  const answer = selectedResponse.answers.find(a => a.questionId === question.id);
+                  const answerText = answer?.value || "";
+                  return (
+                    <div key={question.id} className="space-y-1.5 group/item">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-sm font-medium text-muted-foreground">{question.text}</h4>
+                        {answerText && (
+                            <CopyAction text={answerText} className="opacity-0 group-hover/item:opacity-100 transition-opacity h-6 w-6" />
+                        )}
+                      </div>
+                      <div className="text-sm p-3 bg-card rounded-md border text-card-foreground whitespace-pre-wrap">
+                        {answerText || <span className="text-muted-foreground italic">No answer</span>}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </ScrollArea>
+
+            <div className="pt-4 border-t mt-auto">
+                <Pagination>
+                    <PaginationContent className="w-full justify-between">
+                        <PaginationItem>
+                            <PaginationPrevious 
+                                href="#"
+                                onClick={(e) => { 
+                                    e.preventDefault(); 
+                                    handlePrevResponse(); 
+                                }}
+                                className={cn("cursor-pointer", selectedIdx <= 0 && "pointer-events-none opacity-50")}
+                            />
+                        </PaginationItem>
+                        <PaginationItem>
+                            <span className="text-sm text-muted-foreground">
+                                Response {selectedIdx + 1} of {filteredResponses.length}
+                            </span>
+                        </PaginationItem>
+                        <PaginationItem>
+                            <PaginationNext 
+                                href="#"
+                                onClick={(e) => { 
+                                    e.preventDefault(); 
+                                    handleNextResponse(); 
+                                }}
+                                className={cn("cursor-pointer", selectedIdx >= filteredResponses.length - 1 && "pointer-events-none opacity-50")}
+                            />
+                        </PaginationItem>
+                    </PaginationContent>
+                </Pagination>
+            </div>
+          </SheetContent>
+        </Sheet>
+      )}
     </div>
   );
 }

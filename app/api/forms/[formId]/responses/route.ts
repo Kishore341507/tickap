@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/prisma/db";
 import { auth } from "@/auth";
+import { checkIsManager } from "@/lib/discord";
 
 // POST - Submit a response to a form
 export async function POST(
@@ -137,6 +138,72 @@ export async function GET(
     console.error("Error fetching responses:", error);
     return NextResponse.json(
       { error: "Failed to fetch responses" },
+      { status: 500 }
+    );
+  }
+}
+
+// DELETE - Delete responses
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ formId: string }> }
+) {
+  try {
+    const { formId } = await params;
+    
+    // Authenticate user
+    const session = await auth();
+    if (!session || !session.user?.userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const userId = session.user.userId;
+
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+    }
+    
+    const { responseIds } = body;
+
+    if (!responseIds || !Array.isArray(responseIds) || responseIds.length === 0) {
+      return NextResponse.json(
+        { error: "No response IDs provided" },
+        { status: 400 }
+      );
+    }
+
+    // Fetch form to get guild_id
+    const form = await prisma.form.findUnique({
+      where: { id: formId },
+      select: { guild_id: true }
+    });
+
+    if (!form) {
+      return NextResponse.json({ error: "Form not found" }, { status: 404 });
+    }
+
+    // Check if manager
+    const isManager = await checkIsManager(userId, form.guild_id.toString());
+
+    if (!isManager) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    // Delete responses
+    const result = await prisma.response.deleteMany({
+      where: {
+        id: { in: responseIds },
+        formId: formId,
+      },
+    });
+
+    return NextResponse.json({ success: true, count: result.count });
+  } catch (error) {
+    console.error("Error deleting responses:", error);
+    return NextResponse.json(
+      { error: "Failed to delete responses" },
       { status: 500 }
     );
   }
