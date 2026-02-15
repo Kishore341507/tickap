@@ -29,6 +29,8 @@ interface Question {
   required: boolean;
   options: { id?: string; text: string }[];
   order: number;
+  min?: number;
+  max?: number;
 }
 
 interface FormData {
@@ -126,6 +128,8 @@ function EditFormClient({ guildId, formId }: { guildId: string; formId: string }
         required: q.required,
         options: q.options.map((o: any) => ({ id: o.id, text: o.text })),
         order: q.order,
+        min: q.min,
+        max: q.max,
       })));
     } catch (error) {
       toast({ title: "Error", description: "Failed to load form", variant: "destructive" });
@@ -178,7 +182,25 @@ function EditFormClient({ guildId, formId }: { guildId: string; formId: string }
   };
 
   const updateQuestion = (id: string, field: keyof Question, value: any) => {
-    setQuestions(questions.map(q => q.id === id ? { ...q, [field]: value } : q));
+    setQuestions(questions.map(q => {
+      if (q.id !== id) return q;
+      
+      const updated = { ...q, [field]: value };
+      
+      // Handle defaults when switching types
+      if (field === "type") {
+          const isSelectOrUser = ["MULTIPLE_CHOICE", "CHECKBOXES", "USER"].includes(value as string);
+          if (isSelectOrUser) {
+              if (updated.min === undefined || updated.min === null) updated.min = 1;
+              if (updated.max === undefined || updated.max === null) updated.max = 1;
+          } else {
+               // clear mins/maxes when switching to non-constrained types
+               updated.min = undefined;
+               updated.max = undefined;
+          }
+      }
+      return updated;
+    }));
   };
 
   const deleteQuestion = (id: string) => {
@@ -266,6 +288,50 @@ function EditFormClient({ guildId, formId }: { guildId: string; formId: string }
         toast({ title: "Error", description: `Question ${i + 1} must have at least 2 options`, variant: "destructive" });
         return;
       }
+
+      // Options validation or User Selection validation
+      if (needsOptions(q.type) || q.type === QuestionType.USER) {
+          if (q.min !== undefined && q.min !== null) {
+              if (q.min < 0 || q.min > 25) {
+                  toast({ title: "Error", description: `Question ${i + 1} min selection must be between 0 and 25`, variant: "destructive" });
+                  return;
+              }
+              if (needsOptions(q.type) && q.min > q.options.length) {
+                   toast({ title: "Error", description: `Question ${i + 1} min selection cannot exceed number of options`, variant: "destructive" });
+                   return;
+              }
+          }
+          if (q.max !== undefined && q.max !== null) {
+               if (q.max < 1 || q.max > 25) {
+                   toast({ title: "Error", description: `Question ${i + 1} max selection must be between 1 and 25`, variant: "destructive" });
+                   return;
+               }
+               if (needsOptions(q.type) && q.max > q.options.length) {
+                   toast({ title: "Error", description: `Question ${i + 1} max selection cannot exceed number of options`, variant: "destructive" });
+                   return;
+               }
+          }
+          if (q.min !== undefined && q.min !== null && q.max !== undefined && q.max !== null && q.min > q.max) {
+              toast({ title: "Error", description: `Question ${i + 1}: min selection cannot be greater than max selection`, variant: "destructive" });
+              return;
+          }
+      } else {
+        // Text/Number validation
+        if (q.min !== undefined && q.min !== null && q.min < 0) {
+            toast({ title: "Error", description: `Question ${i + 1} min value invalid`, variant: "destructive" });
+            return;
+        }
+        if (q.type !== QuestionType.NUMBER) {
+             if (q.max !== undefined && q.max !== null && q.max > 4000) {
+                 toast({ title: "Error", description: `Question ${i + 1} max length cannot exceed 4000`, variant: "destructive" });
+                 return;
+             }
+        }
+        if (q.min !== undefined && q.min !== null && q.max !== undefined && q.max !== null && q.min > q.max) {
+            toast({ title: "Error", description: `Question ${i + 1}: min value cannot be greater than max value`, variant: "destructive" });
+            return;
+        }
+      }
     }
 
     setIsSubmitting(true);
@@ -297,6 +363,8 @@ function EditFormClient({ guildId, formId }: { guildId: string; formId: string }
             required: q.required,
             options: q.options.map(o => o.text),
             order: q.order,
+            min: q.min || null,
+            max: q.max || null,
           })),
         }),
       });
@@ -641,6 +709,7 @@ function EditFormClient({ guildId, formId }: { guildId: string; formId: string }
                       <SelectItem value={QuestionType.DATE}>Date</SelectItem>
                       <SelectItem value={QuestionType.TIME}>Time</SelectItem>
                       <SelectItem value={QuestionType.NUMBER}>Number</SelectItem>
+                      <SelectItem value={QuestionType.USER}>User Selection</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -652,6 +721,57 @@ function EditFormClient({ guildId, formId }: { guildId: string; formId: string }
                   />
                   <Label>Required</Label>
                 </div>
+              </div>
+
+              {/* Min/Max Settings */}
+              <div className="grid grid-cols-2 gap-4">
+                 {(question.type === QuestionType.SHORT_TEXT || question.type === QuestionType.PARAGRAPH || question.type === QuestionType.NUMBER) && (
+                   <>
+                      <div>
+                        <Label>{question.type === QuestionType.NUMBER ? "Min Value" : "Min Length"}</Label>
+                        <Input 
+                          type="number" 
+                          value={question.min ?? ''} 
+                          onChange={(e) => updateQuestion(question.id, "min", e.target.value ? parseInt(e.target.value) : null)}
+                          placeholder={question.type === QuestionType.NUMBER ? "Optional" : "Optional (Max 4000)"}
+                        />
+                      </div>
+                      <div>
+                        <Label>{question.type === QuestionType.NUMBER ? "Max Value" : "Max Length"}</Label>
+                        <Input 
+                          type="number" 
+                          value={question.max ?? ''} 
+                          onChange={(e) => updateQuestion(question.id, "max", e.target.value ? parseInt(e.target.value) : null)}
+                          placeholder={question.type === QuestionType.NUMBER ? "Optional" : "Optional (Max 4000)"}
+                        />
+                      </div>
+                   </>
+                 )}
+                 
+                 {(needsOptions(question.type) || question.type === QuestionType.USER) && (
+                   <>
+                      <div>
+                        <Label>Min Selection</Label>
+                        <Input 
+                          type="number" 
+                          value={question.min ?? ''} 
+                          onChange={(e) => updateQuestion(question.id, "min", e.target.value ? parseInt(e.target.value) : null)}
+                          placeholder={question.required ? "Default 1" : "Default 0"}
+                          max={25}
+                        />
+                      </div>
+                      <div>
+                        <Label>Max Selection</Label>
+                        <Input 
+                          type="number" 
+                          value={question.max ?? ''} 
+                          onChange={(e) => updateQuestion(question.id, "max", e.target.value ? parseInt(e.target.value) : null)}
+                          placeholder="Default 1 (Max 25)"
+                          max={25}
+                        />
+                      </div>
+                   </>
+                 )}
               </div>
 
               {needsOptions(question.type) && (
