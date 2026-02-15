@@ -53,6 +53,9 @@ function CreateFormClient({ guildId }: { guildId: string }) {
     maxResponsesPerUser: "",
     submissionCooldown: "",
     submissionCooldownUnit: "seconds",
+    custom_response: false,
+    accept_response: "",
+    reject_response: "",
   });
   
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -298,6 +301,9 @@ function CreateFormClient({ guildId }: { guildId: string }) {
               formData.submissionCooldownUnit === "days" ? 86400 : 1
             )
           ) : null,
+          custom_response: formData.custom_response,
+          accept_response: formData.accept_response,
+          reject_response: formData.reject_response,
           questions: questions.map(q => ({
             text: q.text,
             description: q.description,
@@ -485,6 +491,48 @@ function CreateFormClient({ guildId }: { guildId: string }) {
               <p className="text-xs text-muted-foreground mt-1">
                 Select a text channel to associate this form with (optional)
               </p>
+            </div>
+
+            <div className="pt-4 border-t">
+              <h3 className="text-lg font-medium mb-4">Response Settings</h3>
+              <div className="space-y-4">
+                <div className="flex items-center space-x-2">
+                  <Switch 
+                    id="custom_response" 
+                    checked={formData.custom_response}
+                    onCheckedChange={(checked: boolean) => setFormData({...formData, custom_response: checked})}
+                  />
+                  <div>
+                    <Label htmlFor="custom_response">Enable Custom Response Dialog</Label>
+                    <p className="text-sm text-muted-foreground">
+                      If enabled, you will be prompted to edit the response message before sending.
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="grid gap-4 mt-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="accept_response">Default Acceptance Message</Label>
+                      <Textarea 
+                        id="accept_response"
+                        value={formData.accept_response} 
+                        onChange={(e) => setFormData({...formData, accept_response: e.target.value})}
+                        placeholder="Message sent when response is accepted..."
+                        rows={3}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="reject_response">Default Rejection Message</Label>
+                      <Textarea 
+                        id="reject_response"
+                        value={formData.reject_response} 
+                        onChange={(e) => setFormData({...formData, reject_response: e.target.value})}
+                        placeholder="Message sent when response is rejected..."
+                        rows={3}
+                      />
+                    </div>
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
