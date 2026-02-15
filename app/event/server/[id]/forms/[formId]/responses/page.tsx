@@ -15,9 +15,11 @@ import {
   Search,
   ShieldAlert,
   Copy,
-  Check
+  Check,
+  Edit
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -134,6 +136,88 @@ interface DateRange {
 }
 
 // Helper Components
+function ResponsesSkeleton() {
+  return (
+    <div className="container mx-auto py-8">
+      {/* Header */}
+      <div className="mb-6">
+        <div className="flex items-center justify-between mb-2">
+            <div className="space-y-2">
+                <Skeleton className="h-9 w-64" />
+                <Skeleton className="h-4 w-32" />
+            </div>
+            <div className="flex gap-2">
+                 <Skeleton className="h-10 w-32" />
+            </div>
+        </div>
+      </div>
+
+      {/* Toolbar */}
+      <Card className="mb-6">
+        <CardContent className="p-4">
+            <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center">
+                <div className="flex flex-1 flex-col md:flex-row gap-4 w-full md:w-auto">
+                    {/* Date Range Filter */}
+                    <Skeleton className="h-10 w-[240px]" />
+
+                    {/* Sort */}
+                    <Skeleton className="h-10 w-[180px]" />
+                </div>
+
+                <div className="flex gap-2 w-full md:w-auto justify-end">      
+                    <Skeleton className="h-9 w-20" />
+                    <Skeleton className="h-9 w-28" />
+                </div>
+            </div>
+        </CardContent>
+      </Card>
+
+      {/* Main Table */}
+      <Card>
+        <CardContent className="p-0">
+            <div className="relative w-full overflow-auto">
+              <table className="w-full caption-bottom text-sm">
+                  <thead className="[&_tr]:border-b">
+                      <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+                          <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground w-[50px]">
+                              <Skeleton className="h-4 w-4" />
+                          </th>
+                          <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground w-[60px]">S.No</th>
+                          <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground w-[180px]">
+                              Submitted At
+                          </th>
+                          <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground w-[150px]">Name</th>
+                          <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground w-[150px]">User ID</th>
+                          <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground w-[120px]">Status</th>
+                          <th className="h-12 px-4 text-right align-middle font-medium text-muted-foreground">Actions</th>
+                      </tr>
+                  </thead>
+                  <tbody className="[&_tr:last-child]:border-0">
+                      {Array.from({ length: 5 }).map((_, index) => (
+                          <tr key={index} className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+                              <td className="p-4 align-middle"><Skeleton className="h-4 w-4" /></td>
+                              <td className="p-4 align-middle"><Skeleton className="h-4 w-8" /></td>
+                              <td className="p-4 align-middle">
+                                  <div className="flex flex-col gap-1">
+                                      <Skeleton className="h-4 w-24" />
+                                      <Skeleton className="h-3 w-16" />
+                                  </div>
+                              </td>
+                              <td className="p-4 align-middle"><Skeleton className="h-4 w-24" /></td>
+                              <td className="p-4 align-middle"><Skeleton className="h-4 w-32" /></td>
+                              <td className="p-4 align-middle"><Skeleton className="h-5 w-20 rounded-full" /></td>
+                              <td className="p-4 align-middle text-right"><Skeleton className="h-8 w-8 ml-auto rounded-md" /></td>
+                          </tr>
+                      ))}
+                  </tbody>
+              </table>
+            </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 function CopyAction({ text, className }: { text: string; className?: string }) {
   const [copied, setCopied] = useState(false);
 
@@ -595,15 +679,8 @@ function ResponsesViewerClient({
   };
 
   // Render Helpers
-  if (isCheckingAuth || status === "loading") {
-    return (
-      <div className="container mx-auto py-8 flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-          <p className="text-muted-foreground">Verifying permissions...</p>
-        </div>
-      </div>
-    );
+  if (isCheckingAuth || status === "loading" || isLoading) {
+    return <ResponsesSkeleton />;
   }
 
   if (!isManager) {
@@ -621,14 +698,6 @@ function ResponsesViewerClient({
             </Button>
           </CardContent>
         </Card>
-      </div>
-    );
-  }
-
-  if (isLoading) {
-    return (
-      <div className="container mx-auto py-8 flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin" />
       </div>
     );
   }
@@ -762,6 +831,12 @@ function ResponsesViewerClient({
                         </AlertDialog>
                     )}
                     
+                    <Button variant="outline" size="sm" asChild>
+                        <Link href={`/event/server/${guildId}/forms/${formId}/edit`}>
+                            <Edit className="mr-2 h-4 w-4" />
+                            Edit
+                        </Link>
+                    </Button>
                     <Button variant="outline" size="sm" onClick={exportToCSV}>
                         <Download className="mr-2 h-4 w-4" />
                         Export CSV
