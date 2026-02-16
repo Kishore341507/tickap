@@ -180,40 +180,128 @@ export async function PUT(
       return NextResponse.json({ error: "Form not found" }, { status: 404 });
     }
 
-    // Delete all existing questions and their options (cascade will handle this)
-    await prisma.question.deleteMany({
-      where: { formId },
+    // Transaction to update form, questions, and options
+    await prisma.$transaction(async (tx: any) => {
+      // 1. Identify Questions to Delete
+      const incomingQuestionIds = questions
+        .filter((q: any) => q.id && !q.id.startsWith("new-"))
+        .map((q: any) => q.id);
+
+      const questionsToDelete = existingForm.questions
+        .filter((q: any) => !incomingQuestionIds.includes(q.id))
+        .map((q: any) => q.id);
+
+      if (questionsToDelete.length > 0) {
+        await tx.question.deleteMany({
+          where: { id: { in: questionsToDelete } },
+        });
+      }
+
+      // 2. Process Incoming Questions (Create or Update)
+      for (const q of questions) {
+        if (!q.id || q.id.startsWith("new-")) {
+          // --- CREATE NEW QUESTION ---
+          await tx.question.create({
+            data: {
+              formId,
+              text: q.text,
+              description: q.description || null,
+              placeholder: q.placeholder || null,
+              type: q.type,
+              required: q.required || false,
+              order: q.order,
+              min: q.min,
+              max: q.max,
+              options: {
+                create: q.options?.map((opt: any) => ({
+                  text: typeof opt === "string" ? opt : opt.text,
+                })) || [],
+              },
+            },
+          });
+        } else {
+          // --- UPDATE EXISTING QUESTION ---
+          await tx.question.update({
+            where: { id: q.id },
+            data: {
+              text: q.text,
+              description: q.description || null,
+              placeholder: q.placeholder || null,
+              type: q.type,
+              required: q.required || false,
+              order: q.order,
+              min: q.min,
+              max: q.max,
+            },
+          });
+
+          // Handle Options Diffing for this question
+          const existingQuestion = existingForm.questions.find((eq: any) => eq.id === q.id);
+          const existingOptions = existingQuestion ? existingQuestion.options : [];
+          
+          const incomingOptions = q.options || [];
+          const incomingOptionIds = incomingOptions
+            .filter((o: any) => o.id && !o.id.toString().startsWith("new-"))
+            .map((o: any) => o.id);
+
+          // Options to Delete
+          const optionsToDelete = existingOptions
+            .filter((o: any) => !incomingOptionIds.includes(o.id))
+            .map((o: any) => o.id);
+
+          if (optionsToDelete.length > 0) {
+            await tx.option.deleteMany({
+              where: { id: { in: optionsToDelete } },
+            });
+          }
+
+          // Options to Create or Update
+          for (const opt of incomingOptions) {
+            // Handle plain string options (fallback) or object options
+            const optText = typeof opt === "string" ? opt : opt.text;
+            const optId = typeof opt === "object" ? opt.id : null;
+
+            if (!optId || optId.startsWith("new-")) {
+              await tx.option.create({
+                data: {
+                  questionId: q.id,
+                  text: optText,
+                },
+              });
+            } else {
+              await tx.option.update({
+                where: { id: optId },
+                data: {
+                  text: optText,
+                },
+              });
+            }
+          }
+        }
+      }
+
+      // 3. Update Parent Form Fields
+      await tx.form.update({
+        where: { id: formId },
+        data: {
+          title,
+          description: description || null,
+          guild_id: BigInt(guild_id),
+          channel_id: channel_id ? BigInt(channel_id) : null,
+          role_id: role_id ? BigInt(role_id) : null,
+          manager_id: manager_id ? BigInt(manager_id) : null,
+          maxResponsesPerUser: maxResponsesPerUser !== undefined ? parseInt(maxResponsesPerUser) : 1,
+          submissionCooldown: submissionCooldown !== undefined ? parseInt(submissionCooldown) : 0,
+          custom_response: custom_response !== undefined ? custom_response : false,
+          accept_response: accept_response || null,
+          reject_response: reject_response || null,
+        } as any,
+      });
     });
 
-    // Update the form with new data
-    const updatedForm = await prisma.form.update({
+    // Fetch the final updated form to return
+    const updatedForm = await prisma.form.findUnique({
       where: { id: formId },
-      data: {
-        title,
-        description: description || null,
-        guild_id: BigInt(guild_id),
-        channel_id: channel_id ? BigInt(channel_id) : null,
-        role_id: role_id ? BigInt(role_id) : null,
-        manager_id: manager_id ? BigInt(manager_id) : null,
-        maxResponsesPerUser: maxResponsesPerUser !== undefined ? parseInt(maxResponsesPerUser) : 1,
-        submissionCooldown: submissionCooldown !== undefined ? parseInt(submissionCooldown) : 0,
-        custom_response: custom_response !== undefined ? custom_response : false,
-        accept_response: accept_response || null,
-        reject_response: reject_response || null,
-        questions: {
-          create: questions.map((q: any) => ({
-            text: q.text,
-            description: q.description || null,
-            placeholder: q.placeholder || null,
-            type: q.type,
-            required: q.required || false,
-            order: q.order,
-            options: {
-              create: q.options?.map((opt: string) => ({ text: opt })) || [],
-            },
-          })),
-        },
-      } as any,
       include: {
         questions: {
           include: {
