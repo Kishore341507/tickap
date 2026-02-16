@@ -211,7 +211,11 @@ function EditFormClient({ guildId, formId }: { guildId: string; formId: string }
     if (!currentOption.trim()) return;
     const question = questions.find(q => q.id === questionId);
     if (question) {
-      updateQuestion(questionId, "options", [...question.options, { text: currentOption }]);
+      const newOption = { 
+        id: `new-${Math.random().toString(36).substring(7)}`, 
+        text: currentOption 
+      };
+      updateQuestion(questionId, "options", [...question.options, newOption]);
       setCurrentOption("");
     }
   };
@@ -361,7 +365,10 @@ function EditFormClient({ guildId, formId }: { guildId: string; formId: string }
             placeholder: q.placeholder,
             type: q.type,
             required: q.required,
-            options: q.options.map(o => o.text),
+            options: q.options.map(o => ({ 
+              id: o.id && !o.id.startsWith("new-") ? o.id : undefined,
+              text: o.text || o 
+            })),
             order: q.order,
             min: q.min || null,
             max: q.max || null,
