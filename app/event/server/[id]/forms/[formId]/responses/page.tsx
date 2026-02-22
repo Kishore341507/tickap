@@ -182,31 +182,31 @@ function ResponsesSkeleton() {
                           <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground w-[50px]">
                               <Skeleton className="h-4 w-4" />
                           </th>
-                          <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground w-[60px]">S.No</th>
+                          <th className="hidden md:table-cell h-12 px-4 text-left align-middle font-medium text-muted-foreground w-[60px]">S.No</th>
                           <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground w-[180px]">
                               Submitted At
                           </th>
-                          <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground w-[150px]">Name</th>
-                          <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground w-[150px]">User ID</th>
-                          <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground w-[120px]">Status</th>
-                          <th className="h-12 px-4 text-right align-middle font-medium text-muted-foreground">Actions</th>
+                          <th className="hidden md:table-cell h-12 px-4 text-left align-middle font-medium text-muted-foreground w-[150px]">Name</th>
+                          <th className="hidden md:table-cell h-12 px-4 text-left align-middle font-medium text-muted-foreground w-[150px]">User ID</th>
+                          <th className="hidden md:table-cell h-12 px-4 text-left align-middle font-medium text-muted-foreground w-[120px]">Status</th>
+                          <th className="hidden md:table-cell h-12 px-4 text-right align-middle font-medium text-muted-foreground">Actions</th>
                       </tr>
                   </thead>
                   <tbody className="[&_tr:last-child]:border-0">
                       {Array.from({ length: 5 }).map((_, index) => (
                           <tr key={index} className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
                               <td className="p-4 py-1 align-middle"><Skeleton className="h-4 w-4" /></td>
-                              <td className="p-4 py-1 align-middle"><Skeleton className="h-4 w-8" /></td>
+                              <td className="hidden md:table-cell p-4 py-1 align-middle"><Skeleton className="h-4 w-8" /></td>
                               <td className="p-4 py-1 align-middle">
                                   <div className="flex flex-col gap-1">
                                       <Skeleton className="h-4 w-24" />
                                       <Skeleton className="h-3 w-16" />
                                   </div>
                               </td>
-                              <td className="p-4 py-1 align-middle"><Skeleton className="h-4 w-24" /></td>
-                              <td className="p-4 py-1 align-middle"><Skeleton className="h-4 w-32" /></td>
-                              <td className="p-4 py-1 align-middle"><Skeleton className="h-5 w-20 rounded-full" /></td>
-                              <td className="p-4 py-1 align-middle text-right"><Skeleton className="h-8 w-8 ml-auto rounded-md" /></td>
+                              <td className="hidden md:table-cell p-4 py-1 align-middle"><Skeleton className="h-4 w-24" /></td>
+                              <td className="hidden md:table-cell p-4 py-1 align-middle"><Skeleton className="h-4 w-32" /></td>
+                              <td className="hidden md:table-cell p-4 py-1 align-middle"><Skeleton className="h-5 w-20 rounded-full" /></td>
+                              <td className="hidden md:table-cell p-4 py-1 align-middle text-right"><Skeleton className="h-8 w-8 ml-auto rounded-md" /></td>
                           </tr>
                       ))}
                   </tbody>
