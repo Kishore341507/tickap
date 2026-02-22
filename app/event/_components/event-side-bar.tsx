@@ -2,13 +2,12 @@
 
 import { Separator } from "@/components/ui/separator";
 import clsx from "clsx";
-import { HomeIcon, Info, Server, Settings, SquarePlus } from "lucide-react";
+import { FileText, HomeIcon, Info, Server, Settings, SquarePlus } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import { useTheme } from "next-themes";
-import { json } from "stream/consumers";
 import { useSession } from "next-auth/react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -19,31 +18,24 @@ export default function EventSideBar() {
   const pathname = usePathname();
   const { theme } = useTheme();
   const { status } = useSession();
-  const [isLoading, setIsLoading] = useState(false);
+  const [hasManagerGuilds, setHasManagerGuilds] = useState(false);
 
-  // const [mutualManagerGuilds, setMutualManagerGuilds] = useState([]);
-  // const [toAddGuilds, setToAddGuilds] = useState([]);
-  // useEffect(() => {
-  //   if (status !== "authenticated"){
-  //     setMutualManagerGuilds([]);
-  //     setToAddGuilds([]);
-  //     setIsLoading(false);
-  //     return;
-  //   } 
-  //   setIsLoading(true);
-  //   fetch("/api/discord/user/guild")
-  //     .then((res) => {
-  //       if (!res.ok) return;
-  //       return res.json();
-  //     })
-  //     .then((data) => {
-  //       setMutualManagerGuilds(data.filter((guild: Guild) => guild.manager &&  guild.mutual ).sort((a: any, b: any) => b.approximate_member_count - a.approximate_member_count) );
-  //       setToAddGuilds(data.filter((guild: Guild) => guild.manager && !guild.mutual ).sort((a: any, b: any) => b.approximate_member_count - a.approximate_member_count));
-  //     })
-  //     .finally(() => {
-  //       setIsLoading(false);
-  //     });
-  // }, [status]);
+  useEffect(() => {
+    if (status !== "authenticated") {
+      setHasManagerGuilds(false);
+      return;
+    }
+    fetch("/api/discord/user/guild")
+      .then((res) => {
+        if (!res.ok) return;
+        return res.json();
+      })
+      .then((data) => {
+        setHasManagerGuilds(
+          Array.isArray(data) && data.some((guild: Guild) => guild.manager && guild.mutual)
+        );
+      });
+  }, [status]);
 
   // const GuildSkeleton = () => (
   //   <div className="flex items-center gap-2 rounded-lg px-3 py-2">
@@ -91,6 +83,25 @@ export default function EventSideBar() {
               </div>
               Home
             </Link>
+
+            {hasManagerGuilds && (
+              <Link
+                className={clsx(
+                  "flex items-center gap-2 rounded-lg px-3 py-2 text-gray-500 transition-all hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50",
+                  {
+                    "flex items-center gap-2 rounded-lg bg-gray-100 px-3 py-2 text-gray-900  transition-all hover:text-gray-900 dark:bg-gray-800 dark:text-gray-50 dark:hover:text-gray-50":
+                      pathname.startsWith("/event/forms"),
+                  }
+                )}
+                href="/event/forms"
+              >
+                <div className="border rounded-lg dark:bg-black dark:border-gray-800 border-gray-400 p-1 bg-white">
+                  <FileText className="h-3 w-3" />
+                </div>
+                Forms
+              </Link>
+            )}
+            
             <Link
               className={clsx(
                 "flex items-center gap-2 rounded-lg px-3 py-2 text-gray-500 transition-all hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50",
@@ -123,107 +134,6 @@ export default function EventSideBar() {
               About Us
             </Link>
 
-            {/* {isLoading ? (
-              <>
-                <div>
-                  <Separator className="my-3" />
-                  <div className="flex gap-1 items-center py-2 px-3">
-                    <Settings className="h-5 w-5" />
-                    <span className="ml-2">Manage Server(s)</span>
-                  </div>
-                  <ScrollArea className="h-48 rounded-md border-r border-b border-secondary">
-                    <GuildListSkeleton />
-                  </ScrollArea>
-                </div>
-                <div>
-                  <Separator className="my-3" />
-                  <div className="flex gap-1 items-center py-2 px-3">
-                    <SquarePlus className="h-5 w-5" />
-                    <span className="ml-2">Add to Server(s)</span>
-                  </div>
-                  <ScrollArea className="h-48 rounded-md border-r border-b border-secondary">
-                    <GuildListSkeleton />
-                  </ScrollArea>
-                </div>
-              </>
-            ) : (
-              <>
-                {mutualManagerGuilds.length > 0 && (
-                  <div>
-                    <Separator className="my-3" />
-                    <div className="flex gap-1 items-center py-2 px-3">
-                      <Settings className="h-5 w-5" />
-                      <span className="ml-2">Manage Server(s)</span>
-                    </div>
-
-                    <ScrollArea className="h-48 rounded-md border-r border-b border-secondary ">
-                      {mutualManagerGuilds.map((guild: Guild) => (
-                        <Link
-                          key={guild.id}
-                          className={clsx(
-                            "flex items-center gap-2 rounded-lg px-3 py-2 text-gray-500 transition-all hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50",
-                            {
-                              "flex items-center gap-2 rounded-lg bg-gray-100 px-3 py-2 text-gray-900  transition-all hover:text-gray-900 dark:bg-gray-800 dark:text-gray-50 dark:hover:text-gray-50":
-                                pathname === `/event/server/${guild.id}`,
-                            }
-                          )}
-                          href={`/event/server/${guild.id}`}
-                        >
-                          <div className="border rounded-lg dark:bg-black dark:border-gray-800 border-gray-400 bg-white">
-                            <Image
-                              src={guild.icon}
-                              width={20}
-                              height={20}
-                              alt={guild.name}
-                              className="rounded-lg"
-                            />
-                          </div>
-                          {guild.name}
-                        </Link>
-                      ))}
-                    </ScrollArea>
-                  </div>
-                )}
-                
-                {toAddGuilds.length > 0 && (
-                  <div>
-                    <Separator className="my-3" />
-                    <div className="flex gap-1 items-center py-2 px-3">
-                      <SquarePlus className="h-5 w-5" />
-                      <span className="ml-2">Add to Server(s)</span>
-                    </div>
-
-                    <ScrollArea className="h-48 rounded-md border-r border-b border-secondary ">
-                      {toAddGuilds.map((guild: Guild) => (
-                        <Link
-                          key={guild.id}
-                          className={clsx(
-                            "flex items-center gap-2 rounded-lg px-3 py-2 text-gray-500 transition-all hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50",
-                            {
-                              "flex items-center gap-2 rounded-lg bg-gray-100 px-3 py-2 text-gray-900  transition-all hover:text-gray-900 dark:bg-gray-800 dark:text-gray-50 dark:hover:text-gray-50":
-                                pathname === `/event/server/${guild.id}`,
-                            }
-                          )}
-                          // href={`/event/server/${guild.id}`}
-                          href={botInviteUrl} target="_blank"
-                        >
-                          <div className="border rounded-lg dark:bg-black dark:border-gray-800 border-gray-400 bg-white">
-                            <Image
-                              src={guild.icon}
-                              width={20}
-                              height={20}
-                              alt={guild.name}
-                              className="rounded-lg"
-                            />
-                          </div>
-                          {guild.name}
-                        </Link>
-                      ))}
-                    </ScrollArea>
-                  </div>
-                )}
-              </>
-            )} */}
           </nav>
         </div>
       </div>

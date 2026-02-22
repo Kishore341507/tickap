@@ -12,6 +12,7 @@ import {
 import {
   Banknote,
   CircleUser,
+  FileText,
   Folder,
   HomeIcon,
   KeyRound,
@@ -95,6 +96,16 @@ export default async function EventTopNav({
                   </Button>
                 </Link>
               </DialogClose>
+              {session && (
+                <DialogClose asChild>
+                  <Link href="/event/forms">
+                    <Button variant="outline" className="w-full">
+                      <FileText className="mr-2 h-4 w-4" />
+                      Forms
+                    </Button>
+                  </Link>
+                </DialogClose>
+              )}
               <Separator className="my-3" />
             </div>
           </SheetContent>
