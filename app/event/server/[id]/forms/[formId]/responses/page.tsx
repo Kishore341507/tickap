@@ -447,6 +447,32 @@ function ResponsesViewerClient({
     }
   };
 
+  // Keyboard navigation for dialog
+  useEffect(() => {
+    if (!viewingResponseId) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        handlePrevResponse();
+      } else if (e.key === "ArrowRight") {
+        e.preventDefault();
+        handleNextResponse();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [viewingResponseId, selectedIdx, filteredResponses]);
+
+  // Auto-open newest response on mobile
+  useEffect(() => {
+    const isMobile = window.innerWidth < 768;
+    if (isMobile && filteredResponses.length > 0 && !viewingResponseId) {
+      setViewingResponseId(filteredResponses[0].id);
+    }
+  }, [filteredResponses]);
+
   // Selection Logic
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
@@ -726,29 +752,60 @@ function ResponsesViewerClient({
     <div className="container mx-auto py-8">
       {/* Header */}
       <div className="mb-6">
-        <div className="flex items-center justify-between mb-2">
-            <div>
-                <h1 className="text-3xl font-bold">{formData.title}</h1>
-                <p className="text-muted-foreground">
-                    {formData.responses.length} total responses
-                </p>
-            </div>
-            <div className="flex gap-2">
-                 <Button variant="outline" onClick={() => router.push(`/event/server/${guildId}`)}>
+        <div className="flex flex-col gap-3 mb-2">
+            <div className="flex items-start justify-between gap-2">
+                <div className="flex-1 min-w-0">
+                    <h1 className="text-xl md:text-3xl font-bold break-words">{formData.title}</h1>
+                    <p className="text-muted-foreground text-sm">
+                        {formData.responses.length} total responses
+                    </p>
+                </div>
+                <Button variant="outline" className="hidden md:flex shrink-0" onClick={() => router.push(`/event/server/${guildId}`)}>
                   <ArrowLeft className="mr-2 h-4 w-4" />
                   Back to Server
                 </Button>
             </div>
+            <Button variant="outline" className="md:hidden w-full" onClick={() => router.push(`/event/server/${guildId}`)}>
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Server
+            </Button>
         </div>
       </div>
 
       {/* Toolbar */}
       <Card className="mb-6">
         <CardContent className="p-4">
-            <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center">
-                <div className="flex flex-1 flex-col md:flex-row gap-4 w-full md:w-auto">
-                    {/* Date Range Filter */}
-                    <div className="flex items-center gap-2">
+            <div className="flex flex-col gap-4">
+                {/* Delete Button Row (Mobile Only - When Selected) */}
+                {selectedResponses.size > 0 && (
+                    <div className="md:hidden">
+                        <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button variant="destructive" size="sm" className="w-full">
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Delete ({selectedResponses.size})
+                                </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>Delete {selectedResponses.size} responses?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        This action cannot be undone. These responses will be permanently deleted.
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={handleBulkDelete} className="bg-destructive text-destructive-foreground">Delete</AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+                    </div>
+                )}
+
+                <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center">
+                    <div className="flex flex-1 flex-col md:flex-row gap-4 w-full md:w-auto">
+                        {/* Date Range Filter */}
+                        <div className="flex items-center gap-2">
                         <Popover>
                             <PopoverTrigger asChild>
                             <Button
@@ -807,31 +864,32 @@ function ResponsesViewerClient({
                     </Select>
                 </div>
 
-                <div className="flex gap-2 w-full md:w-auto justify-end">
-                    {selectedResponses.size > 0 && (
-                        <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                                <Button variant="destructive" size="sm">
-                                    <Trash2 className="mr-2 h-4 w-4" />
-                                    Delete ({selectedResponses.size})
-                                </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                                <AlertDialogHeader>
-                                    <AlertDialogTitle>Delete {selectedResponses.size} responses?</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                        This action cannot be undone. These responses will be permanently deleted.
-                                    </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                    <AlertDialogAction onClick={handleBulkDelete} className="bg-destructive text-destructive-foreground">Delete</AlertDialogAction>
-                                </AlertDialogFooter>
-                            </AlertDialogContent>
-                        </AlertDialog>
-                    )}
-                    
-                    <Button variant="outline" size="sm" asChild>
+                    <div className="flex gap-2 w-full md:w-auto justify-end">
+                        {/* Delete Button (Desktop Only) */}
+                        {selectedResponses.size > 0 && (
+                            <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <Button variant="destructive" size="sm" className="hidden md:flex">
+                                        <Trash2 className="mr-2 h-4 w-4" />
+                                        Delete ({selectedResponses.size})
+                                    </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Delete {selectedResponses.size} responses?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            This action cannot be undone. These responses will be permanently deleted.
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction onClick={handleBulkDelete} className="bg-destructive text-destructive-foreground">Delete</AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                        )}
+                        
+                        <Button variant="outline" size="sm" asChild>
                         <Link href={`/event/server/${guildId}/forms/${formId}/edit`}>
                             <Edit className="mr-2 h-4 w-4" />
                             Edit
@@ -841,13 +899,14 @@ function ResponsesViewerClient({
                         <Download className="mr-2 h-4 w-4" />
                         Export CSV
                     </Button>
+                    </div>
                 </div>
             </div>
         </CardContent>
       </Card>
 
       {/* Main Table */}
-      <Card>
+      <Card className="block">
         <CardContent className="p-0">
             <Table>
                 <TableHeader>
@@ -859,17 +918,17 @@ function ResponsesViewerClient({
                                 aria-label="Select all"
                             />
                         </TableHead>
-                        <TableHead className="w-[60px]">S.No</TableHead>
+                        <TableHead className="hidden md:table-cell w-[60px]">S.No</TableHead>
                         <TableHead className="w-[180px]">
                             <Button variant="ghost" size="sm" className="-ml-3 h-8 hover:bg-transparent px-3" onClick={() => setSortOrder(sortOrder === "newest" ? "oldest" : "newest")}>
                                 Submitted At
                                 <ArrowUpDown className="ml-2 h-4 w-4" />
                             </Button>
                         </TableHead>
-                        <TableHead className="w-[150px]">Name</TableHead>
-                        <TableHead className="w-[150px]">User ID</TableHead>
-                        <TableHead className="w-[120px]">Status</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
+                        <TableHead className="hidden md:table-cell w-[150px]">Name</TableHead>
+                        <TableHead className="hidden md:table-cell w-[150px]">User ID</TableHead>
+                        <TableHead className="hidden md:table-cell w-[120px]">Status</TableHead>
+                        <TableHead className="hidden md:table-cell text-right">Actions</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -894,7 +953,7 @@ function ResponsesViewerClient({
                                         aria-label="Select row"
                                     />
                                 </TableCell>
-                                <TableCell className="py-1" >{getSerialNumber(index)}</TableCell>
+                                <TableCell className="hidden md:table-cell py-1" >{getSerialNumber(index)}</TableCell>
                                 <TableCell className="py-1" >
                                     <div className="flex flex-col">
                                         <span className="font-medium">
@@ -905,9 +964,9 @@ function ResponsesViewerClient({
                                         </span>
                                     </div>
                                 </TableCell>
-                                <TableCell className="py-1">{response.userName || "-"}</TableCell>
-                                <TableCell className="py-1 font-mono text-xs">{response.userId || "-"}</TableCell>
-                                <TableCell className="py-1">
+                                <TableCell className="hidden md:table-cell py-1">{response.userName || "-"}</TableCell>
+                                <TableCell className="hidden md:table-cell py-1 font-mono text-xs">{response.userId || "-"}</TableCell>
+                                <TableCell className="hidden md:table-cell py-1">
                                   {(!response.status || response.status === "PENDING") && (
                                     <Badge variant="secondary" className="gap-1">
                                       <Clock className="h-3 w-3" /> Pending
@@ -924,7 +983,7 @@ function ResponsesViewerClient({
                                     </Badge>
                                   )}
                                 </TableCell>
-                                <TableCell className="text-right py-1" onClick={(e) => e.stopPropagation()}>
+                                <TableCell className="hidden md:table-cell text-right py-1" onClick={(e) => e.stopPropagation()}>
                                     <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
                                             <Button variant="ghost" className="h-8 w-8 p-0">
@@ -1087,7 +1146,7 @@ function ResponsesViewerClient({
                 </div>
               </div>
 
-              <div className="flex items-center justify-between p-3 bg-muted/40 rounded-lg border">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 p-3 bg-muted/40 rounded-lg border">
                 <div className="flex items-center gap-2">
                     <span className="text-sm font-medium">Status:</span>
                     {(!selectedResponse.status || selectedResponse.status === "PENDING") && (
@@ -1106,14 +1165,14 @@ function ResponsesViewerClient({
                         </Badge>
                     )}
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
                     {selectedResponse.status !== "ACCEPTED" && (
-                        <Button size="sm" variant="outline" className="h-8 text-green-600 hover:text-green-700 hover:bg-green-50" onClick={() => handleUpdateStatus(selectedResponse.id, "ACCEPTED")}>
+                        <Button size="sm" variant="outline" className="h-8 text-green-600 hover:text-green-700 hover:bg-green-50 w-full sm:w-auto" onClick={() => handleUpdateStatus(selectedResponse.id, "ACCEPTED")}>
                             <CheckCircle2 className="mr-2 h-3.5 w-3.5" /> Accept
                         </Button>
                     )}
                     {selectedResponse.status !== "REJECTED" && (
-                        <Button size="sm" variant="outline" className="h-8 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => handleUpdateStatus(selectedResponse.id, "REJECTED")}>
+                        <Button size="sm" variant="outline" className="h-8 text-destructive hover:text-destructive hover:bg-destructive/10 w-full sm:w-auto" onClick={() => handleUpdateStatus(selectedResponse.id, "REJECTED")}>
                             <XCircle className="mr-2 h-3.5 w-3.5" /> Reject
                         </Button>
                     )}
