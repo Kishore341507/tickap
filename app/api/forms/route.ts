@@ -160,6 +160,13 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         );
       }
+      
+      if (q.type === "CHECKBOX" && q.required) {
+        return NextResponse.json(
+          { error: `Question ${i + 1} of type Checkbox cannot be required.` },
+          { status: 400 }
+        );
+      }
 
       const needsOptions = ["MULTIPLE_CHOICE", "CHECKBOXES", "DROPDOWN"].includes(q.type);
       const isUserSelection = q.type === "USER";

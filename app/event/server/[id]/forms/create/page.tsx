@@ -136,6 +136,9 @@ function CreateFormClient({ guildId }: { guildId: string }) {
                  updated.min = undefined;
                  updated.max = undefined;
             }
+            if (value === "CHECKBOX") {
+                updated.required = false;
+            }
         }
         return updated;
     }));
@@ -633,8 +636,9 @@ function CreateFormClient({ guildId }: { guildId: string }) {
                       <SelectContent>
                         <SelectItem value={QuestionType.SHORT_TEXT}>Short Text</SelectItem>
                         <SelectItem value={QuestionType.PARAGRAPH}>Paragraph</SelectItem>
-                        <SelectItem value={QuestionType.MULTIPLE_CHOICE}>Multiple Choice</SelectItem>
+                        <SelectItem value={QuestionType.MULTIPLE_CHOICE}>Single select</SelectItem>
                         <SelectItem value={QuestionType.CHECKBOXES}>Checkboxes</SelectItem>
+                        <SelectItem value={QuestionType.CHECKBOX}>Checkbox</SelectItem>
                         <SelectItem value={QuestionType.DROPDOWN}>Dropdown</SelectItem>
                         <SelectItem value={QuestionType.DATE}>Date</SelectItem>
                         <SelectItem value={QuestionType.TIME}>Time</SelectItem>
@@ -647,6 +651,7 @@ function CreateFormClient({ guildId }: { guildId: string }) {
                   <div className="flex items-center gap-2 pt-8">
                     <Switch
                       checked={question.required}
+                      disabled={question.type === QuestionType.CHECKBOX}
                       onCheckedChange={(checked) => {
                           const newRequired = checked;
                           let updates: any = { required: newRequired };
@@ -837,6 +842,13 @@ function CreateFormClient({ guildId }: { guildId: string }) {
                         </div>
                       </div>
                     ))}
+                  </div>
+                )}
+
+                {question.type === QuestionType.CHECKBOX && (
+                  <div className="flex items-center space-x-2">
+                    <input type="checkbox" disabled className="mt-1" />
+                    <span className="text-sm font-medium pr-1">Yes</span>
                   </div>
                 )}
                 
