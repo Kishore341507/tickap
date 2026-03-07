@@ -198,6 +198,9 @@ function EditFormClient({ guildId, formId }: { guildId: string; formId: string }
                updated.min = undefined;
                updated.max = undefined;
           }
+          if (value === "CHECKBOX") {
+              updated.required = false;
+          }
       }
       return updated;
     }));
@@ -710,8 +713,9 @@ function EditFormClient({ guildId, formId }: { guildId: string; formId: string }
                     <SelectContent>
                       <SelectItem value={QuestionType.SHORT_TEXT}>Short Text</SelectItem>
                       <SelectItem value={QuestionType.PARAGRAPH}>Paragraph</SelectItem>
-                      <SelectItem value={QuestionType.MULTIPLE_CHOICE}>Multiple Choice</SelectItem>
+                      <SelectItem value={QuestionType.MULTIPLE_CHOICE}>Single select</SelectItem>
                       <SelectItem value={QuestionType.CHECKBOXES}>Checkboxes</SelectItem>
+                      <SelectItem value={QuestionType.CHECKBOX}>Checkbox</SelectItem>
                       <SelectItem value={QuestionType.DROPDOWN}>Dropdown</SelectItem>
                       <SelectItem value={QuestionType.DATE}>Date</SelectItem>
                       <SelectItem value={QuestionType.TIME}>Time</SelectItem>
@@ -724,6 +728,7 @@ function EditFormClient({ guildId, formId }: { guildId: string; formId: string }
                 <div className="flex items-center gap-2 pt-8">
                   <Switch
                     checked={question.required}
+                    disabled={question.type === QuestionType.CHECKBOX}
                     onCheckedChange={(checked) => updateQuestion(question.id, "required", checked)}
                   />
                   <Label>Required</Label>
@@ -918,6 +923,18 @@ function EditFormClient({ guildId, formId }: { guildId: string; formId: string }
                           </Label>
                         </div>
                       ))}
+                    </div>
+                  )}
+
+                  {question.type === QuestionType.CHECKBOX && (
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`preview-${question.id}`}
+                        disabled
+                      />
+                      <Label htmlFor={`preview-${question.id}`} className="font-normal">
+                        Yes
+                      </Label>
                     </div>
                   )}
 

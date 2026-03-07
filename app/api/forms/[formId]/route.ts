@@ -154,7 +154,12 @@ export async function PUT(
           { status: 400 }
         );
       }
-
+      if (q.type === "CHECKBOX" && q.required) {
+        return NextResponse.json(
+          { error: `Question ${i + 1} of type Checkbox cannot be required.` },
+          { status: 400 }
+        );
+      }
       const needsOptions = ["MULTIPLE_CHOICE", "CHECKBOXES", "DROPDOWN"].includes(q.type);
       if (needsOptions && (!q.options || q.options.length < 2)) {
         return NextResponse.json(

@@ -255,6 +255,21 @@ export function FormViewerClient({ formData, userName, userEmail }: {
                   </div>
                 )}
 
+                {question.type === QuestionType.CHECKBOX && (
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`${question.id}`}
+                      checked={answers[question.id] === "true"}
+                      onCheckedChange={(checked) => 
+                        handleAnswerChange(question.id, checked ? "true" : "false")
+                      }
+                    />
+                    <Label htmlFor={`${question.id}`} className="font-normal">
+                      Yes
+                    </Label>
+                  </div>
+                )}
+
                 {question.type === QuestionType.DROPDOWN && (
                   <Select
                     value={(answers[question.id] as string) || ""}
