@@ -36,7 +36,7 @@ export async function getValidAccessToken(userId: string): Promise<string | null
     // Check if token is expired (with 5 minute buffer)
     const now = Math.floor(Date.now() / 1000);
     const expiresAt = account.expires_at || 0;
-    
+
     if (expiresAt > now + 300) {
       // Token is still valid
       return account.access_token;
@@ -44,7 +44,7 @@ export async function getValidAccessToken(userId: string): Promise<string | null
 
     // Token is expired or about to expire, refresh it
     console.log("Token expired, refreshing...");
-    
+
     if (!account.refresh_token) {
       console.error("No refresh token available");
       return null;
@@ -69,7 +69,7 @@ export async function getValidAccessToken(userId: string): Promise<string | null
     }
 
     const tokens = await tokenResponse.json();
-    
+
     // Update the database with new tokens
     await prisma.account.update({
       where: {
@@ -592,16 +592,16 @@ export async function sendLookingForTeamNotification({
 }) {
   try {
     const memberMentions = members
-      .map((member) => `<@${member.user_id}>`)
+      .map((member) => `> <@${member.user_id}>`)
       .join("\n");
 
+    const isInvite = !!mentionUserId;
     const embed: any = {
-      title: `Team: ${teamName}`,
-      description: `**Members:**\n${memberMentions || "None"}`,
+      title: isInvite ? `'${teamName}' Invited You` : `'${teamName}' Looking for members`,
+      description: isInvite
+        ? `Members\n${memberMentions || "None"}`
+        : `Members\n${memberMentions || "None"}`,
       color: color,
-      footer: {
-        text: `Event ID: ${eventId}`,
-      },
     };
 
     const payload: any = {
@@ -621,8 +621,8 @@ export async function sendLookingForTeamNotification({
       ],
     };
 
-    if (mentionUserId) {
-      payload.content = `Hey <@${mentionUserId}>, you've been invited!`;
+    if (isInvite) {
+      payload.content = `<@${mentionUserId}>`;
     }
 
     const messageResponse = await fetch(
