@@ -176,9 +176,12 @@ export async function DELETE(
         );
     }
     
-    await prisma.joinRequest.delete({
+    await prisma.joinRequest.update({
         where: {
             id: existingRequest.id
+        },
+        data: {
+            status: "CANCELLED"
         }
     });
     

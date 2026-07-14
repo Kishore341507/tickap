@@ -54,18 +54,19 @@ export async function DELETE(
         );
     }
 
-    // Optional: check if it's strictly an invite and pending
-    /*
+    // Ensure it's strictly a pending invite
     if (invite.status !== "PENDING" || invite.type !== "INVITE") {
          return NextResponse.json(
-            { message: "Cannot revoke this request" },
+            { message: "Cannot revoke this invite" },
             { status: 400 }
         );
     }
-    */
 
-    await prisma.joinRequest.delete({
-        where: { id: inviteId }
+    await prisma.joinRequest.update({
+        where: { id: inviteId },
+        data: {
+            status: "CANCELLED"
+        }
     });
 
     return NextResponse.json({ message: "Invite revoked successfully" });
