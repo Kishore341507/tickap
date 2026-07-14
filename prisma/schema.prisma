@@ -96,6 +96,7 @@ model events {
   manager_id BigInt?
   guild_id   BigInt?
   channel_id BigInt?
+  notification_channel_id BigInt?
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt

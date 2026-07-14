@@ -9,6 +9,7 @@ import {
   addMemberToGuild,
   fetchMember,
   sendLogMessage,
+  sendLookingForTeamNotification,
 } from "@/lib/discord";
 import { createEventLog } from "@/lib/event-logger";
 import { EventLogType, EventLogTarget, TeamRole } from "@prisma/client";
@@ -358,6 +359,29 @@ export async function POST(
         'Registration',
           registration as unknown as Registration )
       }
+
+    if (event.notification_channel_id && event.enable_team_requests) {
+      const memberCount = registration.registrationusers.length;
+      const minPlayers = event.min_team_player || 1;
+      const maxPlayers = event.max_team_player || 999;
+
+      const isIncomplete = memberCount < minPlayers;
+      const hasSpace = memberCount < maxPlayers;
+
+      if (isIncomplete || hasSpace) {
+        const embedColor = isIncomplete ? 0x57F287 : 0x2B2C31;
+        await sendLookingForTeamNotification({
+          channelId: event.notification_channel_id.toString(),
+          teamName: registration.team_name || "Unknown Team",
+          members: registration.registrationusers.map((member) => ({
+            user_id: member.user_id,
+            user_name: member.user_name,
+          })),
+          eventId: event.id.toString(),
+          color: embedColor,
+        });
+      }
+    }
 
       return NextResponse.json(
         { message: "Team registration successful" },

@@ -574,3 +574,79 @@ export async function sendLogMessage(
     return null;
   }
 }
+
+export async function sendLookingForTeamNotification({
+  channelId,
+  teamName,
+  members,
+  eventId,
+  color,
+  mentionUserId,
+}: {
+  channelId: string;
+  teamName: string;
+  members: { user_id: bigint | string; user_name: string | null }[];
+  eventId: string;
+  color: number;
+  mentionUserId?: string;
+}) {
+  try {
+    const memberMentions = members
+      .map((member) => `<@${member.user_id}>`)
+      .join("\n");
+
+    const embed: any = {
+      title: `Team: ${teamName}`,
+      description: `**Members:**\n${memberMentions || "None"}`,
+      color: color,
+      footer: {
+        text: `Event ID: ${eventId}`,
+      },
+    };
+
+    const payload: any = {
+      embeds: [embed],
+      components: [
+        {
+          type: 1, // ActionRow
+          components: [
+            {
+              type: 2, // Button
+              style: 5, // Link Button
+              label: "View Event",
+              url: `https://tickap.com/event/${eventId}`,
+            },
+          ],
+        },
+      ],
+    };
+
+    if (mentionUserId) {
+      payload.content = `Hey <@${mentionUserId}>, you've been invited!`;
+    }
+
+    const messageResponse = await fetch(
+      `${env.DISCORD_API_URL}/channels/${channelId}/messages`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bot ${env.DISCORD_BOT_TOKEN}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+        cache: "no-store",
+      }
+    );
+
+    if (!messageResponse.ok) {
+      const errText = await messageResponse.text();
+      console.error("Failed to send Looking for team notification:", errText);
+      return null;
+    }
+
+    return true;
+  } catch (error) {
+    console.error("Error sending Looking for team notification:", error);
+    return null;
+  }
+}

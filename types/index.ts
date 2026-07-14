@@ -125,6 +125,7 @@ export interface Event {
   role_id: bigint | null;
   manager_id: bigint | null;
   channel_id: bigint | null;
+  notification_channel_id: bigint | null;
   allow_incomplete_teams?: boolean | null;
   enable_team_invites?: boolean | null;
   enable_team_requests?: boolean | null;
@@ -155,5 +156,6 @@ export interface EventFormValues {
   role_id?: string;
   manager_id?: string;
   channel_id?: string;
+  notification_channel_id?: string;
   status?: EventStatus;
 }

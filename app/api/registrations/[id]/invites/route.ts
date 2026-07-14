@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import prisma from "@/prisma/db";
 import { NextRequest, NextResponse } from "next/server";
+import { sendLookingForTeamNotification } from "@/lib/discord";
 
 export async function POST(
   req: NextRequest,
@@ -130,6 +131,21 @@ export async function POST(
         status: "PENDING"
       },
     });
+
+    const event = registration.events;
+    if (event.notification_channel_id) {
+      await sendLookingForTeamNotification({
+        channelId: event.notification_channel_id.toString(),
+        teamName: registration.team_name || "Unknown Team",
+        members: registration.registrationusers.map((member) => ({
+          user_id: member.user_id,
+          user_name: member.user_name,
+        })),
+        eventId: event.id.toString(),
+        color: 0x57F287, // Green embed
+        mentionUserId: userId, // Mention target user in the message
+      });
+    }
 
     return NextResponse.json({ message: "Invite sent successfully" });
 

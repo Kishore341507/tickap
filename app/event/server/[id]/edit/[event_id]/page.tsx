@@ -64,6 +64,7 @@ const eventFormSchema = z.object({
   role_id: z.string().optional(),
   manager_id: z.string().optional(),
   channel_id: z.string().optional(),
+  notification_channel_id: z.string().optional(),
   status: z.nativeEnum(EventStatus),
   hide_registrations: z.boolean().default(false),
   hide_registration_count: z.boolean().default(false),
@@ -108,6 +109,7 @@ export default function EditEvent() {
   const [roleOpen, setRoleOpen] = useState(false);
   const [managerOpen, setManagerOpen] = useState(false);
   const [channelOpen, setChannelOpen] = useState(false);
+  const [notificationChannelOpen, setNotificationChannelOpen] = useState(false);
   const [eventData, setEventData] = useState<any>(null);
   const [needsBannerUpload, setNeedsBannerUpload] = useState(false);
   const [customQuestions, setCustomQuestions] = useState<CustomQuestion[]>([]);
@@ -132,6 +134,7 @@ export default function EditEvent() {
       role_id: "",
       manager_id: "",
       channel_id: "",
+      notification_channel_id: "",
       status: EventStatus.Open,
       max_teams: undefined,
       min_team_player: undefined,
@@ -220,6 +223,7 @@ export default function EditEvent() {
           role_id: data.event.role_id ? data.event.role_id.toString() : "",
           manager_id: data.event.manager_id ? data.event.manager_id.toString() : "",
           channel_id: data.event.channel_id ? data.event.channel_id.toString() : "",
+          notification_channel_id: data.event.notification_channel_id ? data.event.notification_channel_id.toString() : "",
           status: data.event.status,
           max_teams: data.event.max_teams ? data.event.max_teams : undefined,
           min_team_player: data.event.min_team_player ? data.event.min_team_player : undefined,
@@ -1043,6 +1047,83 @@ export default function EditEvent() {
                         </Popover>
                         <FormDescription>
                           The Discord text channel where logs will be sent.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="notification_channel_id"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-col">
+                        <FormLabel>Notification channel</FormLabel>
+                        <Popover open={notificationChannelOpen} onOpenChange={setNotificationChannelOpen}>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant="outline"
+                                role="combobox"
+                                aria-expanded={notificationChannelOpen}
+                                className="w-full justify-between"
+                                disabled={isLoadingChannels}
+                              >
+                                {isLoadingChannels ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : field.value ? (
+                                  channels.find((channel) => channel.id === field.value)?.name || "Select a channel"
+                                ) : (
+                                  "Select a channel"
+                                )}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-full p-0">
+                            <Command className="max-h-[300px] overflow-y-auto">
+                              <CommandInput placeholder="Search channels..." />
+                              <CommandEmpty>No channels found.</CommandEmpty>
+                              <CommandGroup className="overflow-y-auto">
+                                <CommandItem
+                                  value=""
+                                  onSelect={() => {
+                                    field.onChange("");
+                                    setNotificationChannelOpen(false);
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      field.value === "" ? "opacity-100" : "opacity-0"
+                                    )}
+                                  />
+                                  None
+                                </CommandItem>
+                                {channels.map((channel) => (
+                                  <CommandItem
+                                    key={channel.id}
+                                    value={channel.name}
+                                    onSelect={() => {
+                                      field.onChange(channel.id);
+                                      setNotificationChannelOpen(false);
+                                    }}
+                                  >
+                                    <Check
+                                      className={cn(
+                                        "mr-2 h-4 w-4",
+                                        field.value === channel.id ? "opacity-100" : "opacity-0"
+                                      )}
+                                    />
+                                    {channel.name}
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
+                        <FormDescription>
+                          The Discord text channel where registration and invite notifications will be sent.
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
