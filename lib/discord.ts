@@ -36,7 +36,7 @@ export async function getValidAccessToken(userId: string): Promise<string | null
     // Check if token is expired (with 5 minute buffer)
     const now = Math.floor(Date.now() / 1000);
     const expiresAt = account.expires_at || 0;
-    
+
     if (expiresAt > now + 300) {
       // Token is still valid
       return account.access_token;
@@ -44,7 +44,7 @@ export async function getValidAccessToken(userId: string): Promise<string | null
 
     // Token is expired or about to expire, refresh it
     console.log("Token expired, refreshing...");
-    
+
     if (!account.refresh_token) {
       console.error("No refresh token available");
       return null;
@@ -69,7 +69,7 @@ export async function getValidAccessToken(userId: string): Promise<string | null
     }
 
     const tokens = await tokenResponse.json();
-    
+
     // Update the database with new tokens
     await prisma.account.update({
       where: {
@@ -571,6 +571,82 @@ export async function sendLogMessage(
     return true;
   } catch (error) {
     console.error("Error sending log message:", error);
+    return null;
+  }
+}
+
+export async function sendLookingForTeamNotification({
+  channelId,
+  teamName,
+  members,
+  eventId,
+  color,
+  mentionUserId,
+}: {
+  channelId: string;
+  teamName: string;
+  members: { user_id: bigint | string; user_name: string | null }[];
+  eventId: string;
+  color: number;
+  mentionUserId?: string;
+}) {
+  try {
+    const memberMentions = members
+      .map((member) => `> <@${member.user_id}>`)
+      .join("\n");
+
+    const isInvite = !!mentionUserId;
+    const embed: any = {
+      title: isInvite ? `'${teamName}' Invited You` : `'${teamName}' Looking for members`,
+      description: isInvite
+        ? `Members\n${memberMentions || "None"}`
+        : `Members\n${memberMentions || "None"}`,
+      color: color,
+    };
+
+    const payload: any = {
+      embeds: [embed],
+      components: [
+        {
+          type: 1, // ActionRow
+          components: [
+            {
+              type: 2, // Button
+              style: 5, // Link Button
+              label: "View Event",
+              url: `https://tickap.com/event/${eventId}`,
+            },
+          ],
+        },
+      ],
+    };
+
+    if (isInvite) {
+      payload.content = `<@${mentionUserId}>`;
+    }
+
+    const messageResponse = await fetch(
+      `${env.DISCORD_API_URL}/channels/${channelId}/messages`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bot ${env.DISCORD_BOT_TOKEN}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+        cache: "no-store",
+      }
+    );
+
+    if (!messageResponse.ok) {
+      const errText = await messageResponse.text();
+      console.error("Failed to send Looking for team notification:", errText);
+      return null;
+    }
+
+    return true;
+  } catch (error) {
+    console.error("Error sending Looking for team notification:", error);
     return null;
   }
 }
