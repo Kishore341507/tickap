@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import prisma from "@/prisma/db";
 import { NextRequest, NextResponse } from "next/server";
+import { sendJoinRequestNotification } from "@/lib/discord";
 
 export async function POST(
   req: NextRequest,
@@ -107,6 +108,11 @@ export async function POST(
         }
     });
 
+    const event = registration.events;
+    const leaders = registration.registrationusers.filter(
+        (u) => u.role === "LEADER" || u.role === "MANAGER"
+    );
+
     if (existingRequest) {
          if (existingRequest.status === "DECLINED") {
              return NextResponse.json(
@@ -120,6 +126,17 @@ export async function POST(
              where: { id: existingRequest.id },
              data: { status: "PENDING" }
          });
+
+         if (event.notification_channel_id) {
+           await sendJoinRequestNotification({
+             channelId: event.notification_channel_id.toString(),
+             teamName: registration.team_name || "Unknown Team",
+             requesterId: userId.toString(),
+             requesterName: session.user.name || "Unknown",
+             eventId: event.id.toString(),
+             leaders: leaders.map(l => ({ user_id: l.user_id })),
+           });
+         }
 
          return NextResponse.json({ message: "Request sent successfully" });
     }
@@ -135,6 +152,17 @@ export async function POST(
         status: "PENDING",
       },
     });
+
+    if (event.notification_channel_id) {
+      await sendJoinRequestNotification({
+        channelId: event.notification_channel_id.toString(),
+        teamName: registration.team_name || "Unknown Team",
+        requesterId: userId.toString(),
+        requesterName: session.user.name || "Unknown",
+        eventId: event.id.toString(),
+        leaders: leaders.map(l => ({ user_id: l.user_id })),
+      });
+    }
 
     return NextResponse.json({ message: "Request sent successfully" });
   } catch (error) {
