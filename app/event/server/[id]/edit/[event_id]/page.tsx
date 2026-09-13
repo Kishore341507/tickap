@@ -26,6 +26,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { CalendarIcon, Loader2, Check, ChevronsUpDown, Plus, Trash, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -150,6 +151,8 @@ export default function EditEvent() {
 
   const isSolo = form.watch("is_solo");
   const registerForOther = form.watch("register_for_other");
+  const hideRegistrations = form.watch("hide_registrations");
+  const hideRegistrationCount = form.watch("hide_registration_count");
 
   useEffect(() => {
     if (!registerForOther) {
@@ -1139,36 +1142,49 @@ export default function EditEvent() {
                   </AccordionTrigger>
                   <AccordionContent>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 px-1">
-                      <FormField
-                        control={form.control}
-                        name="hide_registrations"
-                        render={({ field }) => (
-                          <FormItem className="flex flex-row items-center space-x-2 space-y-0">
-                            <FormControl>
-                              <Switch
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                              />
-                            </FormControl>
-                            <FormLabel className="text-sm font-medium">Hide Registrations</FormLabel>
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="hide_registration_count"
-                        render={({ field }) => (
-                          <FormItem className="flex flex-row items-center space-x-2 space-y-0">
-                            <FormControl>
-                              <Switch
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                              />
-                            </FormControl>
-                            <FormLabel className="text-sm font-medium">Hide Registration Count</FormLabel>
-                          </FormItem>
-                        )}
-                      />
+                      <div className="col-span-1 md:col-span-2 space-y-3 rounded-md border p-4">
+                        <div>
+                          <FormLabel className="text-base">Registration Visibility</FormLabel>
+                          <FormDescription>
+                            Control what information is visible to users on the event page.
+                          </FormDescription>
+                        </div>
+                        <ToggleGroup
+                          type="single"
+                          value={
+                            !hideRegistrations
+                              ? "show_all"
+                              : !hideRegistrationCount
+                              ? "show_count"
+                              : "hide_all"
+                          }
+                          onValueChange={(value) => {
+                            if (!value) return; // Prevent unselecting
+                            if (value === "show_all") {
+                              form.setValue("hide_registrations", false);
+                              form.setValue("hide_registration_count", false);
+                            } else if (value === "show_count") {
+                              form.setValue("hide_registrations", true);
+                              form.setValue("hide_registration_count", false);
+                            } else if (value === "hide_all") {
+                              form.setValue("hide_registrations", true);
+                              form.setValue("hide_registration_count", true);
+                            }
+                          }}
+                          className="justify-start"
+                        >
+                          <ToggleGroupItem value="show_all" aria-label="Show Registrations" className="px-4 py-2">
+                            Show Registrations
+                          </ToggleGroupItem>
+                          <ToggleGroupItem value="show_count" aria-label="Show Count" className="px-4 py-2">
+                            Show Users (Count Only)
+                          </ToggleGroupItem>
+                          <ToggleGroupItem value="hide_all" aria-label="Hide All" className="px-4 py-2">
+                            Hide All
+                          </ToggleGroupItem>
+                        </ToggleGroup>
+                      </div>
+
                       {!isSolo && (
                         <>
                           <FormField
