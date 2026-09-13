@@ -650,3 +650,72 @@ export async function sendLookingForTeamNotification({
     return null;
   }
 }
+export async function sendJoinRequestNotification({
+  channelId,
+  teamName,
+  requesterId,
+  requesterName,
+  eventId,
+  leaders,
+}: {
+  channelId: string;
+  teamName: string;
+  requesterId: string | bigint;
+  requesterName: string | null;
+  eventId: string | bigint;
+  leaders: { user_id: bigint | string }[];
+}) {
+  try {
+    const leaderMentions = leaders
+      .map((leader) => `<@${leader.user_id}>`)
+      .join(" ");
+
+    const embed: any = {
+      title: `New Join Request for '${teamName}'`,
+      description: `> <@${requesterId}> (${requesterName || "Unknown"}) has requested to join your team.`,
+      color: 0xFEE75C, // Yellow embed
+    };
+
+    const payload: any = {
+      content: leaderMentions ? `Attention ${leaderMentions}` : undefined,
+      embeds: [embed],
+      components: [
+        {
+          type: 1, // ActionRow
+          components: [
+            {
+              type: 2, // Button
+              style: 5, // Link Button
+              label: "View Request",
+              url: `https://tickap.com/event/${eventId}`,
+            },
+          ],
+        },
+      ],
+    };
+
+    const messageResponse = await fetch(
+      `${env.DISCORD_API_URL}/channels/${channelId}/messages`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bot ${env.DISCORD_BOT_TOKEN}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+        cache: "no-store",
+      }
+    );
+
+    if (!messageResponse.ok) {
+      const errText = await messageResponse.text();
+      console.error("Failed to send join request notification:", errText);
+      return null;
+    }
+
+    return true;
+  } catch (error) {
+    console.error("Error sending join request notification:", error);
+    return null;
+  }
+}

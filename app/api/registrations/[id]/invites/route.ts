@@ -79,6 +79,8 @@ export async function POST(
         }
     });
 
+    const event = registration.events;
+
     if (existingInvite) {
          if (existingInvite.status === "DECLINED") {
              return NextResponse.json(
@@ -91,6 +93,20 @@ export async function POST(
              where: { id: existingInvite.id },
              data: { status: "PENDING" }
          });
+
+         if (event.notification_channel_id) {
+           await sendLookingForTeamNotification({
+             channelId: event.notification_channel_id.toString(),
+             teamName: registration.team_name || "Unknown Team",
+             members: registration.registrationusers.map((member) => ({
+               user_id: member.user_id,
+               user_name: member.user_name,
+             })),
+             eventId: event.id.toString(),
+             color: 0x57F287, // Green embed
+             mentionUserId: userId, // Mention target user in the message
+           });
+         }
 
          return NextResponse.json({ message: "Invite sent successfully" });
     }
@@ -132,7 +148,6 @@ export async function POST(
       },
     });
 
-    const event = registration.events;
     if (event.notification_channel_id) {
       await sendLookingForTeamNotification({
         channelId: event.notification_channel_id.toString(),
