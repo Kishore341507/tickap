@@ -32,6 +32,13 @@ export async function POST(
       );
     }
 
+    if (registration.events.status !== "Open") {
+        return NextResponse.json(
+            { message: "Event registration is not open" },
+            { status: 400 }
+        );
+    }
+
     const currentUser = registration.registrationusers.find(
       (u) => u.user_id === BigInt(session.user.userId!)
     );

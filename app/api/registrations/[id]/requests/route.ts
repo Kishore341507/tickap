@@ -30,6 +30,13 @@ export async function POST(
       );
     }
 
+    if (registration.events.status !== "Open") {
+        return NextResponse.json(
+            { message: "Event registration is not open" },
+            { status: 400 }
+        );
+    }
+
     // Check if event allows requests
     if (!registration.events.enable_team_requests) {
         return NextResponse.json(

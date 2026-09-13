@@ -196,7 +196,7 @@ export default async function EventDetailPage({ params, }: { params: Promise<{ i
 
   // Open To Join Logic
   let openToJoinTeams: typeof event.registrations = [];
-  if (event.enable_team_requests && !isRegistered && !event.is_solo) {
+  if (event.status === "Open" && event.enable_team_requests && !isRegistered && !event.is_solo) {
     const minPlayers = event.min_team_player || 0;
     const maxPlayers = event.max_team_player || Infinity;
 
@@ -356,7 +356,7 @@ export default async function EventDetailPage({ params, }: { params: Promise<{ i
           </div>
 
           {/* Open To Join Section */}
-          {session && !isRegistered && (openToJoinTeams.length > 0 || userRequests.length > 0 || userInvites.length > 0) && (
+          {event.status === "Open" && session && !isRegistered && (openToJoinTeams.length > 0 || userRequests.length > 0 || userInvites.length > 0) && (
             <Card id="open-to-join-section">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
