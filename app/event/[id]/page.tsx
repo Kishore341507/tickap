@@ -149,11 +149,11 @@ export default async function EventDetailPage({ params, }: { params: Promise<{ i
   // Determine visibility of registrations based on event settings and manager status
   const showRegistrations = !event.hide_registrations || isManager;
   const registrationCountState = event.hide_registration_count; // true -> hide, null -> users, false -> teams
-  const showRegistrationCount = registrationCountState !== true || isManager;
+  const showRegistrationCount = registrationCountState !== true; // ignore isManager to strictly hide
   const showUsersCount = registrationCountState === null;
 
   let totalUsersRegistered = 0;
-  if (showUsersCount || isManager) {
+  if (showUsersCount) {
     totalUsersRegistered = event.registrations.reduce((acc, reg) => acc + reg.registrationusers.length, 0);
   }
   const totalMaxUsers = event.max_teams && event.max_team_player ? event.max_teams * event.max_team_player : null;
@@ -332,7 +332,7 @@ export default async function EventDetailPage({ params, }: { params: Promise<{ i
                 <div className="space-y-4">
                   {showRegistrationCount && (
                     <>
-                      {(!showUsersCount || isManager) && (
+                      {!showUsersCount && (
                         <div>
                           <p className="text-sm text-gray-500">Total Teams Registered</p>
                           <p className="text-2xl font-bold">
@@ -341,7 +341,7 @@ export default async function EventDetailPage({ params, }: { params: Promise<{ i
                           </p>
                         </div>
                       )}
-                      {(showUsersCount || isManager) && (
+                      {showUsersCount && (
                         <div>
                           <p className="text-sm text-gray-500">Total Users Registered</p>
                           <p className="text-2xl font-bold">
@@ -609,7 +609,7 @@ export default async function EventDetailPage({ params, }: { params: Promise<{ i
                 <div className="space-y-4">
                   {showRegistrationCount && (
                     <>
-                      {(!showUsersCount || isManager) && (
+                      {!showUsersCount && (
                         <div>
                           <p className="text-sm text-gray-500">Total Teams Registered</p>
                           <p className="text-2xl font-bold">
@@ -618,7 +618,7 @@ export default async function EventDetailPage({ params, }: { params: Promise<{ i
                           </p>
                         </div>
                       )}
-                      {(showUsersCount || isManager) && (
+                      {showUsersCount && (
                         <div>
                           <p className="text-sm text-gray-500">Total Users Registered</p>
                           <p className="text-2xl font-bold">
