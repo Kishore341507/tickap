@@ -25,6 +25,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Calendar } from "@/components/ui/calendar";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CalendarIcon, Loader2, Check, ChevronsUpDown, Plus, Trash, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -72,7 +73,7 @@ const eventFormSchema = z.object({
   channel_id: z.string().optional(),
   notification_channel_id: z.string().optional(),
   hide_registrations: z.boolean().default(false),
-  hide_registration_count: z.boolean().default(false),
+  hide_registration_count: z.enum(["teams", "users", "hide"]).default("teams"),
   allow_incomplete_teams: z.boolean().default(false),
   enable_team_invites: z.boolean().default(true),
   enable_team_requests: z.boolean().default(true),
@@ -193,7 +194,7 @@ export default function CreateEvent() {
       min_team_player : undefined,
       max_team_player : undefined,
       hide_registrations: false,
-      hide_registration_count: false,
+      hide_registration_count: "teams",
       allow_incomplete_teams: false,
       enable_team_invites: true,
       enable_team_requests: true,
@@ -257,6 +258,12 @@ export default function CreateEvent() {
           console.log("Sending date:", date.toISOString());
         } else if (value instanceof Blob) {
           formData.append(key, value);
+        } else if (key === "hide_registration_count") {
+          const translatedValue =
+            value === "hide" ? "true" :
+            value === "users" ? "null" :
+            "false";
+          formData.append(key, translatedValue);
         } else if (value !== undefined && value !== null) {
           formData.append(key, String(value));
         }
@@ -1039,14 +1046,18 @@ export default function CreateEvent() {
                         control={form.control}
                         name="hide_registration_count"
                         render={({ field }) => (
-                          <FormItem className="flex flex-row items-center space-x-2 space-y-0">
+                          <FormItem className="flex flex-col space-y-3 rounded-md border p-4 shadow-sm">
+                            <div className="flex flex-col gap-1">
+                              <FormLabel className="text-base font-medium">Registration Count Visibility</FormLabel>
+                              <FormDescription>Choose what to show to users.</FormDescription>
+                            </div>
                             <FormControl>
-                              <Switch
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                              />
+                              <ToggleGroup type="single" value={field.value} onValueChange={(value) => { if (value) field.onChange(value) }} className="justify-start">
+                                <ToggleGroupItem value="teams" aria-label="Show Teams">Show Teams</ToggleGroupItem>
+                                <ToggleGroupItem value="users" aria-label="Show Users">Show Users</ToggleGroupItem>
+                                <ToggleGroupItem value="hide" aria-label="Hide Count">Hide Count</ToggleGroupItem>
+                              </ToggleGroup>
                             </FormControl>
-                            <FormLabel className="text-sm font-medium">Hide Registration Count</FormLabel>
                           </FormItem>
                         )}
                       />
