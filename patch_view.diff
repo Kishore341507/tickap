@@ -1,0 +1,87 @@
+--- app/event/[id]/page.tsx
++++ app/event/[id]/page.tsx
+@@ -148,8 +148,15 @@
+
+   // Determine visibility of registrations based on event settings and manager status
+   const showRegistrations = !event.hide_registrations || isManager;
+-  const showRegistrationCount = !event.hide_registration_count || isManager;
++  const registrationCountState = event.hide_registration_count; // true -> hide, null -> users, false -> teams
++  const showRegistrationCount = registrationCountState !== true || isManager;
++  const showUsersCount = registrationCountState === null;
++
++  let totalUsersRegistered = 0;
++  if (showUsersCount || isManager) {
++    totalUsersRegistered = event.registrations.reduce((acc, reg) => acc + reg.registrationusers.length, 0);
++  }
++  const totalMaxUsers = event.max_teams && event.max_team_player ? event.max_teams * event.max_team_player : null;
+
+   // Fetch guild information if the event has a guild_id
+   let guildInfo = null;
+@@ -324,12 +331,24 @@
+               <CardContent>
+                 <div className="space-y-4">
+                   {showRegistrationCount && (
+-                    <div>
+-                      <p className="text-sm text-gray-500">Total Teams Registered</p>
+-                      <p className="text-2xl font-bold">
+-                        {event.registrations.length}
+-                        {event.max_teams && ` / ${event.max_teams}`}
+-                      </p>
+-                    </div>
++                    <>
++                      {(!showUsersCount || isManager) && (
++                        <div>
++                          <p className="text-sm text-gray-500">Total Teams Registered</p>
++                          <p className="text-2xl font-bold">
++                            {event.registrations.length}
++                            {event.max_teams && ` / ${event.max_teams}`}
++                          </p>
++                        </div>
++                      )}
++                      {(showUsersCount || isManager) && (
++                        <div>
++                          <p className="text-sm text-gray-500">Total Users Registered</p>
++                          <p className="text-2xl font-bold">
++                            {totalUsersRegistered}
++                            {totalMaxUsers && ` / ${totalMaxUsers}`}
++                          </p>
++                        </div>
++                      )}
++                    </>
+                   )}
+
+                   {/* Registration Button */}
+@@ -588,12 +607,24 @@
+               <CardContent>
+                 <div className="space-y-4">
+                   {showRegistrationCount && (
+-                    <div>
+-                      <p className="text-sm text-gray-500">Total Teams Registered</p>
+-                      <p className="text-2xl font-bold">
+-                        {event.registrations.length}
+-                        {event.max_teams && ` / ${event.max_teams}`}
+-                      </p>
+-                    </div>
++                    <>
++                      {(!showUsersCount || isManager) && (
++                        <div>
++                          <p className="text-sm text-gray-500">Total Teams Registered</p>
++                          <p className="text-2xl font-bold">
++                            {event.registrations.length}
++                            {event.max_teams && ` / ${event.max_teams}`}
++                          </p>
++                        </div>
++                      )}
++                      {(showUsersCount || isManager) && (
++                        <div>
++                          <p className="text-sm text-gray-500">Total Users Registered</p>
++                          <p className="text-2xl font-bold">
++                            {totalUsersRegistered}
++                            {totalMaxUsers && ` / ${totalMaxUsers}`}
++                          </p>
++                        </div>
++                      )}
++                    </>
+                   )}
+
+                   {/* Registration Button */}

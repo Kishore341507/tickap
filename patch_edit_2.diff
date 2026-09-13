@@ -1,0 +1,50 @@
+--- app/event/server/[id]/edit/[event_id]/page.tsx
++++ app/event/server/[id]/edit/[event_id]/page.tsx
+@@ -25,6 +25,7 @@
+ import { Textarea } from "@/components/ui/textarea";
+ import { Switch } from "@/components/ui/switch";
+ import { Calendar } from "@/components/ui/calendar";
++import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+ import { CalendarIcon, Loader2, Check, ChevronsUpDown, Plus, Trash, AlertCircle } from "lucide-react";
+ import { cn } from "@/lib/utils";
+@@ -67,7 +68,7 @@
+   notification_channel_id: z.string().optional(),
+   status: z.nativeEnum(EventStatus),
+   hide_registrations: z.boolean().default(false),
+-  hide_registration_count: z.boolean().default(false),
++  hide_registration_count: z.enum(["teams", "users", "hide"]).default("teams"),
+   allow_incomplete_teams: z.boolean().default(false),
+   enable_team_invites: z.boolean().default(true),
+   enable_team_requests: z.boolean().default(true),
+@@ -140,7 +141,7 @@
+       min_team_player: undefined,
+       max_team_player: undefined,
+       hide_registrations: false,
+-      hide_registration_count: false,
++      hide_registration_count: "teams",
+       allow_incomplete_teams: false,
+       enable_team_invites: true,
+       enable_team_requests: true,
+@@ -229,7 +230,7 @@
+           min_team_player: data.event.min_team_player ? data.event.min_team_player : undefined,
+           max_team_player: data.event.max_team_player ? data.event.max_team_player : undefined,
+           hide_registrations: data.event.hide_registrations || false,
+-          hide_registration_count: data.event.hide_registration_count || false,
++          hide_registration_count: data.event.hide_registration_count === true ? "hide" : (data.event.hide_registration_count === null ? "users" : "teams"),
+           allow_incomplete_teams: data.event.allow_incomplete_teams || false,
+           enable_team_invites: data.event.enable_team_invites ?? true,
+           enable_team_requests: data.event.enable_team_requests ?? true,
+@@ -353,6 +354,12 @@
+         } else if (value instanceof Blob) {
+           formData.append(key, value);
++        } else if (key === "hide_registration_count") {
++          const translatedValue =
++            value === "hide" ? "true" :
++            value === "users" ? "null" :
++            "false";
++          formData.append(key, translatedValue);
+         } else if (value !== undefined && value !== null) {
+           formData.append(key, String(value));
+         }
+       });

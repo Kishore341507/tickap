@@ -1,0 +1,20 @@
+--- app/api/events/route.ts
++++ app/api/events/route.ts
+@@ -107,7 +107,7 @@
+       channel_id: formData.get("channel_id") ? BigInt(formData.get("channel_id") as string) : null,
+       notification_channel_id: formData.get("notification_channel_id") ? BigInt(formData.get("notification_channel_id") as string) : null,
+       hide_registrations: formData.get("hide_registrations") === "true",
+-      hide_registration_count: formData.get("hide_registration_count") === "true",
++      hide_registration_count: formData.get("hide_registration_count") === "true" ? true : (formData.get("hide_registration_count") === "null" ? null : false),
+       register_for_other: formData.get("register_for_other") === "true",
+       allow_incomplete_teams: formData.get("allow_incomplete_teams") === "true",
+       enable_team_invites: formData.get("enable_team_invites") === "true",
+@@ -269,7 +269,7 @@
+       channel_id: formData.get("channel_id") ? BigInt(formData.get("channel_id") as string) : existingEvent.channel_id,
+       notification_channel_id: formData.get("notification_channel_id") ? BigInt(formData.get("notification_channel_id") as string) : existingEvent.notification_channel_id,
+       hide_registrations: formData.has("hide_registrations") ? formData.get("hide_registrations") === "true" : existingEvent.hide_registrations,
+-      hide_registration_count: formData.has("hide_registration_count") ? formData.get("hide_registration_count") === "true" : existingEvent.hide_registration_count,
++      hide_registration_count: formData.has("hide_registration_count") ? (formData.get("hide_registration_count") === "true" ? true : (formData.get("hide_registration_count") === "null" ? null : false)) : existingEvent.hide_registration_count,
+       register_for_other: formData.has("register_for_other") ? formData.get("register_for_other") === "true" : existingEvent.register_for_other,
+       allow_incomplete_teams: formData.has("allow_incomplete_teams") ? formData.get("allow_incomplete_teams") === "true" : existingEvent.allow_incomplete_teams,
+       enable_team_invites: formData.has("enable_team_invites") ? formData.get("enable_team_invites") === "true" : existingEvent.enable_team_invites,

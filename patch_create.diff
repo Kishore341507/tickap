@@ -1,0 +1,28 @@
+--- app/event/server/[id]/create/page.tsx
++++ app/event/server/[id]/create/page.tsx
+@@ -1039,13 +1048,15 @@
+                         name="hide_registration_count"
+                         render={({ field }) => (
+-                          <FormItem className="flex flex-row items-center space-x-2 space-y-0">
+-                            <FormControl>
+-                              <Switch
+-                                checked={field.value}
+-                                onCheckedChange={field.onChange}
+-                              />
+-                            </FormControl>
+-                            <FormLabel className="text-sm font-medium">Hide Registration Count</FormLabel>
+-                          </FormItem>
++                          <FormItem className="flex flex-col space-y-3 rounded-md border p-4 shadow-sm">
++                            <div className="flex flex-col gap-1">
++                              <FormLabel className="text-base font-medium">Registration Count Visibility</FormLabel>
++                              <FormDescription>Choose what to show to users.</FormDescription>
++                            </div>
++                            <FormControl>
++                              <ToggleGroup type="single" value={field.value} onValueChange={(value) => { if (value) field.onChange(value) }} className="justify-start">
++                                <ToggleGroupItem value="teams" aria-label="Show Teams">Show Teams</ToggleGroupItem>
++                                <ToggleGroupItem value="users" aria-label="Show Users">Show Users</ToggleGroupItem>
++                                <ToggleGroupItem value="hide" aria-label="Hide Count">Hide Count</ToggleGroupItem>
++                              </ToggleGroup>
++                            </FormControl>
++                          </FormItem>
+                         )}
