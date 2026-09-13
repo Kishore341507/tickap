@@ -76,13 +76,6 @@ export async function POST(
          return NextResponse.json({ message: "Registration not found" }, { status: 404 });
     }
 
-    if (registration.events.status !== "Open") {
-        return NextResponse.json(
-            { message: "Event registration is not open" },
-            { status: 400 }
-        );
-    }
-
     if (action === "decline") {
         await prisma.joinRequest.update({
             where: { id: inviteId },
