@@ -276,18 +276,18 @@ function EditFormClient({ guildId, formId }: { guildId: string; formId: string }
         return;
       }
 
-      if (q.text.length > 200) {
-        toast({ title: "Error", description: `Question ${i + 1} text must be 200 characters or less`, variant: "destructive" });
+      if (q.text.length > 45) {
+        toast({ title: "Error", description: `Question ${i + 1} text must be 45 characters or less`, variant: "destructive" });
         return;
       }
 
-      if (q.description.length > 400) {
-        toast({ title: "Error", description: `Question ${i + 1} description must be 400 characters or less`, variant: "destructive" });
+      if (q.description.length > 100) {
+        toast({ title: "Error", description: `Question ${i + 1} description must be 100 characters or less`, variant: "destructive" });
         return;
       }
 
-      if (q.placeholder.length > 400) {
-        toast({ title: "Error", description: `Question ${i + 1} placeholder must be 400 characters or less`, variant: "destructive" });
+      if (q.placeholder.length > 100) {
+        toast({ title: "Error", description: `Question ${i + 1} placeholder must be 100 characters or less`, variant: "destructive" });
         return;
       }
 
@@ -666,10 +666,10 @@ function EditFormClient({ guildId, formId }: { guildId: string; formId: string }
                   value={question.text}
                   onChange={(e) => updateQuestion(question.id, "text", e.target.value)}
                   placeholder="Enter your question"
-                  maxLength={200}
+                  maxLength={45}
                 />
                 <p className="text-xs text-muted-foreground mt-1">
-                  {question.text.length}/200 characters
+                  {question.text.length}/45 characters
                 </p>
               </div>
               
@@ -680,10 +680,10 @@ function EditFormClient({ guildId, formId }: { guildId: string; formId: string }
                   onChange={(e) => updateQuestion(question.id, "description", e.target.value)}
                   placeholder="Add a description or help text for this question"
                   rows={2}
-                  maxLength={400}
+                  maxLength={100}
                 />
                 <p className="text-xs text-muted-foreground mt-1">
-                  {question.description.length}/400 characters
+                  {question.description.length}/100 characters
                 </p>
               </div>
               
@@ -693,10 +693,10 @@ function EditFormClient({ guildId, formId }: { guildId: string; formId: string }
                   value={question.placeholder}
                   onChange={(e) => updateQuestion(question.id, "placeholder", e.target.value)}
                   placeholder="Enter placeholder text for the answer field"
-                  maxLength={400}
+                  maxLength={100}
                 />
                 <p className="text-xs text-muted-foreground mt-1">
-                  {question.placeholder.length}/400 characters
+                  {question.placeholder.length}/100 characters
                 </p>
               </div>
               
