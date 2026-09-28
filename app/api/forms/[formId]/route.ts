@@ -134,23 +134,23 @@ export async function PUT(
         );
       }
 
-      if (q.text.length > 200) {
+      if (q.text.length > 45) {
         return NextResponse.json(
-          { error: `Question ${i + 1} text must be 200 characters or less` },
+          { error: `Question ${i + 1} text must be 45 characters or less` },
           { status: 400 }
         );
       }
 
-      if (q.description && q.description.length > 400) {
+      if (q.description && q.description.length > 100) {
         return NextResponse.json(
-          { error: `Question ${i + 1} description must be 400 characters or less` },
+          { error: `Question ${i + 1} description must be 100 characters or less` },
           { status: 400 }
         );
       }
 
-      if (q.placeholder && q.placeholder.length > 400) {
+      if (q.placeholder && q.placeholder.length > 100) {
         return NextResponse.json(
-          { error: `Question ${i + 1} placeholder must be 400 characters or less` },
+          { error: `Question ${i + 1} placeholder must be 100 characters or less` },
           { status: 400 }
         );
       }
