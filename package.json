@@ -76,5 +76,11 @@
     "postcss": "^8",
     "tailwindcss": "^3.4.1",
     "typescript": "^5"
+  },
+  "overrides": {
+    "brace-expansion": "^1.1.21",
+    "@next/eslint-plugin-next": {
+      "glob": "^10.4.6"
+    }
   }
 }
