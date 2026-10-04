@@ -263,8 +263,37 @@ function ResponsesViewerClient({
   const [formData, setFormData] = useState<FormData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteFormDialogOpen, setDeleteFormDialogOpen] = useState(false);
+  const [isDeletingForm, setIsDeletingForm] = useState(false);
   const [isManager, setIsManager] = useState<boolean | null>(null);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+
+  const handleDeleteForm = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsDeletingForm(true);
+    try {
+      const res = await fetch(`/api/forms/${formId}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || "Failed to delete form");
+      }
+      toast({
+        title: "Form Deleted",
+        description: "The form has been soft deleted successfully.",
+      });
+      setDeleteFormDialogOpen(false);
+      router.push(`/event/forms/guild/${guildId}`);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete form",
+        variant: "destructive",
+      });
+      setIsDeletingForm(false);
+    }
+  };
 
   // Filter & Sort State
   const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
@@ -753,15 +782,22 @@ function ResponsesViewerClient({
 
   if (!formData) {
     return (
-      <div className="container mx-auto py-12 px-4 max-w-md">
-        <Card className="rounded-2xl border border-border/60 bg-card/40 shadow-sm text-center p-6">
-          <CardContent className="pt-2 space-y-3">
-            <p className="text-sm text-muted-foreground">Form not found</p>
-            <Button size="sm" variant="outline" onClick={() => router.push(`/event/server/${guildId}`)} className="text-xs">
-              Back to Server
-            </Button>
-          </CardContent>
-        </Card>
+      <div className="container mx-auto py-16 px-4 max-w-lg text-center space-y-6">
+        <div className="flex h-16 w-16 mx-auto items-center justify-center rounded-2xl bg-destructive/10 border border-destructive/20 text-destructive">
+          <AlertCircle className="h-8 w-8" />
+        </div>
+        <div className="space-y-2">
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">Form Not Found</h1>
+          <p className="text-sm text-muted-foreground">
+            This form does not exist, has been soft deleted, or you do not have permission to view its responses.
+          </p>
+        </div>
+        <Button asChild variant="outline" className="rounded-xl border-border/60 text-xs font-semibold">
+          <Link href={`/event/forms/guild/${guildId}`}>
+            <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />
+            Back to Server Forms
+          </Link>
+        </Button>
       </div>
     );
   }
@@ -814,7 +850,50 @@ function ResponsesViewerClient({
           )}
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2 shrink-0 flex-wrap">
+          <AlertDialog open={deleteFormDialogOpen} onOpenChange={(open) => !isDeletingForm && setDeleteFormDialogOpen(open)}>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 text-xs border-destructive/30 text-destructive hover:bg-destructive/10 hover:border-destructive/60 gap-1.5"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                <span>Delete Form</span>
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent className="rounded-2xl max-w-md">
+              <AlertDialogHeader>
+                <AlertDialogTitle className="text-lg font-bold">Delete Form</AlertDialogTitle>
+                <AlertDialogDescription className="text-xs text-muted-foreground leading-relaxed">
+                  Are you sure you want to delete <span className="font-semibold text-foreground">&quot;{formData?.title}&quot;</span>? This form will be soft deleted and will no longer be visible or accessible on TickAp to anyone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter className="mt-4 gap-2">
+                <AlertDialogCancel disabled={isDeletingForm} className="rounded-xl text-xs font-medium">
+                  Cancel
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleDeleteForm}
+                  disabled={isDeletingForm}
+                  className="rounded-xl text-xs font-semibold bg-destructive hover:bg-destructive/90 text-destructive-foreground gap-1.5"
+                >
+                  {isDeletingForm ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      <span>Working...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="h-3.5 w-3.5" />
+                      <span>Delete Form</span>
+                    </>
+                  )}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+
           <Button variant="outline" size="sm" asChild className="h-9 text-xs">
             <Link href={`/event/server/${guildId}/forms/${formId}/edit`}>
               <Edit className="mr-1.5 h-3.5 w-3.5" />
