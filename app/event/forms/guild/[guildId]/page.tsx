@@ -72,7 +72,13 @@ export default async function GuildFormsPage({
       next: { revalidate: 120 },
     }),
     prisma.form.findMany({
-      where: { guild_id: BigInt(guildId), is_deleted: false },
+      where: {
+        guild_id: BigInt(guildId),
+        OR: [
+          { is_deleted: false },
+          { is_deleted: null },
+        ],
+      },
       include: { questions: true, responses: true },
       orderBy: { createdAt: "desc" },
     }),

@@ -44,7 +44,7 @@ export async function PATCH(
       where: { id: formId },
     }) as any;
 
-    if (!form) {
+    if (!form || form.is_deleted) {
       return NextResponse.json({ error: "Form not found" }, { status: 404 });
     }
 

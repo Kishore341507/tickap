@@ -52,7 +52,10 @@ export default async function ServerEvents({
   const forms = await prisma.form.findMany({
     where: {
       guild_id: BigInt(id),
-      is_deleted: false,
+      OR: [
+        { is_deleted: false },
+        { is_deleted: null },
+      ],
     },
     include: {
       questions: true,

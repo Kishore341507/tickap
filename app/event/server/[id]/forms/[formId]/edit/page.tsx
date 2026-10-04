@@ -41,6 +41,17 @@ import { cn } from "@/lib/utils";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface Question {
   id: string;
@@ -92,7 +103,10 @@ function EditFormClient({ guildId, formId }: { guildId: string; formId: string }
   const { toast } = useToast();
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isNotFound, setIsNotFound] = useState(false);
   const [channels, setChannels] = useState<{ id: string; name: string; position: number }[]>([]);
   const [isLoadingChannels, setIsLoadingChannels] = useState(false);
   const [channelOpen, setChannelOpen] = useState(false);
@@ -118,11 +132,47 @@ function EditFormClient({ guildId, formId }: { guildId: string; formId: string }
     fetchChannels();
   }, [formId]);
 
+  const handleDeleteForm = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsDeleting(true);
+    try {
+      const response = await fetch(`/api/forms/${formId}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to delete form");
+      }
+
+      toast({
+        title: "Form Deleted",
+        description: "The form has been soft deleted successfully.",
+      });
+
+      setDeleteDialogOpen(false);
+      router.push(`/event/server/${guildId}`);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete form",
+        variant: "destructive",
+      });
+      setIsDeleting(false);
+    }
+  };
+
   const fetchForm = async () => {
     try {
       setIsLoading(true);
       const response = await fetch(`/api/forms/${formId}`);
-      if (!response.ok) throw new Error("Failed to fetch form");
+      if (!response.ok) {
+        if (response.status === 404) {
+          setIsNotFound(true);
+          return;
+        }
+        throw new Error("Failed to fetch form");
+      }
       
       const data = await response.json();
       
@@ -464,6 +514,28 @@ function EditFormClient({ guildId, formId }: { guildId: string; formId: string }
     }
   };
 
+  if (isNotFound) {
+    return (
+      <div className="container mx-auto py-16 px-4 max-w-lg text-center space-y-6">
+        <div className="flex h-16 w-16 mx-auto items-center justify-center rounded-2xl bg-destructive/10 border border-destructive/20 text-destructive">
+          <AlertCircle className="h-8 w-8" />
+        </div>
+        <div className="space-y-2">
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">Form Not Found</h1>
+          <p className="text-sm text-muted-foreground">
+            This form does not exist, has been soft deleted, or you do not have permission to edit it.
+          </p>
+        </div>
+        <Button asChild variant="outline" className="rounded-xl border-border/60 text-xs font-semibold">
+          <Link href={`/event/server/${guildId}`}>
+            <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />
+            Back to Server
+          </Link>
+        </Button>
+      </div>
+    );
+  }
+
   if (isLoading) {
     return (
       <div className="container mx-auto py-8 px-4 max-w-4xl space-y-8 animate-pulse">
@@ -543,7 +615,51 @@ function EditFormClient({ guildId, formId }: { guildId: string; formId: string }
           </div>
         </div>
 
-        <div className="flex items-center gap-2 self-end sm:self-auto">
+        <div className="flex items-center gap-2 self-end sm:self-auto flex-wrap">
+          <AlertDialog open={deleteDialogOpen} onOpenChange={(open) => !isDeleting && setDeleteDialogOpen(open)}>
+            <AlertDialogTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="rounded-xl border-destructive/30 text-destructive hover:bg-destructive/10 hover:border-destructive/60 text-xs font-medium gap-1.5"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                <span>Delete Form</span>
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent className="rounded-2xl max-w-md">
+              <AlertDialogHeader>
+                <AlertDialogTitle className="text-lg font-bold">Delete Form</AlertDialogTitle>
+                <AlertDialogDescription className="text-xs text-muted-foreground leading-relaxed">
+                  Are you sure you want to delete <span className="font-semibold text-foreground">&quot;{formData.title || "this form"}&quot;</span>? This form will be soft deleted and will no longer be visible or accessible on TickAp to anyone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter className="mt-4 gap-2">
+                <AlertDialogCancel disabled={isDeleting} className="rounded-xl text-xs font-medium">
+                  Cancel
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleDeleteForm}
+                  disabled={isDeleting}
+                  className="rounded-xl text-xs font-semibold bg-destructive hover:bg-destructive/90 text-destructive-foreground gap-1.5"
+                >
+                  {isDeleting ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      <span>Working...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="h-3.5 w-3.5" />
+                      <span>Delete Form</span>
+                    </>
+                  )}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+
           <Button
             type="button"
             variant="outline"

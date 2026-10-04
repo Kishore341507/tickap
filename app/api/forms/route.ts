@@ -22,7 +22,18 @@ export async function GET(request: NextRequest) {
     const userId = searchParams.get("userId");
     const guildId = searchParams.get("guildId");
 
-    const where = userId ? { userId, is_deleted: false } : guildId ? { guild_id: BigInt(guildId), is_deleted: false } : { is_deleted: false };
+    const notDeleted = {
+      OR: [
+        { is_deleted: false },
+        { is_deleted: null },
+      ],
+    };
+
+    const where = userId
+      ? { userId, ...notDeleted }
+      : guildId
+      ? { guild_id: BigInt(guildId), ...notDeleted }
+      : notDeleted;
 
     const forms = await prisma.form.findMany({
       where,

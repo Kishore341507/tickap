@@ -197,10 +197,10 @@ export async function DELETE(
     // Fetch form to get guild_id
     const form = await prisma.form.findUnique({
       where: { id: formId },
-      select: { guild_id: true }
+      select: { guild_id: true, is_deleted: true }
     });
 
-    if (!form) {
+    if (!form || form.is_deleted) {
       return NextResponse.json({ error: "Form not found" }, { status: 404 });
     }
 
