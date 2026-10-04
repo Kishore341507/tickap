@@ -9,6 +9,15 @@ export async function POST(
   { params }: { params: Promise<{ formId: string }> }
 ) {
   try {
+    // Web submissions disabled for now - server only
+    const allowWebSubmissions = false;
+    if (!allowWebSubmissions) {
+      return NextResponse.json(
+        { error: "This form can be filled from the server only. Web submissions are currently disabled." },
+        { status: 403 }
+      );
+    }
+
     const { formId } = await params;
     const body = await request.json();
     const { userName, userEmail, answers } = body;
