@@ -16,7 +16,11 @@ import {
   ShieldAlert,
   Copy,
   Check,
-  Edit
+  Edit,
+  ChevronRight,
+  ChevronLeft,
+  Filter,
+  FileText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -138,81 +142,65 @@ interface DateRange {
 // Helper Components
 function ResponsesSkeleton() {
   return (
-    <div className="container mx-auto py-8">
-      {/* Header */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between mb-2">
-            <div className="space-y-2">
-                <Skeleton className="h-9 w-64" />
-                <Skeleton className="h-4 w-32" />
-            </div>
-            <div className="flex gap-2">
-                 <Skeleton className="h-10 w-32" />
-            </div>
+    <div className="container mx-auto py-8 px-4 max-w-6xl space-y-6 animate-pulse">
+      {/* Breadcrumb skeleton */}
+      <div className="flex items-center justify-between">
+        <Skeleton className="h-4 w-48 rounded" />
+        <Skeleton className="h-8 w-28 rounded-md" />
+      </div>
+
+      {/* Header skeleton */}
+      <div className="flex justify-between items-center pb-6 border-b border-border/40">
+        <div className="space-y-2">
+          <Skeleton className="h-8 w-64 rounded-lg" />
+          <Skeleton className="h-4 w-48 rounded" />
+        </div>
+        <div className="flex gap-2">
+          <Skeleton className="h-9 w-24 rounded-md" />
+          <Skeleton className="h-9 w-28 rounded-md" />
         </div>
       </div>
 
-      {/* Toolbar */}
-      <Card className="mb-6">
-        <CardContent className="p-4">
-            <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center">
-                <div className="flex flex-1 flex-col md:flex-row gap-4 w-full md:w-auto">
-                    {/* Date Range Filter */}
-                    <Skeleton className="h-10 w-[240px]" />
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="rounded-xl border border-border/50 bg-card/40 p-4 space-y-2">
+            <Skeleton className="h-3 w-20 rounded" />
+            <Skeleton className="h-7 w-12 rounded" />
+          </div>
+        ))}
+      </div>
 
-                    {/* Sort */}
-                    <Skeleton className="h-10 w-[180px]" />
-                </div>
-
-                <div className="flex gap-2 w-full md:w-auto justify-end">      
-                    <Skeleton className="h-9 w-20" />
-                    <Skeleton className="h-9 w-28" />
-                </div>
-            </div>
-        </CardContent>
+      {/* Toolbar skeleton */}
+      <Card className="rounded-2xl border border-border/60 bg-card/40 shadow-sm p-4">
+        <div className="flex flex-col sm:flex-row gap-3">
+          <Skeleton className="h-9 flex-1 rounded-lg" />
+          <Skeleton className="h-9 w-36 rounded-lg" />
+          <Skeleton className="h-9 w-44 rounded-lg" />
+          <Skeleton className="h-9 w-36 rounded-lg" />
+        </div>
       </Card>
 
-      {/* Main Table */}
-      <Card>
-        <CardContent className="p-0">
-            <div className="relative w-full overflow-auto">
-              <table className="w-full caption-bottom text-sm">
-                  <thead className="[&_tr]:border-b">
-                      <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-                          <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground w-[50px]">
-                              <Skeleton className="h-4 w-4" />
-                          </th>
-                          <th className="hidden md:table-cell h-12 px-4 text-left align-middle font-medium text-muted-foreground w-[60px]">S.No</th>
-                          <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground w-[180px]">
-                              Submitted At
-                          </th>
-                          <th className="hidden md:table-cell h-12 px-4 text-left align-middle font-medium text-muted-foreground w-[150px]">Name</th>
-                          <th className="hidden md:table-cell h-12 px-4 text-left align-middle font-medium text-muted-foreground w-[150px]">User ID</th>
-                          <th className="hidden md:table-cell h-12 px-4 text-left align-middle font-medium text-muted-foreground w-[120px]">Status</th>
-                          <th className="hidden md:table-cell h-12 px-4 text-right align-middle font-medium text-muted-foreground">Actions</th>
-                      </tr>
-                  </thead>
-                  <tbody className="[&_tr:last-child]:border-0">
-                      {Array.from({ length: 5 }).map((_, index) => (
-                          <tr key={index} className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-                              <td className="p-4 py-1 align-middle"><Skeleton className="h-4 w-4" /></td>
-                              <td className="hidden md:table-cell p-4 py-1 align-middle"><Skeleton className="h-4 w-8" /></td>
-                              <td className="p-4 py-1 align-middle">
-                                  <div className="flex flex-col gap-1">
-                                      <Skeleton className="h-4 w-24" />
-                                      <Skeleton className="h-3 w-16" />
-                                  </div>
-                              </td>
-                              <td className="hidden md:table-cell p-4 py-1 align-middle"><Skeleton className="h-4 w-24" /></td>
-                              <td className="hidden md:table-cell p-4 py-1 align-middle"><Skeleton className="h-4 w-32" /></td>
-                              <td className="hidden md:table-cell p-4 py-1 align-middle"><Skeleton className="h-5 w-20 rounded-full" /></td>
-                              <td className="hidden md:table-cell p-4 py-1 align-middle text-right"><Skeleton className="h-8 w-8 ml-auto rounded-md" /></td>
-                          </tr>
-                      ))}
-                  </tbody>
-              </table>
+      {/* Table skeleton */}
+      <Card className="rounded-2xl border border-border/60 bg-card/40 shadow-sm overflow-hidden">
+        <div className="p-4 space-y-3">
+          {Array.from({ length: 6 }).map((_, index) => (
+            <div key={index} className="flex items-center justify-between gap-4 py-2 border-b border-border/30 last:border-0">
+              <Skeleton className="h-4 w-4 rounded" />
+              <Skeleton className="h-4 w-8 rounded" />
+              <div className="flex items-center gap-2 flex-1">
+                <Skeleton className="h-8 w-8 rounded-full" />
+                <div className="space-y-1">
+                  <Skeleton className="h-4 w-28 rounded" />
+                  <Skeleton className="h-3 w-20 rounded" />
+                </div>
+              </div>
+              <Skeleton className="h-4 w-24 rounded" />
+              <Skeleton className="h-6 w-20 rounded-full" />
+              <Skeleton className="h-8 w-8 rounded-md" />
             </div>
-        </CardContent>
+          ))}
+        </div>
       </Card>
     </div>
   );
@@ -280,6 +268,8 @@ function ResponsesViewerClient({
 
   // Filter & Sort State
   const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"ALL" | "PENDING" | "ACCEPTED" | "REJECTED">("ALL");
   const [dateRange, setDateRange] = useState<DateRange>({
     from: undefined,
     to: undefined,
@@ -378,11 +368,41 @@ function ResponsesViewerClient({
     }
   };
 
+  // Stats summary calculation
+  const stats = useMemo(() => {
+    if (!formData) return { total: 0, accepted: 0, pending: 0, rejected: 0 };
+    const total = formData.responses.length;
+    const accepted = formData.responses.filter((r) => r.status === "ACCEPTED").length;
+    const rejected = formData.responses.filter((r) => r.status === "REJECTED").length;
+    const pending = formData.responses.filter((r) => !r.status || r.status === "PENDING").length;
+    return { total, accepted, pending, rejected };
+  }, [formData]);
+
   // Derived Data (Filtering & Sorting)
   const filteredResponses = useMemo(() => {
     if (!formData) return [];
 
     let result = [...formData.responses];
+
+    // Filter by search query (username or userId)
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(
+        (r) =>
+          r.userName?.toLowerCase().includes(q) ||
+          r.userId?.toLowerCase().includes(q)
+      );
+    }
+
+    // Filter by status
+    if (statusFilter !== "ALL") {
+      result = result.filter((r) => {
+        if (statusFilter === "PENDING") {
+          return !r.status || r.status === "PENDING";
+        }
+        return r.status === statusFilter;
+      });
+    }
 
     // Filter by Date Range
     if (dateRange.from) {
@@ -390,10 +410,9 @@ function ResponsesViewerClient({
         const date = new Date(r.createdAt);
         if (date < dateRange.from!) return false;
         if (dateRange.to) {
-            // Add 1 day to include the end date fully
-            const endDate = new Date(dateRange.to);
-            endDate.setHours(23, 59, 59, 999);
-            if (date > endDate) return false;
+          const endDate = new Date(dateRange.to);
+          endDate.setHours(23, 59, 59, 999);
+          if (date > endDate) return false;
         }
         return true;
       });
@@ -407,7 +426,7 @@ function ResponsesViewerClient({
     });
 
     return result;
-  }, [formData, dateRange, sortOrder]);
+  }, [formData, searchQuery, statusFilter, dateRange, sortOrder]);
 
   // Pagination Logic
   const totalPages = Math.ceil(filteredResponses.length / itemsPerPage);
@@ -711,16 +730,20 @@ function ResponsesViewerClient({
 
   if (!isManager) {
     return (
-      <div className="container mx-auto py-8 flex items-center justify-center min-h-[400px]">
-        <Card className="max-w-md">
-          <CardContent className="pt-6 text-center">
-            <ShieldAlert className="h-12 w-12 mx-auto mb-4 text-destructive" />
-            <h2 className="text-xl font-semibold mb-2">Access Denied</h2>
-            <p className="text-muted-foreground mb-4">
-              Only server managers can view form responses
-            </p>
-            <Button onClick={() => router.push(`/event/server/${guildId}`)}>
-              Back to Server
+      <div className="container mx-auto py-12 px-4 flex items-center justify-center min-h-[400px]">
+        <Card className="max-w-md w-full rounded-2xl border border-border/60 bg-card/40 shadow-sm text-center p-6">
+          <CardContent className="pt-2 space-y-4">
+            <div className="p-3 rounded-full bg-destructive/10 w-fit mx-auto text-destructive">
+              <ShieldAlert className="h-8 w-8" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold">Access Denied</h2>
+              <p className="text-xs text-muted-foreground mt-1">
+                Only server managers can view questionnaire responses.
+              </p>
+            </div>
+            <Button size="sm" variant="outline" onClick={() => router.push(`/event/server/${guildId}`)} className="text-xs">
+              <ChevronLeft className="mr-1 h-3.5 w-3.5" /> Back to Server
             </Button>
           </CardContent>
         </Card>
@@ -730,472 +753,561 @@ function ResponsesViewerClient({
 
   if (!formData) {
     return (
-      <div className="container mx-auto py-8">
-        <Card>
-          <CardContent className="pt-6">
-            <p className="text-center text-muted-foreground">Form not found</p>
+      <div className="container mx-auto py-12 px-4 max-w-md">
+        <Card className="rounded-2xl border border-border/60 bg-card/40 shadow-sm text-center p-6">
+          <CardContent className="pt-2 space-y-3">
+            <p className="text-sm text-muted-foreground">Form not found</p>
+            <Button size="sm" variant="outline" onClick={() => router.push(`/event/server/${guildId}`)} className="text-xs">
+              Back to Server
+            </Button>
           </CardContent>
         </Card>
       </div>
     );
   }
 
-  // Get start serial number
-  // If Newest -> Oldest, current page starts from 1? No, usually 1 is the 1st row shown.
-  // Requirement: "responses with serial numbers starting from 1 to the end"
-  // If I have 100 responses, sorted newest to oldest. Page 1 shows 1-10. Row 1 is Serial 1.
   const getSerialNumber = (index: number) => {
     return (currentPage - 1) * itemsPerPage + index + 1;
   };
 
   return (
-    <div className="container mx-auto py-8">
+    <div className="container mx-auto py-8 px-4 max-w-6xl space-y-6">
+      {/* Breadcrumb Navigation */}
+      <div className="flex items-center justify-between text-xs text-muted-foreground">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <Link href="/event" className="hover:text-foreground transition-colors">
+            Events
+          </Link>
+          <ChevronRight className="h-3 w-3 opacity-60" />
+          <Link href={`/event/server/${guildId}`} className="hover:text-foreground transition-colors font-mono">
+            {guildId.slice(0, 10)}...
+          </Link>
+          <ChevronRight className="h-3 w-3 opacity-60" />
+          <Link href={`/event/forms/guild/${guildId}`} className="hover:text-foreground transition-colors">
+            Forms
+          </Link>
+          <ChevronRight className="h-3 w-3 opacity-60" />
+          <span className="text-foreground font-medium truncate max-w-[140px] sm:max-w-xs">{formData.title}</span>
+          <ChevronRight className="h-3 w-3 opacity-60" />
+          <span className="text-foreground font-medium">Responses</span>
+        </div>
+
+        <Button variant="outline" size="sm" onClick={() => router.push(`/event/server/${guildId}`)} className="h-8 text-xs">
+          <ChevronLeft className="h-3.5 w-3.5 mr-1" />
+          Back to Server
+        </Button>
+      </div>
+
       {/* Header */}
-      <div className="mb-6">
-        <div className="flex flex-col gap-3 mb-2">
-            <div className="flex items-start justify-between gap-2">
-                <div className="flex-1 min-w-0">
-                    <h1 className="text-xl md:text-3xl font-bold break-words">{formData.title}</h1>
-                    <p className="text-muted-foreground text-sm">
-                        {formData.responses.length} total responses
-                    </p>
-                </div>
-                <Button variant="outline" className="hidden md:flex shrink-0" onClick={() => router.push(`/event/server/${guildId}`)}>
-                  <ArrowLeft className="mr-2 h-4 w-4" />
-                  Back to Server
-                </Button>
-            </div>
-            <Button variant="outline" className="md:hidden w-full" onClick={() => router.push(`/event/server/${guildId}`)}>
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Server
-            </Button>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-border/40">
+        <div>
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">{formData.title}</h1>
+            <Badge variant="outline" className="text-xs font-mono border-primary/30 text-primary">
+              Responses
+            </Badge>
+          </div>
+          {formData.description && (
+            <p className="text-xs sm:text-sm text-muted-foreground mt-1 max-w-3xl line-clamp-2">
+              {formData.description}
+            </p>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0">
+          <Button variant="outline" size="sm" asChild className="h-9 text-xs">
+            <Link href={`/event/server/${guildId}/forms/${formId}/edit`}>
+              <Edit className="mr-1.5 h-3.5 w-3.5" />
+              Edit Form
+            </Link>
+          </Button>
+          <Button variant="outline" size="sm" onClick={exportToCSV} className="h-9 text-xs">
+            <Download className="mr-1.5 h-3.5 w-3.5" />
+            Export CSV
+          </Button>
         </div>
       </div>
 
-      {/* Toolbar */}
-      <Card className="mb-6">
-        <CardContent className="p-4">
-            <div className="flex flex-col gap-4">
-                {/* Delete Button Row (Mobile Only - When Selected) */}
-                {selectedResponses.size > 0 && (
-                    <div className="md:hidden">
-                        <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                                <Button variant="destructive" size="sm" className="w-full">
-                                    <Trash2 className="mr-2 h-4 w-4" />
-                                    Delete ({selectedResponses.size})
-                                </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                                <AlertDialogHeader>
-                                    <AlertDialogTitle>Delete {selectedResponses.size} responses?</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                        This action cannot be undone. These responses will be permanently deleted.
-                                    </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                    <AlertDialogAction onClick={handleBulkDelete} className="bg-destructive text-destructive-foreground">Delete</AlertDialogAction>
-                                </AlertDialogFooter>
-                            </AlertDialogContent>
-                        </AlertDialog>
-                    </div>
-                )}
+      {/* Metrics Stat Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="rounded-xl border border-border/50 bg-card/40 p-4">
+          <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Total Responses</p>
+          <p className="text-2xl font-bold tracking-tight text-foreground mt-1">{stats.total}</p>
+        </div>
+        <div className="rounded-xl border border-border/50 bg-card/40 p-4">
+          <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Accepted</p>
+          <p className="text-2xl font-bold tracking-tight text-green-500 mt-1">{stats.accepted}</p>
+        </div>
+        <div className="rounded-xl border border-border/50 bg-card/40 p-4">
+          <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Pending Review</p>
+          <p className="text-2xl font-bold tracking-tight text-amber-500 mt-1">{stats.pending}</p>
+        </div>
+        <div className="rounded-xl border border-border/50 bg-card/40 p-4">
+          <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Rejected</p>
+          <p className="text-2xl font-bold tracking-tight text-destructive mt-1">{stats.rejected}</p>
+        </div>
+      </div>
 
-                <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center">
-                    <div className="flex flex-1 flex-col md:flex-row gap-4 w-full md:w-auto">
-                        {/* Date Range Filter */}
-                        <div className="flex items-center gap-2">
-                        <Popover>
-                            <PopoverTrigger asChild>
-                            <Button
-                                variant={"outline"}
-                                className={cn(
-                                "w-[240px] justify-start text-left font-normal",
-                                !dateRange.from && "text-muted-foreground"
-                                )}
-                            >
-                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                {dateRange.from ? (
-                                dateRange.to ? (
-                                    <>
-                                    {format(dateRange.from, "LLL dd, y")} -{" "}
-                                    {format(dateRange.to, "LLL dd, y")}
-                                    </>
-                                ) : (
-                                    format(dateRange.from, "LLL dd, y")
-                                )
-                                ) : (
-                                <span>Filter by Date</span>
-                                )}
-                            </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                                initialFocus
-                                mode="range"
-                                defaultMonth={dateRange.from}
-                                selected={dateRange}
-                                onSelect={(range) => setDateRange({ from: range?.from, to: range?.to })}
-                                numberOfMonths={2}
-                            />
-                            </PopoverContent>
-                        </Popover>
-                        {(dateRange.from || dateRange.to) && (
-                             <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                onClick={() => setDateRange({ from: undefined, to: undefined })}
-                             >
-                                Clear
-                             </Button>
-                        )}
-                    </div>
-
-                    {/* Sort */}
-                    <Select value={sortOrder} onValueChange={(v: "newest" | "oldest") => setSortOrder(v)}>
-                        <SelectTrigger className="w-[180px]">
-                            <SelectValue placeholder="Sort by" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="newest">Newest → Oldest</SelectItem>
-                            <SelectItem value="oldest">Oldest → Newest</SelectItem>
-                        </SelectContent>
-                    </Select>
-                </div>
-
-                    <div className="flex gap-2 w-full md:w-auto justify-end">
-                        {/* Delete Button (Desktop Only) */}
-                        {selectedResponses.size > 0 && (
-                            <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                    <Button variant="destructive" size="sm" className="hidden md:flex">
-                                        <Trash2 className="mr-2 h-4 w-4" />
-                                        Delete ({selectedResponses.size})
-                                    </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                        <AlertDialogTitle>Delete {selectedResponses.size} responses?</AlertDialogTitle>
-                                        <AlertDialogDescription>
-                                            This action cannot be undone. These responses will be permanently deleted.
-                                        </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                        <AlertDialogAction onClick={handleBulkDelete} className="bg-destructive text-destructive-foreground">Delete</AlertDialogAction>
-                                    </AlertDialogFooter>
-                                </AlertDialogContent>
-                            </AlertDialog>
-                        )}
-                        
-                        <Button variant="outline" size="sm" asChild>
-                        <Link href={`/event/server/${guildId}/forms/${formId}/edit`}>
-                            <Edit className="mr-2 h-4 w-4" />
-                            Edit
-                        </Link>
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={exportToCSV}>
-                        <Download className="mr-2 h-4 w-4" />
-                        Export CSV
-                    </Button>
-                    </div>
-                </div>
+      {/* Filter & Toolbar */}
+      <Card className="rounded-2xl border border-border/60 bg-card/40 shadow-sm">
+        <CardContent className="p-4 space-y-3">
+          <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
+            {/* Search Input */}
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by participant name or Discord ID..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 pr-9 bg-muted/20 border-border/60 h-9 text-xs"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-3 top-2.5 text-xs text-muted-foreground hover:text-foreground"
+                >
+                  Clear
+                </button>
+              )}
             </div>
+
+            {/* Status Filter */}
+            <Select value={statusFilter} onValueChange={(val: any) => setStatusFilter(val)}>
+              <SelectTrigger className="w-full md:w-[150px] bg-muted/20 border-border/60 h-9 text-xs">
+                <SelectValue placeholder="Status Filter" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">All Statuses</SelectItem>
+                <SelectItem value="PENDING">Pending</SelectItem>
+                <SelectItem value="ACCEPTED">Accepted</SelectItem>
+                <SelectItem value="REJECTED">Rejected</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Date Range Filter */}
+            <div className="flex items-center gap-1.5">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full md:w-[220px] justify-start text-left font-normal bg-muted/20 border-border/60 h-9 text-xs",
+                      !dateRange.from && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-3.5 w-3.5" />
+                    {dateRange.from ? (
+                      dateRange.to ? (
+                        <>
+                          {format(dateRange.from, "MMM d")} - {format(dateRange.to, "MMM d, yyyy")}
+                        </>
+                      ) : (
+                        format(dateRange.from, "MMM d, yyyy")
+                      )
+                    ) : (
+                      <span>Filter Date Range</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    initialFocus
+                    mode="range"
+                    defaultMonth={dateRange.from}
+                    selected={dateRange}
+                    onSelect={(range) => setDateRange({ from: range?.from, to: range?.to })}
+                    numberOfMonths={2}
+                  />
+                </PopoverContent>
+              </Popover>
+              {(dateRange.from || dateRange.to) && (
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => setDateRange({ from: undefined, to: undefined })}
+                  className="h-9 px-2 text-xs text-muted-foreground hover:text-foreground"
+                >
+                  Clear
+                </Button>
+              )}
+            </div>
+
+            {/* Sort Dropdown */}
+            <Select value={sortOrder} onValueChange={(v: "newest" | "oldest") => setSortOrder(v)}>
+              <SelectTrigger className="w-full md:w-[150px] bg-muted/20 border-border/60 h-9 text-xs">
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="newest">Newest First</SelectItem>
+                <SelectItem value="oldest">Oldest First</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Bulk Selection Bar */}
+          {selectedResponses.size > 0 && (
+            <div className="flex items-center justify-between p-2.5 rounded-xl bg-destructive/10 border border-destructive/20 text-xs">
+              <span className="font-semibold text-destructive">
+                {selectedResponses.size} response{selectedResponses.size === 1 ? "" : "s"} selected
+              </span>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" size="sm" className="h-7 text-xs">
+                    <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+                    Delete Selected
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete {selectedResponses.size} responses?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This action cannot be undone. These responses will be permanently removed from this form.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleBulkDelete} className="bg-destructive text-destructive-foreground">
+                      Delete
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
+          )}
         </CardContent>
       </Card>
 
       {/* Main Table */}
-      <Card className="block">
+      <Card className="rounded-2xl border border-border/60 bg-card/40 shadow-sm overflow-hidden">
         <CardContent className="p-0">
+          <div className="relative w-full overflow-auto">
             <Table>
-                <TableHeader>
-                    <TableRow>
-                        <TableHead className="w-[50px]">
-                            <Checkbox 
-                                checked={isAllSelected}
-                                onCheckedChange={handleSelectAll}
-                                aria-label="Select all"
-                            />
-                        </TableHead>
-                        <TableHead className="hidden md:table-cell w-[60px]">S.No</TableHead>
-                        <TableHead className="w-[180px]">
-                            <Button variant="ghost" size="sm" className="-ml-3 h-8 hover:bg-transparent px-3" onClick={() => setSortOrder(sortOrder === "newest" ? "oldest" : "newest")}>
-                                Submitted At
-                                <ArrowUpDown className="ml-2 h-4 w-4" />
+              <TableHeader>
+                <TableRow className="border-b border-border/40 bg-muted/20 hover:bg-muted/20">
+                  <TableHead className="w-[45px] pl-4">
+                    <Checkbox 
+                      checked={isAllSelected}
+                      onCheckedChange={handleSelectAll}
+                      aria-label="Select all"
+                    />
+                  </TableHead>
+                  <TableHead className="hidden md:table-cell w-[60px] text-xs">#</TableHead>
+                  <TableHead className="text-xs">
+                    <Button variant="ghost" size="sm" className="-ml-3 h-8 hover:bg-transparent px-3 text-xs font-semibold" onClick={() => setSortOrder(sortOrder === "newest" ? "oldest" : "newest")}>
+                      Submitted At
+                      <ArrowUpDown className="ml-1.5 h-3.5 w-3.5 opacity-60" />
+                    </Button>
+                  </TableHead>
+                  <TableHead className="hidden md:table-cell text-xs">Participant</TableHead>
+                  <TableHead className="hidden md:table-cell text-xs">User ID</TableHead>
+                  <TableHead className="text-xs">Status</TableHead>
+                  <TableHead className="text-right pr-4 text-xs">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {paginatedResponses.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="h-32 text-center text-xs text-muted-foreground">
+                      No responses found matching current filters.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  paginatedResponses.map((response, index) => (
+                    <TableRow 
+                      key={response.id} 
+                      data-state={selectedResponses.has(response.id) && "selected"}
+                      className="cursor-pointer hover:bg-muted/30 border-b border-border/30 transition-colors"
+                      onClick={() => setViewingResponseId(response.id)}
+                    >
+                      <TableCell onClick={(e) => e.stopPropagation()} className="pl-4 py-3">
+                        <Checkbox 
+                          checked={selectedResponses.has(response.id)}
+                          onCheckedChange={(checked) => handleSelectOne(response.id, checked as boolean)}
+                          aria-label="Select row"
+                        />
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell py-3 text-xs font-mono text-muted-foreground">
+                        {getSerialNumber(index)}
+                      </TableCell>
+                      <TableCell className="py-3">
+                        <div className="flex flex-col">
+                          <span className="font-semibold text-xs text-foreground">
+                            {format(new Date(response.createdAt), "MMM d, yyyy")}
+                          </span>
+                          <span className="text-[11px] text-muted-foreground">
+                            {format(new Date(response.createdAt), "h:mm a")}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell py-3">
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-7 w-7 ring-1 ring-border/40">
+                            <AvatarFallback className="text-[10px]">
+                              {response.userName?.substring(0, 2).toUpperCase() || "U"}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="font-medium text-xs text-foreground truncate max-w-[140px]">
+                            {response.userName || "Unknown Participant"}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell py-3 font-mono text-[11px] text-muted-foreground">
+                        {response.userId || "-"}
+                      </TableCell>
+                      <TableCell className="py-3">
+                        {(!response.status || response.status === "PENDING") && (
+                          <Badge variant="secondary" className="gap-1 text-[10px] font-medium">
+                            <Clock className="h-3 w-3 text-amber-500" /> Pending
+                          </Badge>
+                        )}
+                        {response.status === "ACCEPTED" && (
+                          <Badge variant="outline" className="gap-1 text-[10px] font-medium border-green-500/30 text-green-500 bg-green-500/10">
+                            <CheckCircle2 className="h-3 w-3" /> Accepted
+                          </Badge>
+                        )}
+                        {response.status === "REJECTED" && (
+                          <Badge variant="outline" className="gap-1 text-[10px] font-medium border-destructive/30 text-destructive bg-destructive/10">
+                            <XCircle className="h-3 w-3" /> Rejected
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right pr-4 py-3" onClick={(e) => e.stopPropagation()}>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground">
+                              <span className="sr-only">Open menu</span>
+                              <MoreHorizontal className="h-4 w-4" />
                             </Button>
-                        </TableHead>
-                        <TableHead className="hidden md:table-cell w-[150px]">Name</TableHead>
-                        <TableHead className="hidden md:table-cell w-[150px]">User ID</TableHead>
-                        <TableHead className="hidden md:table-cell w-[120px]">Status</TableHead>
-                        <TableHead className="hidden md:table-cell text-right">Actions</TableHead>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleUpdateStatus(response.id, "ACCEPTED")}>
+                              <CheckCircle2 className="mr-2 h-3.5 w-3.5 text-green-500" /> Accept
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleUpdateStatus(response.id, "REJECTED")}>
+                              <XCircle className="mr-2 h-3.5 w-3.5 text-destructive" /> Reject
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => handleDelete(response.id)} className="text-destructive">
+                              <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
                     </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {paginatedResponses.length === 0 ? (
-                        <TableRow>
-                            <TableCell colSpan={7} className="h-24 text-center">
-                                No results found.
-                            </TableCell>
-                        </TableRow>
-                    ) : (
-                        paginatedResponses.map((response, index) => (
-                            <TableRow 
-                                key={response.id} 
-                                data-state={selectedResponses.has(response.id) && "selected"}
-                                className="cursor-pointer hover:bg-muted/50"
-                                onClick={() => setViewingResponseId(response.id)}
-                            >
-                                <TableCell onClick={(e) => e.stopPropagation()} className="py-1" >
-                                    <Checkbox 
-                                        checked={selectedResponses.has(response.id)}
-                                        onCheckedChange={(checked) => handleSelectOne(response.id, checked as boolean)}
-                                        aria-label="Select row"
-                                    />
-                                </TableCell>
-                                <TableCell className="hidden md:table-cell py-1" >{getSerialNumber(index)}</TableCell>
-                                <TableCell className="py-1" >
-                                    <div className="flex flex-col">
-                                        <span className="font-medium">
-                                            {format(new Date(response.createdAt), "MMM d, yyyy")}
-                                        </span>
-                                        <span className="text-xs text-muted-foreground">
-                                             {format(new Date(response.createdAt), "h:mm a")}
-                                        </span>
-                                    </div>
-                                </TableCell>
-                                <TableCell className="hidden md:table-cell py-1">{response.userName || "-"}</TableCell>
-                                <TableCell className="hidden md:table-cell py-1 font-mono text-xs">{response.userId || "-"}</TableCell>
-                                <TableCell className="hidden md:table-cell py-1">
-                                  {(!response.status || response.status === "PENDING") && (
-                                    <Badge variant="secondary" className="gap-1">
-                                      <Clock className="h-3 w-3" /> Pending
-                                    </Badge>
-                                  )}
-                                  {response.status === "ACCEPTED" && (
-                                    <Badge variant="default" className="bg-green-600 hover:bg-green-700 gap-1">
-                                      <CheckCircle2 className="h-3 w-3" /> Accepted
-                                    </Badge>
-                                  )}
-                                  {response.status === "REJECTED" && (
-                                    <Badge variant="destructive" className="gap-1">
-                                      <XCircle className="h-3 w-3" /> Rejected
-                                    </Badge>
-                                  )}
-                                </TableCell>
-                                <TableCell className="hidden md:table-cell text-right py-1" onClick={(e) => e.stopPropagation()}>
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button variant="ghost" className="h-8 w-8 p-0">
-                                                <span className="sr-only">Open menu</span>
-                                                <MoreHorizontal className="h-4 w-4" />
-                                            </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end">
-                                            <DropdownMenuItem onClick={() => handleUpdateStatus(response.id, "ACCEPTED")}>
-                                              <CheckCircle2 className="mr-2 h-4 w-4 text-green-500" /> Accept Response
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem onClick={() => handleUpdateStatus(response.id, "REJECTED")}>
-                                              <XCircle className="mr-2 h-4 w-4 text-destructive" /> Reject Response
-                                            </DropdownMenuItem>
-                                            <DropdownMenuSeparator />
-                                            <DropdownMenuItem onClick={() => {
-                                                const ids = new Set([response.id]);
-                                                setSelectedResponses(ids);
-                                            }} className="text-destructive">
-                                                <Trash2 className="mr-2 h-4 w-4" />
-                                                Delete Response
-                                            </DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-                                </TableCell>
-                            </TableRow>
-                        ))
-                    )}
-                </TableBody>
+                  ))
+                )}
+              </TableBody>
             </Table>
+          </div>
         </CardContent>
       </Card>
 
       {/* Pagination */}
-      <div className="flex flex-col md:flex-row items-center justify-between px-2 py-4 gap-4">
-        <div className="flex-1 text-sm text-muted-foreground order-2 md:order-1">
-            Showing {filteredResponses.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0} to {Math.min(currentPage * itemsPerPage, filteredResponses.length)} of {filteredResponses.length} entries
+      <div className="flex flex-col sm:flex-row items-center justify-between px-2 py-2 gap-4">
+        <div className="text-xs text-muted-foreground order-2 sm:order-1">
+          Showing {filteredResponses.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0} to {Math.min(currentPage * itemsPerPage, filteredResponses.length)} of {filteredResponses.length} entries
         </div>
 
-        <div className="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-6 lg:space-x-8 order-1 md:order-2">
-            <div className="flex items-center space-x-2">
-                <p className="text-sm font-medium">Rows per page</p>
-                <Select
-                    value={itemsPerPage.toString()}
-                    onValueChange={(value) => {
-                        setItemsPerPage(Number(value));
-                        setCurrentPage(1);
-                    }}
-                >
-                    <SelectTrigger className="h-8 w-[70px]">
-                        <SelectValue placeholder={itemsPerPage} />
-                    </SelectTrigger>
-                    <SelectContent side="top">
-                        {[10, 20, 50, 100].map((pageSize) => (
-                            <SelectItem key={pageSize} value={`${pageSize}`}>
-                                {pageSize}
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-            </div>
-            
-            {totalPages > 1 && (
-                <Pagination>
-                    <PaginationContent>
-                        <PaginationItem>
-                            <PaginationPrevious 
-                                href="#" 
-                                onClick={(e) => { e.preventDefault(); if (currentPage > 1) setCurrentPage(currentPage - 1); }}
-                                className={cn("cursor-pointer", currentPage <= 1 && "pointer-events-none opacity-50")}
-                            />
-                        </PaginationItem>
-                        
-                        {getPageNumbers().map((page, i) => (
-                            <PaginationItem key={i}>
-                                {page === '...' ? (
-                                    <PaginationEllipsis />
-                                ) : (
-                                    <PaginationLink 
-                                        href="#" 
-                                        isActive={currentPage === page}
-                                        onClick={(e) => { e.preventDefault(); setCurrentPage(page as number); }}
-                                        className="cursor-pointer"
-                                    >
-                                        {page}
-                                    </PaginationLink>
-                                )}
-                            </PaginationItem>
-                        ))}
+        <div className="flex items-center gap-4 order-1 sm:order-2">
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">Rows per page</span>
+            <Select
+              value={itemsPerPage.toString()}
+              onValueChange={(value) => {
+                setItemsPerPage(Number(value));
+                setCurrentPage(1);
+              }}
+            >
+              <SelectTrigger className="h-8 w-[65px] text-xs bg-muted/20 border-border/60">
+                <SelectValue placeholder={itemsPerPage} />
+              </SelectTrigger>
+              <SelectContent side="top">
+                {[10, 20, 50, 100].map((pageSize) => (
+                  <SelectItem key={pageSize} value={`${pageSize}`} className="text-xs">
+                    {pageSize}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
+          {totalPages > 1 && (
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious 
+                    href="#" 
+                    onClick={(e) => { e.preventDefault(); if (currentPage > 1) setCurrentPage(currentPage - 1); }}
+                    className={cn("cursor-pointer h-8 text-xs", currentPage <= 1 && "pointer-events-none opacity-50")}
+                  />
+                </PaginationItem>
+                
+                {getPageNumbers().map((page, i) => (
+                  <PaginationItem key={i}>
+                    {page === '...' ? (
+                      <PaginationEllipsis />
+                    ) : (
+                      <PaginationLink 
+                        href="#" 
+                        isActive={currentPage === page}
+                        onClick={(e) => { e.preventDefault(); setCurrentPage(page as number); }}
+                        className="cursor-pointer h-8 text-xs"
+                      >
+                        {page}
+                      </PaginationLink>
+                    )}
+                  </PaginationItem>
+                ))}
 
-                        <PaginationItem>
-                            <PaginationNext 
-                                href="#"
-                                onClick={(e) => { e.preventDefault(); if (currentPage < totalPages) setCurrentPage(currentPage + 1); }}
-                                className={cn("cursor-pointer", currentPage >= totalPages ? "pointer-events-none opacity-50" : "")}
-                            />
-                        </PaginationItem>
-                    </PaginationContent>
-                </Pagination>
-            )}
+                <PaginationItem>
+                  <PaginationNext 
+                    href="#"
+                    onClick={(e) => { e.preventDefault(); if (currentPage < totalPages) setCurrentPage(currentPage + 1); }}
+                    className={cn("cursor-pointer h-8 text-xs", currentPage >= totalPages ? "pointer-events-none opacity-50" : "")}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          )}
         </div>
       </div>
 
+      {/* Response Detail Inspection Drawer (Sheet) */}
       {selectedResponse && (
         <Sheet open={!!viewingResponseId} onOpenChange={(open) => !open && setViewingResponseId(null)}>
-          <SheetContent className="flex flex-col h-full w-full sm:max-w-xl">
-            <SheetHeader className="pb-4 space-y-4">
+          <SheetContent className="flex flex-col h-full w-full sm:max-w-xl p-0 gap-0">
+            <SheetHeader className="p-5 sm:p-6 pb-4 border-b border-border/40 space-y-4">
               <div className="flex items-start justify-between gap-4">
-                <div className="space-y-1">
-                   <SheetTitle>Response Details</SheetTitle>
-                   <SheetDescription>Review submitted answers</SheetDescription>
+                <div>
+                  <SheetTitle className="text-lg font-bold">Response Details</SheetTitle>
+                  <SheetDescription className="text-xs">
+                    Review submitted questionnaire answers
+                  </SheetDescription>
                 </div>
                 <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="h-8 shrink-0"
-                    onClick={() => {
-                        const lines = [
-                            `User: ${selectedResponse.userName || "Unknown"}`,
-                            `User ID: ${selectedResponse.userId}`,
-                            `Submitted: ${new Date(selectedResponse.createdAt).toLocaleString()}`,
-                            `--------------------`,
-                        ];
-                        
-                        formData?.questions.forEach(q => {
-                            const answer = selectedResponse.answers.find(a => a.questionId === q.id);
-                            lines.push(`Q: ${q.text}`);
-                            lines.push(`A: ${answer?.value || "No answer"}`);
-                            lines.push(``);
-                        });
-                        
-                        navigator.clipboard.writeText(lines.join('\n'));
-                        toast({ title: "Copied", description: "Full response details copied" });
-                    }}
+                  variant="outline" 
+                  size="sm" 
+                  className="h-8 text-xs shrink-0"
+                  onClick={() => {
+                    const lines = [
+                      `User: ${selectedResponse.userName || "Unknown"}`,
+                      `User ID: ${selectedResponse.userId}`,
+                      `Submitted: ${new Date(selectedResponse.createdAt).toLocaleString()}`,
+                      `--------------------`,
+                    ];
+                    
+                    formData?.questions.forEach(q => {
+                      const answer = selectedResponse.answers.find(a => a.questionId === q.id);
+                      lines.push(`Q: ${q.text}`);
+                      lines.push(`A: ${answer?.value || "No answer"}`);
+                      lines.push(``);
+                    });
+                    
+                    navigator.clipboard.writeText(lines.join('\n'));
+                    toast({ title: "Copied", description: "Full response details copied to clipboard" });
+                  }}
                 >
-                    <Copy className="mr-2 h-3.5 w-3.5" />
-                    Copy All
+                  <Copy className="mr-1.5 h-3.5 w-3.5" />
+                  Copy All
                 </Button>
               </div>
 
-              <div className="flex items-center gap-3 p-3 bg-muted/40 rounded-lg border">
-                <Avatar className="h-10 w-10 border bg-background">
+              {/* Submitter Info Card */}
+              <div className="flex items-center gap-3 p-3 bg-muted/20 rounded-xl border border-border/50">
+                <Avatar className="h-10 w-10 ring-1 ring-border/50 bg-background">
                   <AvatarImage />
-                  <AvatarFallback>{selectedResponse.userName?.substring(0, 2).toUpperCase() || "U"}</AvatarFallback>
+                  <AvatarFallback className="text-xs font-semibold">
+                    {selectedResponse.userName?.substring(0, 2).toUpperCase() || "U"}
+                  </AvatarFallback>
                 </Avatar>
                 <div className="flex flex-col flex-1 min-w-0">
-                  <span className="font-medium truncate text-sm">{selectedResponse.userName || "Unknown User"}</span>
-                  <div className="flex items-center text-xs text-muted-foreground font-mono mt-0.5 group cursor-pointer hover:text-foreground transition-colors"
-                       onClick={() => navigator.clipboard.writeText(selectedResponse.userId || "")}
-                       title="Click to copy User ID"
+                  <span className="font-semibold truncate text-xs text-foreground">
+                    {selectedResponse.userName || "Unknown Participant"}
+                  </span>
+                  <div 
+                    className="flex items-center text-[11px] text-muted-foreground font-mono mt-0.5 cursor-pointer hover:text-foreground transition-colors"
+                    onClick={() => {
+                      if (selectedResponse.userId) {
+                        navigator.clipboard.writeText(selectedResponse.userId);
+                        toast({ title: "Copied", description: "Discord User ID copied" });
+                      }
+                    }}
+                    title="Click to copy User ID"
                   >
-                      <span className="truncate max-w-[180px]">{selectedResponse.userId}</span>
-                      <CopyAction text={selectedResponse.userId || ""} className="h-4 w-4 ml-1 opacity-50 group-hover:opacity-100 transition-opacity" />
+                    <span className="truncate max-w-[180px]">{selectedResponse.userId}</span>
+                    <CopyAction text={selectedResponse.userId || ""} className="h-3.5 w-3.5 ml-1" />
                   </div>
                 </div>
-                <div className="text-right text-xs text-muted-foreground whitespace-nowrap pl-2 border-l ml-2">
-                    {format(new Date(selectedResponse.createdAt), "MMM d, y")}
-                    <br />
-                    {format(new Date(selectedResponse.createdAt), "h:mm a")}
+                <div className="text-right text-[11px] text-muted-foreground whitespace-nowrap pl-3 border-l border-border/40">
+                  {format(new Date(selectedResponse.createdAt), "MMM d, y")}
+                  <br />
+                  {format(new Date(selectedResponse.createdAt), "h:mm a")}
                 </div>
               </div>
 
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 p-3 bg-muted/40 rounded-lg border">
+              {/* Status and Action Buttons */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-muted/20 rounded-xl border border-border/50">
                 <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium">Status:</span>
-                    {(!selectedResponse.status || selectedResponse.status === "PENDING") && (
-                        <Badge variant="secondary" className="gap-1">
-                            <Clock className="h-3 w-3" /> Pending
-                        </Badge>
-                    )}
-                    {selectedResponse.status === "ACCEPTED" && (
-                        <Badge variant="default" className="bg-green-600 hover:bg-green-700 gap-1">
-                            <CheckCircle2 className="h-3 w-3" /> Accepted
-                        </Badge>
-                    )}
-                    {selectedResponse.status === "REJECTED" && (
-                        <Badge variant="destructive" className="gap-1">
-                            <XCircle className="h-3 w-3" /> Rejected
-                        </Badge>
-                    )}
+                  <span className="text-xs font-semibold text-muted-foreground">Status:</span>
+                  {(!selectedResponse.status || selectedResponse.status === "PENDING") && (
+                    <Badge variant="secondary" className="gap-1 text-[11px]">
+                      <Clock className="h-3 w-3 text-amber-500" /> Pending Review
+                    </Badge>
+                  )}
+                  {selectedResponse.status === "ACCEPTED" && (
+                    <Badge variant="outline" className="gap-1 text-[11px] border-green-500/30 text-green-500 bg-green-500/10">
+                      <CheckCircle2 className="h-3 w-3" /> Accepted
+                    </Badge>
+                  )}
+                  {selectedResponse.status === "REJECTED" && (
+                    <Badge variant="outline" className="gap-1 text-[11px] border-destructive/30 text-destructive bg-destructive/10">
+                      <XCircle className="h-3 w-3" /> Rejected
+                    </Badge>
+                  )}
                 </div>
-                <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
-                    {selectedResponse.status !== "ACCEPTED" && (
-                        <Button size="sm" variant="outline" className="h-8 text-green-600 hover:text-green-700 hover:bg-green-50 w-full sm:w-auto" onClick={() => handleUpdateStatus(selectedResponse.id, "ACCEPTED")}>
-                            <CheckCircle2 className="mr-2 h-3.5 w-3.5" /> Accept
-                        </Button>
-                    )}
-                    {selectedResponse.status !== "REJECTED" && (
-                        <Button size="sm" variant="outline" className="h-8 text-destructive hover:text-destructive hover:bg-destructive/10 w-full sm:w-auto" onClick={() => handleUpdateStatus(selectedResponse.id, "REJECTED")}>
-                            <XCircle className="mr-2 h-3.5 w-3.5" /> Reject
-                        </Button>
-                    )}
+                <div className="flex items-center gap-2">
+                  {selectedResponse.status !== "ACCEPTED" && (
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      className="h-8 text-xs border-green-500/40 text-green-600 hover:text-green-700 hover:bg-green-500/10"
+                      onClick={() => handleUpdateStatus(selectedResponse.id, "ACCEPTED")}
+                    >
+                      <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" /> Accept
+                    </Button>
+                  )}
+                  {selectedResponse.status !== "REJECTED" && (
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      className="h-8 text-xs border-destructive/40 text-destructive hover:bg-destructive/10"
+                      onClick={() => handleUpdateStatus(selectedResponse.id, "REJECTED")}
+                    >
+                      <XCircle className="mr-1.5 h-3.5 w-3.5" /> Reject
+                    </Button>
+                  )}
                 </div>
               </div>
             </SheetHeader>
-            <Separator />
             
-            <ScrollArea className="flex-1 -mx-6 px-6">
-              <div className="space-y-6 py-6">
-                {formData?.questions.map((question) => {
+            <ScrollArea className="flex-1 px-5 sm:px-6">
+              <div className="space-y-4 py-5">
+                {formData?.questions.map((question, qIdx) => {
                   const answer = selectedResponse.answers.find(a => a.questionId === question.id);
                   const answerText = answer?.value || "";
                   return (
-                    <div key={question.id} className="space-y-1.5 group/item">
+                    <div key={question.id} className="space-y-1.5 group/item p-3 rounded-xl border border-border/40 bg-muted/10">
                       <div className="flex items-center justify-between">
-                        <h4 className="text-sm font-medium text-muted-foreground">{question.text}</h4>
+                        <span className="text-xs font-semibold text-foreground">
+                          {qIdx + 1}. {question.text}
+                        </span>
                         {answerText && (
-                            <CopyAction text={answerText} className="opacity-0 group-hover/item:opacity-100 transition-opacity h-6 w-6" />
+                          <CopyAction text={answerText} className="opacity-0 group-hover/item:opacity-100 transition-opacity h-5 w-5" />
                         )}
                       </div>
-                      <div className="text-sm p-3 bg-card rounded-md border text-card-foreground whitespace-pre-wrap">
-                        {answerText || <span className="text-muted-foreground italic">No answer</span>}
+                      <div className="text-xs p-2.5 bg-background/60 rounded-lg border border-border/30 text-foreground whitespace-pre-wrap font-mono">
+                        {answerText || <span className="text-muted-foreground italic font-sans">No answer submitted</span>}
                       </div>
                     </div>
                   );
@@ -1203,36 +1315,31 @@ function ResponsesViewerClient({
               </div>
             </ScrollArea>
 
-            <div className="pt-4 border-t mt-auto">
-                <Pagination>
-                    <PaginationContent className="w-full justify-between">
-                        <PaginationItem>
-                            <PaginationPrevious 
-                                href="#"
-                                onClick={(e) => { 
-                                    e.preventDefault(); 
-                                    handlePrevResponse(); 
-                                }}
-                                className={cn("cursor-pointer", selectedIdx <= 0 && "pointer-events-none opacity-50")}
-                            />
-                        </PaginationItem>
-                        <PaginationItem>
-                            <span className="text-sm text-muted-foreground">
-                                Response {selectedIdx + 1} of {filteredResponses.length}
-                            </span>
-                        </PaginationItem>
-                        <PaginationItem>
-                            <PaginationNext 
-                                href="#"
-                                onClick={(e) => { 
-                                    e.preventDefault(); 
-                                    handleNextResponse(); 
-                                }}
-                                className={cn("cursor-pointer", selectedIdx >= filteredResponses.length - 1 && "pointer-events-none opacity-50")}
-                            />
-                        </PaginationItem>
-                    </PaginationContent>
-                </Pagination>
+            {/* Bottom Sheet Pagination */}
+            <div className="p-4 border-t border-border/40 bg-card/60 mt-auto">
+              <div className="flex items-center justify-between">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handlePrevResponse}
+                  disabled={selectedIdx <= 0}
+                  className="h-8 text-xs"
+                >
+                  <ChevronLeft className="mr-1 h-3.5 w-3.5" /> Previous
+                </Button>
+                <span className="text-xs text-muted-foreground">
+                  Response {selectedIdx + 1} of {filteredResponses.length}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleNextResponse}
+                  disabled={selectedIdx >= filteredResponses.length - 1}
+                  className="h-8 text-xs"
+                >
+                  Next <ChevronRight className="ml-1 h-3.5 w-3.5" />
+                </Button>
+              </div>
             </div>
           </SheetContent>
         </Sheet>
@@ -1245,40 +1352,45 @@ function ResponsesViewerClient({
       >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>
+            <DialogTitle className="text-base font-bold">
               {statusDialog.newStatus === "ACCEPTED" ? "Accept Response" : "Reject Response"}
             </DialogTitle>
-            <DialogDescription>
-              Custom message to be sent to the user.
+            <DialogDescription className="text-xs">
+              Attach a custom decision notification message sent to the applicant.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label htmlFor="custom-message">Reply Message</Label>
+            <div className="space-y-1.5">
+              <Label htmlFor="custom-message" className="text-xs font-semibold">Reply Message</Label>
               <Textarea
                 id="custom-message"
                 value={statusDialog.message}
                 onChange={(e) => setStatusDialog({ ...statusDialog, message: e.target.value })}
-                placeholder="Enter your message here..."
+                placeholder="Enter feedback or congratulatory notes here..."
                 rows={4}
+                className="bg-muted/20 border-border/60 text-xs resize-y"
               />
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="gap-2 sm:gap-0">
             <Button 
               variant="outline" 
+              size="sm"
               onClick={() => setStatusDialog({ ...statusDialog, open: false })}
               disabled={isUpdatingStatus}
+              className="text-xs h-8"
             >
               Cancel
             </Button>
             <Button 
+              size="sm"
               variant={statusDialog.newStatus === "ACCEPTED" ? "default" : "destructive"}
               onClick={() => confirmStatusUpdate(statusDialog.responseId, statusDialog.newStatus, statusDialog.message)}
               disabled={isUpdatingStatus}
+              className="text-xs h-8"
             >
-              {isUpdatingStatus && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {statusDialog.newStatus === "ACCEPTED" ? "Accept" : "Reject"}
+              {isUpdatingStatus && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
+              {statusDialog.newStatus === "ACCEPTED" ? "Accept Response" : "Reject Response"}
             </Button>
           </DialogFooter>
         </DialogContent>

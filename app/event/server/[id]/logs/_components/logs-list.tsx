@@ -47,13 +47,25 @@ export function LogsList({ logs }: LogsListProps) {
   const getLogTypeBadge = (logType: EventLogType) => {
     switch (logType) {
       case "CREATE":
-        return <Badge className="bg-green-500">Create</Badge>;
+        return (
+          <Badge variant="outline" className="bg-emerald-500/15 text-emerald-500 border-emerald-500/30 text-[11px] font-semibold">
+            CREATE
+          </Badge>
+        );
       case "UPDATE":
-        return <Badge className="bg-blue-500">Update</Badge>;
+        return (
+          <Badge variant="outline" className="bg-sky-500/15 text-sky-500 border-sky-500/30 text-[11px] font-semibold">
+            UPDATE
+          </Badge>
+        );
       case "DELETE":
-        return <Badge className="bg-red-500">Delete</Badge>;
+        return (
+          <Badge variant="outline" className="bg-rose-500/15 text-rose-500 border-rose-500/30 text-[11px] font-semibold">
+            DELETE
+          </Badge>
+        );
       default:
-        return <Badge>Unknown</Badge>;
+        return <Badge variant="outline">{logType}</Badge>;
     }
   };
 
@@ -61,106 +73,129 @@ export function LogsList({ logs }: LogsListProps) {
   const getLogTargetBadge = (logTarget: EventLogTarget) => {
     switch (logTarget) {
       case "EVENT":
-        return <Badge variant="outline">Event</Badge>;
+        return (
+          <Badge variant="outline" className="bg-muted/50 text-foreground border-border/60 text-[11px]">
+            Event
+          </Badge>
+        );
       case "REGISTRATION":
-        return <Badge variant="outline">Registration</Badge>;
+        return (
+          <Badge variant="outline" className="bg-muted/50 text-foreground border-border/60 text-[11px]">
+            Registration
+          </Badge>
+        );
       default:
-        return <Badge variant="outline">Unknown</Badge>;
+        return <Badge variant="outline">{logTarget}</Badge>;
     }
   };
 
   return (
     <div className="space-y-4">
       {logs.length === 0 ? (
-        <div className="text-center py-12">
-          <p className="text-muted-foreground">No logs found</p>
+        <div className="text-center py-12 border border-dashed border-border/60 rounded-xl bg-muted/10">
+          <p className="text-sm font-medium text-foreground">No logs found</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            No audit records match your current filter selection.
+          </p>
         </div>
       ) : (
-        <Accordion type="single" collapsible className="w-full">
+        <Accordion type="single" collapsible className="w-full space-y-2.5">
           {logs.map((log) => (
-            <AccordionItem key={log.id} value={log.id}>
-              <AccordionTrigger className="hover:no-underline">
-                <div className="flex items-center justify-between w-full pr-4">
-                  <div className="flex items-center space-x-2">
+            <AccordionItem 
+              key={log.id} 
+              value={log.id}
+              className="border border-border/50 bg-card/30 rounded-xl px-4 py-0.5 data-[state=open]:border-border/80 transition-colors"
+            >
+              <AccordionTrigger className="hover:no-underline py-3">
+                <div className="flex items-center justify-between w-full pr-3 gap-2 flex-wrap sm:flex-nowrap">
+                  <div className="flex items-center gap-2 flex-wrap">
                     {getLogTypeBadge(log.log_type)}
                     {getLogTargetBadge(log.log_target)}
-                    <span className="ml-2 text-sm text-muted-foreground">
+                    <span className="text-xs font-mono text-muted-foreground">
                       {format(new Date(log.created_at), 'yyyy-MM-dd HH:mm:ss')}
                     </span>
                   </div>
-                  <div className="hidden md:flex items-center space-x-2 text-sm text-muted-foreground">
-                    {log.user_name && <span>by {log.user_name}</span>}
+                  <div className="flex items-center space-x-2 text-xs text-muted-foreground">
+                    {log.user_name ? (
+                      <span className="bg-muted/40 px-2 py-0.5 rounded border border-border/40 font-medium text-foreground">
+                        {log.user_name}
+                      </span>
+                    ) : (
+                      <span>System</span>
+                    )}
                   </div>
                 </div>
               </AccordionTrigger>
-              <AccordionContent>
-                <Card className="p-4 bg-muted/50 whitespace-pre-wrap">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <div className="flex items-center space-x-2">
-                        <Calendar className="h-4 w-4" />
-                        <span className="text-sm">
-                          {format(new Date(log.created_at), 'PPpp')}
-                        </span>
-                      </div>
-                      
-                      {log.user_name && (
-                        <div className="flex items-center space-x-2">
-                          <User className="h-4 w-4" />
-                          <span className="text-sm">{log.user_name}</span>
-                        </div>
-                      )}
-                      
-                      {log.registration_id && (
-                        <div className="flex items-center space-x-2">
-                          <Tag className="h-4 w-4" />
-                          <span className="text-sm">Registration ID: {log.registration_id}</span>
-                        </div>
-                      )}
+              <AccordionContent className="pt-2 pb-4 border-t border-border/30 mt-1">
+                <div className="rounded-xl border border-border/50 bg-muted/20 p-4 space-y-4">
+                  <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground pb-2 border-b border-border/40">
+                    <div className="flex items-center gap-1.5">
+                      <Calendar className="h-3.5 w-3.5 opacity-70" />
+                      <span>{format(new Date(log.created_at), 'PPpp')}</span>
                     </div>
                     
-                    {/* Data comparison section */}
-                    <div className="space-y-2">
-                      {log.log_type === "UPDATE" && (
-                        <div className="space-y-2">
-                          <h4 className="text-sm font-medium">Changes:</h4>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                            <div>
-                              <p className="text-xs text-muted-foreground">Before:</p>
-                              <pre className="text-xs overflow-auto p-2 bg-background rounded-md max-h-48">
-                                {formatJson(log.old_data)}
-                              </pre>
-                            </div>
-                            <div>
-                              <p className="text-xs text-muted-foreground">After:</p>
-                              <pre className="text-xs overflow-auto p-2 bg-background rounded-md max-h-48">
-                                {formatJson(log.new_data)}
-                              </pre>
-                            </div>
+                    {log.user_name && (
+                      <div className="flex items-center gap-1.5">
+                        <User className="h-3.5 w-3.5 opacity-70" />
+                        <span>Action by: <strong className="text-foreground">{log.user_name}</strong></span>
+                      </div>
+                    )}
+                    
+                    {log.registration_id && (
+                      <div className="flex items-center gap-1.5 font-mono">
+                        <Tag className="h-3.5 w-3.5 opacity-70" />
+                        <span>Registration #{log.registration_id}</span>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Data comparison section */}
+                  <div>
+                    {log.log_type === "UPDATE" && (
+                      <div className="space-y-3">
+                        <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                          State Diff
+                        </h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div>
+                            <p className="text-xs font-medium text-muted-foreground mb-1">Previous Values</p>
+                            <pre className="text-[11px] overflow-auto p-3 bg-background/80 rounded-lg border border-border/50 font-mono text-muted-foreground max-h-56 leading-relaxed">
+                              {formatJson(log.old_data)}
+                            </pre>
+                          </div>
+                          <div>
+                            <p className="text-xs font-medium text-foreground mb-1">New Values</p>
+                            <pre className="text-[11px] overflow-auto p-3 bg-background/80 rounded-lg border border-border/50 font-mono text-foreground max-h-56 leading-relaxed">
+                              {formatJson(log.new_data)}
+                            </pre>
                           </div>
                         </div>
-                      )}
-                      
-                      {log.log_type === "CREATE" && log.new_data && (
-                        <div>
-                          <h4 className="text-sm font-medium">Created Data:</h4>
-                          <pre className="text-xs overflow-auto p-2 bg-background rounded-md max-h-48">
-                            {formatJson(log.new_data)}
-                          </pre>
-                        </div>
-                      )}
-                      
-                      {log.log_type === "DELETE" && log.old_data && (
-                        <div>
-                          <h4 className="text-sm font-medium">Deleted Data:</h4>
-                          <pre className="text-xs overflow-auto p-2 bg-background rounded-md max-h-48">
-                            {formatJson(log.old_data)}
-                          </pre>
-                        </div>
-                      )}
-                    </div>
+                      </div>
+                    )}
+                    
+                    {log.log_type === "CREATE" && log.new_data && (
+                      <div className="space-y-2">
+                        <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                          Created Record
+                        </h4>
+                        <pre className="text-[11px] overflow-auto p-3 bg-background/80 rounded-lg border border-border/50 font-mono text-foreground max-h-56 leading-relaxed">
+                          {formatJson(log.new_data)}
+                        </pre>
+                      </div>
+                    )}
+                    
+                    {log.log_type === "DELETE" && log.old_data && (
+                      <div className="space-y-2">
+                        <h4 className="text-xs font-semibold uppercase tracking-wider text-rose-500">
+                          Deleted Record
+                        </h4>
+                        <pre className="text-[11px] overflow-auto p-3 bg-background/80 rounded-lg border border-border/50 font-mono text-muted-foreground max-h-56 leading-relaxed">
+                          {formatJson(log.old_data)}
+                        </pre>
+                      </div>
+                    )}
                   </div>
-                </Card>
+                </div>
               </AccordionContent>
             </AccordionItem>
           ))}

@@ -60,77 +60,128 @@ export function LogsManagement({ eventId, guildId, event, logs }: LogsManagement
     });
   }, [logs, searchQuery, logTypeFilter, logTargetFilter]);
 
+  const createCount = logs.filter(l => l.log_type === "CREATE").length;
+  const updateCount = logs.filter(l => l.log_type === "UPDATE").length;
+  const deleteCount = logs.filter(l => l.log_type === "DELETE").length;
+
   return (
-    <>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <div>
-            <CardTitle>{event.name} - Activity Logs</CardTitle>
-            <CardDescription className="mt-2">
-              <div className="flex flex-wrap gap-2 mt-1">
-                <Badge variant="outline">
-                  Total Logs: {logs.length}
-                </Badge>
-                <Badge variant="outline">
-                  Filtered: {filteredLogs.length}
-                </Badge>
-              </div>
-            </CardDescription>
+    <div className="space-y-6">
+      {/* Quick Summary Strip */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="rounded-xl border border-border/50 bg-card/40 p-4">
+          <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+            Total Records
+          </p>
+          <p className="text-2xl font-bold tracking-tight text-foreground mt-1">
+            {logs.length}
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-border/50 bg-card/40 p-4">
+          <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+            Creations
+          </p>
+          <p className="text-2xl font-bold tracking-tight text-emerald-500 mt-1">
+            {createCount}
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-border/50 bg-card/40 p-4">
+          <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+            Updates
+          </p>
+          <p className="text-2xl font-bold tracking-tight text-sky-500 mt-1">
+            {updateCount}
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-border/50 bg-card/40 p-4">
+          <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+            Deletions
+          </p>
+          <p className="text-2xl font-bold tracking-tight text-rose-500 mt-1">
+            {deleteCount}
+          </p>
+        </div>
+      </div>
+
+      {/* Main Logs Card */}
+      <Card className="rounded-2xl border border-border/60 bg-card/40 shadow-sm">
+        <CardHeader className="p-5 sm:p-6 pb-4 border-b border-border/40">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <CardTitle className="text-lg font-semibold text-foreground">
+                Audit Timeline
+              </CardTitle>
+              <CardDescription className="text-xs text-muted-foreground mt-1">
+                Showing {filteredLogs.length} of {logs.length} events
+              </CardDescription>
+            </div>
+
+            <Button 
+              variant="outline" 
+              size="sm"
+              className="h-9 text-xs"
+              onClick={() => setShowExportDialog(true)}
+            >
+              <Download className="h-3.5 w-3.5 mr-1.5 opacity-70" />
+              Export Logs
+            </Button>
           </div>
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={() => setShowExportDialog(true)}
-          >
-            <Download className="h-4 w-4 mr-2" />
-            Export Logs
-          </Button>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="flex flex-col md:flex-row gap-4">
-              <div className="relative flex-1">
-                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search logs..."
-                  className="pl-8"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
-              
-              <Select 
-                value={logTypeFilter} 
-                onValueChange={setLogTypeFilter}
-              >
-                <SelectTrigger className="w-full md:w-[180px]">
-                  <SelectValue placeholder="Log Type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  <SelectItem value="CREATE">Create</SelectItem>
-                  <SelectItem value="UPDATE">Update</SelectItem>
-                  <SelectItem value="DELETE">Delete</SelectItem>
-                </SelectContent>
-              </Select>
-              
-              <Select 
-                value={logTargetFilter} 
-                onValueChange={setLogTargetFilter}
-              >
-                <SelectTrigger className="w-full md:w-[180px]">
-                  <SelectValue placeholder="Target" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Targets</SelectItem>
-                  <SelectItem value="EVENT">Event</SelectItem>
-                  <SelectItem value="REGISTRATION">Registration</SelectItem>
-                </SelectContent>
-              </Select>
+
+          {/* Filter & Search Toolbar */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3">
+            <div className="relative sm:col-span-1">
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search user, ID, or changes..."
+                className="pl-9 h-9 text-xs bg-muted/30 border-border/60"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-3 top-2.5 text-muted-foreground hover:text-foreground text-xs"
+                >
+                  Clear
+                </button>
+              )}
             </div>
             
-            <LogsList logs={filteredLogs} />
+            <Select 
+              value={logTypeFilter} 
+              onValueChange={setLogTypeFilter}
+            >
+              <SelectTrigger className="h-9 text-xs bg-muted/30 border-border/60">
+                <SelectValue placeholder="Action Type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Actions</SelectItem>
+                <SelectItem value="CREATE">Create</SelectItem>
+                <SelectItem value="UPDATE">Update</SelectItem>
+                <SelectItem value="DELETE">Delete</SelectItem>
+              </SelectContent>
+            </Select>
+            
+            <Select 
+              value={logTargetFilter} 
+              onValueChange={setLogTargetFilter}
+            >
+              <SelectTrigger className="h-9 text-xs bg-muted/30 border-border/60">
+                <SelectValue placeholder="Target" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Targets</SelectItem>
+                <SelectItem value="EVENT">Event</SelectItem>
+                <SelectItem value="REGISTRATION">Registration</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
+        </CardHeader>
+
+        <CardContent className="p-4 sm:p-6">
+          <LogsList logs={filteredLogs} />
         </CardContent>
       </Card>
 
@@ -140,6 +191,6 @@ export function LogsManagement({ eventId, guildId, event, logs }: LogsManagement
         eventName={event.name}
         logs={filteredLogs}
       />
-    </>
+    </div>
   );
 }

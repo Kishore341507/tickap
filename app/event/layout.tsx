@@ -20,12 +20,11 @@ export default function EventLayout({
 }) {
   return (
     <AuthProvider>
-      <div className="grid min-h-screen w-full lg:grid-cols-[240px_1fr]">
-        <EventSideBar></EventSideBar>
-
-        <EventTopNav>
-          <main className="flex flex-col gap-4 p-4 lg:gap-6">{children}</main>
-        </EventTopNav>
+      <div className="flex min-h-screen w-full bg-background">
+        <EventSideBar />
+        <div className="flex flex-1 flex-col min-w-0">
+          <EventTopNav>{children}</EventTopNav>
+        </div>
       </div>
     </AuthProvider>
   );

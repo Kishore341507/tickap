@@ -6,6 +6,7 @@ import GuildCard from '../_components/guild-card';
 import Link from 'next/link';
 import { botInviteUrl, getValidAccessToken } from '@/lib/discord';
 import { Guild } from '@/types';
+import { SignInCard } from '@/components/auth';
 
 export default async function Servers() {
 
@@ -82,7 +83,17 @@ export default async function Servers() {
   toAddGuilds.sort((a: any, b: any) => b.approximate_member_count - a.approximate_member_count);
 
   return (
-    <div>
+    <div className="space-y-6">
+      {!session && (
+        <SignInCard
+          variant="banner"
+          title="Sign in to Manage Your Servers"
+          description="Connect your Discord account to view servers you manage, configure events, and customize forms."
+          callbackUrl="/event/server"
+          className="mb-6"
+        />
+      )}
+
       { managableGuilds.length > 0 && <h2 className="scroll-m-20 border-b pb-2 text-3xl font-semibold tracking-tight first:mt-0">Manage Server</h2> }
       { managableGuilds.length > 0 &&
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-8 my-4 mx-3">

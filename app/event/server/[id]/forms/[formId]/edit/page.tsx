@@ -2,23 +2,45 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Trash2, GripVertical, ArrowLeft, Loader2, Eye } from "lucide-react";
+import { 
+  Plus, 
+  Trash2, 
+  GripVertical, 
+  ArrowLeft, 
+  ArrowRight, 
+  ArrowUp,
+  ArrowDown,
+  Eye, 
+  FileText, 
+  HelpCircle, 
+  Sparkles, 
+  Hash, 
+  Clock, 
+  Settings2, 
+  AlertCircle,
+  ChevronRight,
+  ChevronLeft,
+  Check, 
+  ChevronsUpDown, 
+  Loader2 
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { QuestionType } from "@prisma/client";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
-import { Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface Question {
   id: string;
@@ -29,8 +51,8 @@ interface Question {
   required: boolean;
   options: { id?: string; text: string }[];
   order: number;
-  min?: number;
-  max?: number;
+  min?: number | null;
+  max?: number | null;
 }
 
 interface FormData {
@@ -46,6 +68,19 @@ interface FormData {
   reject_response: string;
 }
 
+const QUESTION_TYPES: { type: QuestionType; label: string; desc: string }[] = [
+  { type: QuestionType.SHORT_TEXT, label: "Short Text", desc: "Single line text input (up to 4,000 chars)" },
+  { type: QuestionType.PARAGRAPH, label: "Paragraph", desc: "Multi-line detailed text input" },
+  { type: QuestionType.MULTIPLE_CHOICE, label: "Single Select (Radio)", desc: "Choose one option from a list" },
+  { type: QuestionType.CHECKBOXES, label: "Multiple Select (Checkboxes)", desc: "Select multiple options" },
+  { type: QuestionType.CHECKBOX, label: "Single Checkbox", desc: "Binary acknowledgment or agreement" },
+  { type: QuestionType.DROPDOWN, label: "Dropdown", desc: "Compact single choice select menu" },
+  { type: QuestionType.DATE, label: "Date Picker", desc: "Calendar date selector" },
+  { type: QuestionType.TIME, label: "Time Picker", desc: "Clock time selector" },
+  { type: QuestionType.NUMBER, label: "Numeric Value", desc: "Constrained numeric input" },
+  { type: QuestionType.USER, label: "Discord User Selection", desc: "Mention Discord server members" },
+];
+
 export default async function EditFormPage({ params }: { params: Promise<{ id: string; formId: string }> }) {
   const { id, formId } = await params;
   
@@ -55,12 +90,12 @@ export default async function EditFormPage({ params }: { params: Promise<{ id: s
 function EditFormClient({ guildId, formId }: { guildId: string; formId: string }) {
   const router = useRouter();
   const { toast } = useToast();
+  const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [channels, setChannels] = useState<{ id: string; name: string; position: number }[]>([]);
   const [isLoadingChannels, setIsLoadingChannels] = useState(false);
   const [channelOpen, setChannelOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState("edit");
   
   const [formData, setFormData] = useState<FormData>({
     title: "",
@@ -76,7 +111,7 @@ function EditFormClient({ guildId, formId }: { guildId: string; formId: string }
   });
   
   const [questions, setQuestions] = useState<Question[]>([]);
-  const [currentOption, setCurrentOption] = useState("");
+  const [optionDrafts, setOptionDrafts] = useState<Record<string, string>>({});
 
   useEffect(() => {
     fetchForm();
@@ -85,6 +120,7 @@ function EditFormClient({ guildId, formId }: { guildId: string; formId: string }
 
   const fetchForm = async () => {
     try {
+      setIsLoading(true);
       const response = await fetch(`/api/forms/${formId}`);
       if (!response.ok) throw new Error("Failed to fetch form");
       
@@ -107,9 +143,9 @@ function EditFormClient({ guildId, formId }: { guildId: string; formId: string }
       }
 
       setFormData({
-        title: data.title,
+        title: data.title || "",
         description: data.description || "",
-        questions: data.questions,
+        questions: data.questions || [],
         channel_id: data.channel_id ? data.channel_id.toString() : "",
         maxResponsesPerUser: data.maxResponsesPerUser ?? 1,
         submissionCooldown: cooldown,
@@ -119,15 +155,18 @@ function EditFormClient({ guildId, formId }: { guildId: string; formId: string }
         reject_response: data.reject_response || "",
       });
       
-      setQuestions(data.questions.map((q: any) => ({
+      setQuestions((data.questions || []).map((q: any) => ({
         id: q.id,
-        text: q.text,
+        text: q.text || "",
         description: q.description || "",
         placeholder: q.placeholder || "",
         type: q.type,
-        required: q.required,
-        options: q.options.map((o: any) => ({ id: o.id, text: o.text })),
-        order: q.order,
+        required: q.required || false,
+        options: (q.options || []).map((o: any) => ({ 
+          id: o.id, 
+          text: typeof o === "string" ? o : o.text 
+        })),
+        order: q.order ?? 0,
         min: q.min,
         max: q.max,
       })));
@@ -146,7 +185,6 @@ function EditFormClient({ guildId, formId }: { guildId: string; formId: string }
         throw new Error('Failed to fetch channels');
       }
       const channelsData = await channelsResponse.json();
-      // Filter for text channels and sort by position
       const textChannels = channelsData
         .filter((channel: any) => channel.type === 0)
         .sort((a: any, b: any) => a.position - b.position);
@@ -177,6 +215,8 @@ function EditFormClient({ guildId, formId }: { guildId: string; formId: string }
       required: false,
       options: [],
       order: questions.length,
+      min: null,
+      max: null,
     };
     setQuestions([...questions, newQuestion]);
   };
@@ -189,18 +229,17 @@ function EditFormClient({ guildId, formId }: { guildId: string; formId: string }
       
       // Handle defaults when switching types
       if (field === "type") {
-          const isSelectOrUser = ["MULTIPLE_CHOICE", "CHECKBOXES", "USER"].includes(value as string);
-          if (isSelectOrUser) {
-              if (updated.min === undefined || updated.min === null) updated.min = 1;
-              if (updated.max === undefined || updated.max === null) updated.max = 1;
-          } else {
-               // clear mins/maxes when switching to non-constrained types
-               updated.min = undefined;
-               updated.max = undefined;
-          }
-          if (value === "CHECKBOX") {
-              updated.required = false;
-          }
+        const isSelectOrUser = value === QuestionType.MULTIPLE_CHOICE || value === QuestionType.CHECKBOXES || value === QuestionType.USER;
+        if (isSelectOrUser) {
+          if (updated.min === undefined || updated.min === null) updated.min = 1;
+          if (updated.max === undefined || updated.max === null) updated.max = 1;
+        } else {
+          updated.min = null;
+          updated.max = null;
+        }
+        if (value === QuestionType.CHECKBOX) {
+          updated.required = false;
+        }
       }
       return updated;
     }));
@@ -211,15 +250,20 @@ function EditFormClient({ guildId, formId }: { guildId: string; formId: string }
   };
 
   const addOption = (questionId: string) => {
-    if (!currentOption.trim()) return;
+    const draft = (optionDrafts[questionId] || "").trim();
+    if (!draft) return;
+    if (draft.length > 100) {
+      toast({ title: "Error", description: "Option text must be 100 characters or less", variant: "destructive" });
+      return;
+    }
     const question = questions.find(q => q.id === questionId);
     if (question) {
       const newOption = { 
         id: `new-${Math.random().toString(36).substring(7)}`, 
-        text: currentOption 
+        text: draft 
       };
       updateQuestion(questionId, "options", [...question.options, newOption]);
-      setCurrentOption("");
+      setOptionDrafts(prev => ({ ...prev, [questionId]: "" }));
     }
   };
 
@@ -241,29 +285,43 @@ function EditFormClient({ guildId, formId }: { guildId: string; formId: string }
     setQuestions(newQuestions);
   };
 
+  const needsOptions = (type: QuestionType) => {
+    return type === QuestionType.MULTIPLE_CHOICE || type === QuestionType.CHECKBOXES || type === QuestionType.DROPDOWN;
+  };
+
+  const getTypeLabel = (type: QuestionType) => {
+    const found = QUESTION_TYPES.find(t => t.type === type);
+    return found ? found.label : type;
+  };
+
   const handleSubmit = async () => {
     if (!formData.title.trim()) {
       toast({ title: "Error", description: "Please enter a form title", variant: "destructive" });
+      setStep(1);
       return;
     }
 
     if (formData.title.length > 200) {
       toast({ title: "Error", description: "Form title must be 200 characters or less", variant: "destructive" });
+      setStep(1);
       return;
     }
 
     if (formData.description.length > 1000) {
       toast({ title: "Error", description: "Form description must be 1000 characters or less", variant: "destructive" });
+      setStep(1);
       return;
     }
 
     if (questions.length === 0) {
       toast({ title: "Error", description: "Please add at least one question", variant: "destructive" });
+      setStep(2);
       return;
     }
 
     if (questions.length > 30) {
       toast({ title: "Error", description: "Maximum 30 questions allowed per form", variant: "destructive" });
+      setStep(2);
       return;
     }
 
@@ -273,70 +331,84 @@ function EditFormClient({ guildId, formId }: { guildId: string; formId: string }
       
       if (!q.text.trim()) {
         toast({ title: "Error", description: `Question ${i + 1} text is required`, variant: "destructive" });
+        setStep(2);
         return;
       }
 
       if (q.text.length > 45) {
         toast({ title: "Error", description: `Question ${i + 1} text must be 45 characters or less`, variant: "destructive" });
+        setStep(2);
         return;
       }
 
       if (q.description.length > 100) {
         toast({ title: "Error", description: `Question ${i + 1} description must be 100 characters or less`, variant: "destructive" });
+        setStep(2);
         return;
       }
 
       if (q.placeholder.length > 100) {
         toast({ title: "Error", description: `Question ${i + 1} placeholder must be 100 characters or less`, variant: "destructive" });
+        setStep(2);
         return;
       }
 
-      if (needsOptions(q.type) && q.options.length < 2) {
+      const needsOpts = needsOptions(q.type);
+      if (needsOpts && q.options.length < 2) {
         toast({ title: "Error", description: `Question ${i + 1} must have at least 2 options`, variant: "destructive" });
+        setStep(2);
         return;
       }
 
       // Options validation or User Selection validation
-      if (needsOptions(q.type) || q.type === QuestionType.USER) {
-          if (q.min !== undefined && q.min !== null) {
-              if (q.min < 0 || q.min > 25) {
-                  toast({ title: "Error", description: `Question ${i + 1} min selection must be between 0 and 25`, variant: "destructive" });
-                  return;
-              }
-              if (needsOptions(q.type) && q.min > q.options.length) {
-                   toast({ title: "Error", description: `Question ${i + 1} min selection cannot exceed number of options`, variant: "destructive" });
-                   return;
-              }
+      if (needsOpts || q.type === QuestionType.USER) {
+        if (q.min !== undefined && q.min !== null) {
+          if (q.min < 0 || q.min > 25) {
+            toast({ title: "Error", description: `Question ${i + 1} min selection must be between 0 and 25`, variant: "destructive" });
+            setStep(2);
+            return;
           }
-          if (q.max !== undefined && q.max !== null) {
-               if (q.max < 1 || q.max > 25) {
-                   toast({ title: "Error", description: `Question ${i + 1} max selection must be between 1 and 25`, variant: "destructive" });
-                   return;
-               }
-               if (needsOptions(q.type) && q.max > q.options.length) {
-                   toast({ title: "Error", description: `Question ${i + 1} max selection cannot exceed number of options`, variant: "destructive" });
-                   return;
-               }
+          if (needsOpts && q.min > q.options.length) {
+            toast({ title: "Error", description: `Question ${i + 1} min selection cannot exceed number of options`, variant: "destructive" });
+            setStep(2);
+            return;
           }
-          if (q.min !== undefined && q.min !== null && q.max !== undefined && q.max !== null && q.min > q.max) {
-              toast({ title: "Error", description: `Question ${i + 1}: min selection cannot be greater than max selection`, variant: "destructive" });
-              return;
+        }
+        if (q.max !== undefined && q.max !== null) {
+          if (q.max < 1 || q.max > 25) {
+            toast({ title: "Error", description: `Question ${i + 1} max selection must be between 1 and 25`, variant: "destructive" });
+            setStep(2);
+            return;
           }
+          if (needsOpts && q.max > q.options.length) {
+            toast({ title: "Error", description: `Question ${i + 1} max selection cannot exceed number of options`, variant: "destructive" });
+            setStep(2);
+            return;
+          }
+        }
+        if (q.min !== undefined && q.min !== null && q.max !== undefined && q.max !== null && q.min > q.max) {
+          toast({ title: "Error", description: `Question ${i + 1}: min selection cannot be greater than max selection`, variant: "destructive" });
+          setStep(2);
+          return;
+        }
       } else {
         // Text/Number validation
         if (q.min !== undefined && q.min !== null && q.min < 0) {
-            toast({ title: "Error", description: `Question ${i + 1} min value invalid`, variant: "destructive" });
-            return;
+          toast({ title: "Error", description: `Question ${i + 1} min value invalid`, variant: "destructive" });
+          setStep(2);
+          return;
         }
         if (q.type !== QuestionType.NUMBER) {
-             if (q.max !== undefined && q.max !== null && q.max > 4000) {
-                 toast({ title: "Error", description: `Question ${i + 1} max length cannot exceed 4000`, variant: "destructive" });
-                 return;
-             }
+          if (q.max !== undefined && q.max !== null && q.max > 4000) {
+            toast({ title: "Error", description: `Question ${i + 1} max length cannot exceed 4000`, variant: "destructive" });
+            setStep(2);
+            return;
+          }
         }
         if (q.min !== undefined && q.min !== null && q.max !== undefined && q.max !== null && q.min > q.max) {
-            toast({ title: "Error", description: `Question ${i + 1}: min value cannot be greater than max value`, variant: "destructive" });
-            return;
+          toast({ title: "Error", description: `Question ${i + 1}: min value cannot be greater than max value`, variant: "destructive" });
+          setStep(2);
+          return;
         }
       }
     }
@@ -392,104 +464,260 @@ function EditFormClient({ guildId, formId }: { guildId: string; formId: string }
     }
   };
 
-  const needsOptions = (type: QuestionType) => {
-    return [QuestionType.MULTIPLE_CHOICE, QuestionType.CHECKBOXES, QuestionType.DROPDOWN].includes(type as any);
-  };
-
   if (isLoading) {
     return (
-      <div className="container mx-auto py-8 flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin" />
+      <div className="container mx-auto py-8 px-4 max-w-4xl space-y-8 animate-pulse">
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-4 w-48 rounded" />
+          <Skeleton className="h-8 w-24 rounded-md" />
+        </div>
+        <div className="pb-6 border-b border-border/40 space-y-2">
+          <Skeleton className="h-8 w-56 rounded-lg" />
+          <Skeleton className="h-4 w-80 rounded" />
+        </div>
+        <Skeleton className="h-12 w-full rounded-2xl" />
+        <Card className="rounded-2xl border border-border/60 bg-card/40 shadow-sm">
+          <CardHeader className="p-6 border-b border-border/40 space-y-2">
+            <Skeleton className="h-5 w-40 rounded" />
+            <Skeleton className="h-3 w-64 rounded" />
+          </CardHeader>
+          <CardContent className="p-6 space-y-5">
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-24 rounded" />
+              <Skeleton className="h-10 w-full rounded-lg" />
+            </div>
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-24 rounded" />
+              <Skeleton className="h-24 w-full rounded-lg" />
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto py-8 max-w-4xl">
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Edit Form</h1>
-        <div className="flex gap-2">
+    <div className="container mx-auto py-8 px-4 max-w-4xl space-y-8">
+      {/* Breadcrumb Navigation */}
+      <div className="flex items-center justify-between text-xs text-muted-foreground">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <Link href="/event/server" className="hover:text-foreground transition-colors">
+            Events
+          </Link>
+          <ChevronRight className="h-3.5 w-3.5 opacity-50" />
+          <Link href={`/event/server/${guildId}`} className="hover:text-foreground transition-colors font-mono">
+            {guildId.length > 12 ? `${guildId.slice(0, 10)}...` : guildId}
+          </Link>
+          <ChevronRight className="h-3.5 w-3.5 opacity-50" />
+          <span className="text-foreground font-medium">Edit Form</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="text-[11px] font-semibold tracking-wide border-border/60 bg-muted/30">
+            Form Editor
+          </Badge>
+          <Badge variant="secondary" className="text-[11px] font-mono">
+            {questions.length}/30 Qs
+          </Badge>
+        </div>
+      </div>
+
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-border/40">
+        <div className="flex items-center gap-3">
           <Button
-            variant={activeTab === "edit" ? "default" : "outline"}
-            onClick={() => setActiveTab("edit")}
-            size="sm"
+            variant="ghost"
+            size="icon"
+            onClick={() => router.push(`/event/server/${guildId}`)}
+            className="rounded-xl border border-border/40 hover:bg-muted/50 h-9 w-9 shrink-0"
           >
-            Edit
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
+              Edit Form
+              <Sparkles className="h-4 w-4 text-primary" />
+            </h1>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Modify form fields, configure delivery channels, and adjust participant settings.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 self-end sm:self-auto">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => router.push(`/event/server/${guildId}`)}
+            className="rounded-xl border-border/60 text-xs font-medium"
+          >
+            Cancel
           </Button>
           <Button
-            variant={activeTab === "preview" ? "default" : "outline"}
-            onClick={() => setActiveTab("preview")}
+            type="button"
             size="sm"
+            onClick={handleSubmit}
+            disabled={isSubmitting}
+            className="rounded-xl text-xs font-semibold shadow-sm"
           >
-            <Eye className="mr-2 h-4 w-4" />
-            Preview
+            {isSubmitting ? (
+              <>
+                <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              <>
+                <Check className="mr-1.5 h-3.5 w-3.5" />
+                Save Changes
+              </>
+            )}
           </Button>
         </div>
       </div>
 
-      {activeTab === "edit" ? (
-        <>
-          <Card className="mb-4">
-            <CardHeader>
-              <CardTitle>Form Details</CardTitle>
+      {/* Visual Stepper */}
+      <div className="grid grid-cols-3 gap-3 p-1.5 rounded-2xl bg-muted/40 border border-border/60">
+        {[
+          { num: 1, label: "Form Details", desc: "Configuration & delivery", icon: FileText },
+          { num: 2, label: `Questions (${questions.length})`, desc: "Fields & validation", icon: HelpCircle },
+          { num: 3, label: "Live Preview", desc: "Participant view", icon: Eye },
+        ].map((s) => {
+          const Icon = s.icon;
+          const isActive = step === s.num;
+          const isDone = step > s.num;
+          return (
+            <button
+              key={s.num}
+              type="button"
+              onClick={() => setStep(s.num)}
+              className={cn(
+                "flex items-center gap-3 p-3 rounded-xl transition-all duration-200 text-left",
+                isActive
+                  ? "bg-background text-foreground shadow-sm border border-border/60 font-semibold"
+                  : isDone
+                  ? "text-muted-foreground hover:bg-background/60 hover:text-foreground"
+                  : "text-muted-foreground/60 hover:bg-background/40 hover:text-muted-foreground"
+              )}
+            >
+              <div
+                className={cn(
+                  "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-xs font-bold transition-colors",
+                  isActive
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : isDone
+                    ? "bg-primary/20 text-primary border border-primary/30"
+                    : "bg-muted/70 text-muted-foreground border border-border/40"
+                )}
+              >
+                {isDone ? <Check className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
+              </div>
+              <div className="hidden sm:block min-w-0 flex-1">
+                <p className="text-xs font-semibold truncate leading-tight">{s.label}</p>
+                <p className="text-[11px] text-muted-foreground truncate leading-tight mt-0.5">{s.desc}</p>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* STEP 1: FORM DETAILS */}
+      {step === 1 && (
+        <div className="space-y-6">
+          {/* Main Info Card */}
+          <Card className="rounded-2xl border border-border/60 bg-card/40 shadow-sm backdrop-blur-sm">
+            <CardHeader className="p-6 border-b border-border/40">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                  <FileText className="h-4 w-4" />
+                </div>
+                <div>
+                  <CardTitle className="text-base font-semibold">General Information</CardTitle>
+                  <CardDescription className="text-xs">
+                    Define the form title, description, limits, and target Discord channel.
+                  </CardDescription>
+                </div>
+              </div>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="title">Form Title *</Label>
+            <CardContent className="p-6 space-y-5">
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="title" className="text-xs font-semibold">
+                    Form Title <span className="text-destructive">*</span>
+                  </Label>
+                  <span className="text-[11px] text-muted-foreground">
+                    {formData.title.length}/200
+                  </span>
+                </div>
                 <Input
                   id="title"
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  placeholder="Enter form title"
+                  placeholder="e.g. Staff Application, Event Feedback, Clan Registration"
                   maxLength={200}
+                  className="bg-muted/20 border-border/60 h-10 text-sm"
                 />
-                <p className="text-xs text-muted-foreground mt-1">
-                  {formData.title.length}/200 characters
-                </p>
               </div>
-              <div>
-                <Label htmlFor="description">Description</Label>
+
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="description" className="text-xs font-semibold">
+                    Description (Optional)
+                  </Label>
+                  <span className="text-[11px] text-muted-foreground">
+                    {formData.description.length}/1000
+                  </span>
+                </div>
                 <Textarea
                   id="description"
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Enter form description (optional)"
-                  rows={4}
+                  placeholder="Provide context, instructions, or deadlines for this form..."
+                  rows={3}
                   maxLength={1000}
+                  className="bg-muted/20 border-border/60 text-sm resize-none"
                 />
-                <p className="text-xs text-muted-foreground mt-1">
-                  {formData.description.length}/1000 characters
-                </p>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="maxResponses">Max Submissions per User</Label>
+              {/* Limits and Timing */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="maxResponses" className="text-xs font-semibold flex items-center gap-1.5">
+                    <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                    Max Submissions Per User
+                  </Label>
                   <Input 
                     id="maxResponses"
                     type="number" 
                     min="0"
                     value={formData.maxResponsesPerUser}
-                    onChange={(e) => setFormData({...formData, maxResponsesPerUser: parseInt(e.target.value) || 0})}
+                    onChange={(e) => setFormData({ ...formData, maxResponsesPerUser: parseInt(e.target.value) || 0 })}
+                    className="bg-muted/20 border-border/60 h-10 text-sm"
                   />
-                  <p className="text-xs text-muted-foreground">Set to 0 for unlimited submissions.</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    Use 0 for unlimited responses per participant. Default is 1.
+                  </p>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="cooldown">Submission Cooldown</Label>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="cooldown" className="text-xs font-semibold flex items-center gap-1.5">
+                    <Settings2 className="h-3.5 w-3.5 text-muted-foreground" />
+                    Submission Cooldown
+                  </Label>
                   <div className="flex gap-2">
                     <Input 
                       id="cooldown"
                       type="number" 
                       min="0"
                       value={formData.submissionCooldown}
-                      onChange={(e) => setFormData({...formData, submissionCooldown: parseInt(e.target.value) || 0})}
-                      placeholder="No cooldown"
+                      onChange={(e) => setFormData({ ...formData, submissionCooldown: parseInt(e.target.value) || 0 })}
+                      placeholder="0"
+                      className="bg-muted/20 border-border/60 h-10 text-sm"
                     />
                     <Select 
                       value={formData.submissionCooldownUnit} 
-                      onValueChange={(value) => setFormData({...formData, submissionCooldownUnit: value})}
+                      onValueChange={(value) => setFormData({ ...formData, submissionCooldownUnit: value })}
                     >
-                      <SelectTrigger className="w-[110px]">
+                      <SelectTrigger className="w-[120px] bg-muted/20 border-border/60 h-10 text-xs">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -500,50 +728,67 @@ function EditFormClient({ guildId, formId }: { guildId: string; formId: string }
                       </SelectContent>
                     </Select>
                   </div>
-                  <p className="text-xs text-muted-foreground">Wait time between submissions.</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    Enforces waiting period between subsequent submissions.
+                  </p>
                 </div>
               </div>
 
-              <div>
-                <Label htmlFor="channel">Discord Channel (Optional)</Label>
+              {/* Discord Delivery Channel Picker */}
+              <div className="space-y-1.5 pt-2">
+                <Label htmlFor="channel" className="text-xs font-semibold flex items-center gap-1.5">
+                  <Hash className="h-3.5 w-3.5 text-muted-foreground" />
+                  Discord Notification Channel (Optional)
+                </Label>
                 <Popover open={channelOpen} onOpenChange={setChannelOpen}>
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
                       role="combobox"
                       aria-expanded={channelOpen}
-                      className="w-full justify-between"
+                      className="w-full justify-between bg-muted/20 border-border/60 h-10 text-sm font-normal"
                       disabled={isLoadingChannels}
                     >
                       {isLoadingChannels ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <span>Loading channels...</span>
+                        </div>
                       ) : formData.channel_id ? (
-                        channels.find((channel) => channel.id === formData.channel_id)?.name || "Select a channel"
+                        <div className="flex items-center gap-2">
+                          <Hash className="h-4 w-4 text-primary" />
+                          <span className="font-medium text-foreground">
+                            {channels.find((channel) => channel.id === formData.channel_id)?.name || formData.channel_id}
+                          </span>
+                        </div>
                       ) : (
-                        "Select a channel"
+                        <span className="text-muted-foreground">Select a text channel</span>
                       )}
                       <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-full p-0">
-                    <Command className="max-h-[300px] overflow-y-auto">
-                      <CommandInput placeholder="Search channels..." />
-                      <CommandEmpty>No channels found.</CommandEmpty>
-                      <CommandGroup className="overflow-y-auto">
+                  <PopoverContent className="w-[380px] p-0 rounded-xl shadow-lg border-border/60">
+                    <Command className="max-h-[300px]">
+                      <CommandInput placeholder="Search Discord channels..." className="text-xs" />
+                      <CommandEmpty className="py-4 text-center text-xs text-muted-foreground">
+                        No text channels found.
+                      </CommandEmpty>
+                      <CommandGroup className="overflow-y-auto max-h-[220px]">
                         <CommandItem
                           value="none"
                           onSelect={() => {
                             setFormData({ ...formData, channel_id: "" });
                             setChannelOpen(false);
                           }}
+                          className="text-xs cursor-pointer"
                         >
                           <Check
                             className={cn(
-                              "mr-2 h-4 w-4",
-                              formData.channel_id === "" ? "opacity-100" : "opacity-0"
+                              "mr-2 h-3.5 w-3.5",
+                              formData.channel_id === "" ? "opacity-100 text-primary" : "opacity-0"
                             )}
                           />
-                          None
+                          None (Do not link channel)
                         </CommandItem>
                         {channels.map((channel) => (
                           <CommandItem
@@ -553,417 +798,684 @@ function EditFormClient({ guildId, formId }: { guildId: string; formId: string }
                               setFormData({ ...formData, channel_id: channel.id });
                               setChannelOpen(false);
                             }}
+                            className="text-xs cursor-pointer"
                           >
                             <Check
                               className={cn(
-                                "mr-2 h-4 w-4",
-                                formData.channel_id === channel.id ? "opacity-100" : "opacity-0"
+                                "mr-2 h-3.5 w-3.5",
+                                formData.channel_id === channel.id ? "opacity-100 text-primary" : "opacity-0"
                               )}
                             />
-                            # {channel.name}
+                            <Hash className="mr-1.5 h-3 w-3 text-muted-foreground" />
+                            {channel.name}
                           </CommandItem>
                         ))}
                       </CommandGroup>
                     </Command>
                   </PopoverContent>
                 </Popover>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Select a text channel to associate this form with (optional)
+                <p className="text-[11px] text-muted-foreground">
+                  Submissions and notifications can be routed directly to this Discord text channel.
                 </p>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="mb-4">
-            <CardHeader>
-              <CardTitle>Response Settings</CardTitle>
+          {/* Response Settings Card */}
+          <Card className="rounded-2xl border border-border/60 bg-card/40 shadow-sm backdrop-blur-sm">
+            <CardHeader className="p-6 border-b border-border/40">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                  <Settings2 className="h-4 w-4" />
+                </div>
+                <div>
+                  <CardTitle className="text-base font-semibold">Response Automation</CardTitle>
+                  <CardDescription className="text-xs">
+                    Customize messages sent to respondents upon approval or rejection.
+                  </CardDescription>
+                </div>
+              </div>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center space-x-2">
+            <CardContent className="p-6 space-y-5">
+              <div className="flex items-center justify-between rounded-xl border border-border/60 p-4 bg-muted/10">
+                <div className="space-y-0.5 pr-4">
+                  <Label htmlFor="custom_response" className="text-xs font-semibold cursor-pointer">
+                    Enable Custom Response Dialog
+                  </Label>
+                  <p className="text-[11px] text-muted-foreground">
+                    When reviewing a submission, prompt administrators to personalize the response before sending.
+                  </p>
+                </div>
                 <Switch 
                   id="custom_response" 
                   checked={formData.custom_response}
-                  onCheckedChange={(checked: boolean) => setFormData({...formData, custom_response: checked})}
+                  onCheckedChange={(checked: boolean) => setFormData({ ...formData, custom_response: checked })}
                 />
-                <div>
-                  <Label htmlFor="custom_response">Enable Custom Response Dialog</Label>
-                  <p className="text-sm text-muted-foreground">
-                    If enabled, you will be prompted to edit the response message before sending.
-                  </p>
-                </div>
               </div>
-              
-              <div className="grid gap-4 mt-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="accept_response">Default Acceptance Message</Label>
-                    <Textarea 
-                      id="accept_response"
-                      value={formData.accept_response} 
-                      onChange={(e) => setFormData({...formData, accept_response: e.target.value})}
-                      placeholder="Message sent when response is accepted..."
-                      rows={3}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="reject_response">Default Rejection Message</Label>
-                    <Textarea 
-                      id="reject_response"
-                      value={formData.reject_response} 
-                      onChange={(e) => setFormData({...formData, reject_response: e.target.value})}
-                      placeholder="Message sent when response is rejected..."
-                      rows={3}
-                    />
-                  </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="accept_response" className="text-xs font-semibold text-emerald-500">
+                    Default Acceptance Message
+                  </Label>
+                  <Textarea 
+                    id="accept_response"
+                    value={formData.accept_response} 
+                    onChange={(e) => setFormData({ ...formData, accept_response: e.target.value })}
+                    placeholder="Congratulations! Your submission has been approved..."
+                    rows={3}
+                    className="bg-muted/20 border-border/60 text-xs resize-none"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="reject_response" className="text-xs font-semibold text-destructive">
+                    Default Rejection Message
+                  </Label>
+                  <Textarea 
+                    id="reject_response"
+                    value={formData.reject_response} 
+                    onChange={(e) => setFormData({ ...formData, reject_response: e.target.value })}
+                    placeholder="Thank you for your interest. Unfortunately, your submission was declined..."
+                    rows={3}
+                    className="bg-muted/20 border-border/60 text-xs resize-none"
+                  />
+                </div>
               </div>
             </CardContent>
           </Card>
-
-      <div className="space-y-4">
-        <div className="flex justify-between items-center mb-4">
-          <p className="text-sm text-muted-foreground">
-            {questions.length}/30 questions
-          </p>
         </div>
-        {questions.map((question, index) => (
-          <Card key={question.id}>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <GripVertical className="h-5 w-5 text-muted-foreground cursor-move" />
-                  <CardTitle className="text-lg">Question {index + 1}</CardTitle>
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    onClick={() => moveQuestion(index, "up")}
-                    disabled={index === 0}
-                  >
-                    ↑
-                  </Button>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    onClick={() => moveQuestion(index, "down")}
-                    disabled={index === questions.length - 1}
-                  >
-                    ↓
-                  </Button>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    onClick={() => deleteQuestion(question.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label>Question Text *</Label>
-                <Input
-                  value={question.text}
-                  onChange={(e) => updateQuestion(question.id, "text", e.target.value)}
-                  placeholder="Enter your question"
-                  maxLength={45}
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  {question.text.length}/45 characters
-                </p>
-              </div>
-              
-              <div>
-                <Label>Description (Optional)</Label>
-                <Textarea
-                  value={question.description}
-                  onChange={(e) => updateQuestion(question.id, "description", e.target.value)}
-                  placeholder="Add a description or help text for this question"
-                  rows={2}
-                  maxLength={100}
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  {question.description.length}/100 characters
-                </p>
-              </div>
-              
-              <div>
-                <Label>Placeholder (Optional)</Label>
-                <Input
-                  value={question.placeholder}
-                  onChange={(e) => updateQuestion(question.id, "placeholder", e.target.value)}
-                  placeholder="Enter placeholder text for the answer field"
-                  maxLength={100}
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  {question.placeholder.length}/100 characters
-                </p>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Question Type</Label>
-                  <Select
-                    value={question.type}
-                    onValueChange={(value) => updateQuestion(question.id, "type", value as QuestionType)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={QuestionType.SHORT_TEXT}>Short Text</SelectItem>
-                      <SelectItem value={QuestionType.PARAGRAPH}>Paragraph</SelectItem>
-                      <SelectItem value={QuestionType.MULTIPLE_CHOICE}>Single select</SelectItem>
-                      <SelectItem value={QuestionType.CHECKBOXES}>Checkboxes</SelectItem>
-                      <SelectItem value={QuestionType.CHECKBOX}>Checkbox</SelectItem>
-                      <SelectItem value={QuestionType.DROPDOWN}>Dropdown</SelectItem>
-                      <SelectItem value={QuestionType.DATE}>Date</SelectItem>
-                      <SelectItem value={QuestionType.TIME}>Time</SelectItem>
-                      <SelectItem value={QuestionType.NUMBER}>Number</SelectItem>
-                      <SelectItem value={QuestionType.USER}>User Selection</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="flex items-center gap-2 pt-8">
-                  <Switch
-                    checked={question.required}
-                    disabled={question.type === QuestionType.CHECKBOX}
-                    onCheckedChange={(checked) => updateQuestion(question.id, "required", checked)}
-                  />
-                  <Label>Required</Label>
-                </div>
-              </div>
+      )}
 
-              {/* Min/Max Settings */}
-              <div className="grid grid-cols-2 gap-4">
-                 {(question.type === QuestionType.SHORT_TEXT || question.type === QuestionType.PARAGRAPH || question.type === QuestionType.NUMBER) && (
-                   <>
-                      <div>
-                        <Label>{question.type === QuestionType.NUMBER ? "Min Value" : "Min Length"}</Label>
+      {/* STEP 2: QUESTION BUILDER */}
+      {step === 2 && (
+        <div className="space-y-6">
+          {/* Header Action Bar for Questions */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl bg-card/40 border border-border/60 shadow-sm backdrop-blur-sm">
+            <div>
+              <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <HelpCircle className="h-4 w-4 text-primary" />
+                Form Questions
+              </h2>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Construct your form with inputs, dropdowns, and choices. Reorder with the arrow buttons.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="text-xs font-mono border-border/60 bg-muted/20">
+                {questions.length} / 30 Questions
+              </Badge>
+              <Button
+                type="button"
+                size="sm"
+                onClick={addQuestion}
+                disabled={questions.length >= 30}
+                className="rounded-xl text-xs font-semibold shadow-sm"
+              >
+                <Plus className="mr-1.5 h-3.5 w-3.5" />
+                Add Question
+              </Button>
+            </div>
+          </div>
+
+          {/* Empty State */}
+          {questions.length === 0 && (
+            <div className="rounded-2xl border border-dashed border-border/70 p-12 text-center bg-muted/10 space-y-4">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                <HelpCircle className="h-6 w-6" />
+              </div>
+              <div className="space-y-1 max-w-sm mx-auto">
+                <h3 className="text-sm font-semibold text-foreground">No questions yet</h3>
+                <p className="text-xs text-muted-foreground">
+                  Your form requires at least one question. Click below to add your first question field.
+                </p>
+              </div>
+              <Button onClick={addQuestion} className="rounded-xl text-xs font-semibold">
+                <Plus className="mr-1.5 h-3.5 w-3.5" />
+                Add First Question
+              </Button>
+            </div>
+          )}
+
+          {/* Question Cards List */}
+          <div className="space-y-4">
+            {questions.map((question, index) => (
+              <Card 
+                key={question.id} 
+                className="rounded-2xl border border-border/60 bg-card/40 shadow-sm backdrop-blur-sm overflow-hidden transition-all duration-200"
+              >
+                {/* Question Header Strip */}
+                <div className="flex items-center justify-between p-4 border-b border-border/40 bg-muted/20">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <GripVertical className="h-4 w-4 text-muted-foreground/50 shrink-0" />
+                    <Badge variant="outline" className="text-xs font-bold px-2 py-0.5 rounded-md bg-muted/30">
+                      #{index + 1}
+                    </Badge>
+                    <Badge variant="secondary" className="text-xs font-medium px-2 py-0.5 rounded-md">
+                      {getTypeLabel(question.type)}
+                    </Badge>
+                    <span className="text-xs font-semibold text-foreground truncate max-w-[220px] sm:max-w-[340px]">
+                      {question.text || "Untitled Question"}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-1 shrink-0">
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-8 w-8 rounded-lg hover:bg-background/80"
+                      onClick={() => moveQuestion(index, "up")}
+                      disabled={index === 0}
+                      title="Move Up"
+                    >
+                      <ArrowUp className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-8 w-8 rounded-lg hover:bg-background/80"
+                      onClick={() => moveQuestion(index, "down")}
+                      disabled={index === questions.length - 1}
+                      title="Move Down"
+                    >
+                      <ArrowDown className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-8 w-8 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                      onClick={() => deleteQuestion(question.id)}
+                      title="Delete Question"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Question Config Body */}
+                <CardContent className="p-6 space-y-4">
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-xs font-semibold">
+                        Question Prompt <span className="text-destructive">*</span>
+                      </Label>
+                      <span className="text-[11px] text-muted-foreground">
+                        {question.text.length}/45
+                      </span>
+                    </div>
+                    <Input
+                      value={question.text}
+                      onChange={(e) => updateQuestion(question.id, "text", e.target.value)}
+                      placeholder="e.g. What is your Minecraft IGN?"
+                      maxLength={45}
+                      className="bg-muted/20 border-border/60 h-10 text-sm font-medium"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-xs font-semibold">Description / Subtitle (Optional)</Label>
+                        <span className="text-[11px] text-muted-foreground">
+                          {question.description.length}/100
+                        </span>
+                      </div>
+                      <Input
+                        value={question.description}
+                        onChange={(e) => updateQuestion(question.id, "description", e.target.value)}
+                        placeholder="Help text or clarifying details"
+                        maxLength={100}
+                        className="bg-muted/20 border-border/60 h-9 text-xs"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-xs font-semibold">Placeholder Text (Optional)</Label>
+                        <span className="text-[11px] text-muted-foreground">
+                          {question.placeholder.length}/100
+                        </span>
+                      </div>
+                      <Input
+                        value={question.placeholder}
+                        onChange={(e) => updateQuestion(question.id, "placeholder", e.target.value)}
+                        placeholder="Placeholder shown inside the input"
+                        maxLength={100}
+                        className="bg-muted/20 border-border/60 h-9 text-xs"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold">Question Type</Label>
+                      <Select
+                        value={question.type}
+                        onValueChange={(value) => updateQuestion(question.id, "type", value as QuestionType)}
+                      >
+                        <SelectTrigger className="bg-muted/20 border-border/60 h-9 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={QuestionType.SHORT_TEXT}>Short Text</SelectItem>
+                          <SelectItem value={QuestionType.PARAGRAPH}>Paragraph</SelectItem>
+                          <SelectItem value={QuestionType.MULTIPLE_CHOICE}>Single select (Radio)</SelectItem>
+                          <SelectItem value={QuestionType.CHECKBOXES}>Multiple select (Checkboxes)</SelectItem>
+                          <SelectItem value={QuestionType.CHECKBOX}>Single Checkbox (Agree / Yes)</SelectItem>
+                          <SelectItem value={QuestionType.DROPDOWN}>Dropdown</SelectItem>
+                          <SelectItem value={QuestionType.DATE}>Date</SelectItem>
+                          <SelectItem value={QuestionType.TIME}>Time</SelectItem>
+                          <SelectItem value={QuestionType.NUMBER}>Number</SelectItem>
+                          <SelectItem value={QuestionType.USER}>Discord User Selection</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="flex items-center justify-between rounded-xl border border-border/40 p-2.5 bg-muted/20 h-9 mt-auto">
+                      <Label className="text-xs font-medium cursor-pointer">Required Question</Label>
+                      <Switch
+                        checked={question.required}
+                        disabled={question.type === QuestionType.CHECKBOX}
+                        onCheckedChange={(checked) => {
+                          const newRequired = checked;
+                          let updates: any = { required: newRequired };
+                          if ((needsOptions(question.type) || question.type === QuestionType.USER) && 
+                              (question.min === undefined || question.min === null)) {
+                            updates.min = newRequired ? 1 : 0;
+                          }
+                          updateQuestion(question.id, "required", newRequired);
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Min/Max Settings */}
+                  {(question.type === QuestionType.SHORT_TEXT || question.type === QuestionType.PARAGRAPH || question.type === QuestionType.NUMBER) && (
+                    <div className="grid grid-cols-2 gap-4 pt-1">
+                      <div className="space-y-1">
+                        <Label className="text-xs font-semibold">{question.type === QuestionType.NUMBER ? "Min Value" : "Min Length"}</Label>
                         <Input 
                           type="number" 
                           value={question.min ?? ''} 
                           onChange={(e) => updateQuestion(question.id, "min", e.target.value ? parseInt(e.target.value) : null)}
                           placeholder={question.type === QuestionType.NUMBER ? "Optional" : "Optional (Max 4000)"}
+                          className="bg-muted/20 border-border/60 h-8 text-xs"
                         />
                       </div>
-                      <div>
-                        <Label>{question.type === QuestionType.NUMBER ? "Max Value" : "Max Length"}</Label>
+                      <div className="space-y-1">
+                        <Label className="text-xs font-semibold">{question.type === QuestionType.NUMBER ? "Max Value" : "Max Length"}</Label>
                         <Input 
                           type="number" 
                           value={question.max ?? ''} 
                           onChange={(e) => updateQuestion(question.id, "max", e.target.value ? parseInt(e.target.value) : null)}
                           placeholder={question.type === QuestionType.NUMBER ? "Optional" : "Optional (Max 4000)"}
+                          className="bg-muted/20 border-border/60 h-8 text-xs"
                         />
                       </div>
-                   </>
-                 )}
-                 
-                 {(needsOptions(question.type) || question.type === QuestionType.USER) && (
-                   <>
-                      <div>
-                        <Label>Min Selection</Label>
+                    </div>
+                  )}
+                  
+                  {(needsOptions(question.type) || question.type === QuestionType.USER) && (
+                    <div className="grid grid-cols-2 gap-4 pt-1">
+                      <div className="space-y-1">
+                        <Label className="text-xs font-semibold">Min Selection Count</Label>
                         <Input 
                           type="number" 
                           value={question.min ?? ''} 
                           onChange={(e) => updateQuestion(question.id, "min", e.target.value ? parseInt(e.target.value) : null)}
                           placeholder={question.required ? "Default 1" : "Default 0"}
                           max={25}
+                          className="bg-muted/20 border-border/60 h-8 text-xs"
                         />
                       </div>
-                      <div>
-                        <Label>Max Selection</Label>
+                      <div className="space-y-1">
+                        <Label className="text-xs font-semibold">Max Selection Count</Label>
                         <Input 
                           type="number" 
                           value={question.max ?? ''} 
                           onChange={(e) => updateQuestion(question.id, "max", e.target.value ? parseInt(e.target.value) : null)}
                           placeholder="Default 1 (Max 25)"
                           max={25}
+                          className="bg-muted/20 border-border/60 h-8 text-xs"
                         />
                       </div>
-                   </>
-                 )}
-              </div>
-
-              {needsOptions(question.type) && (
-                <div>
-                  <Label>Options</Label>
-                  <div className="space-y-2">
-                    {question.options.map((option, optIdx) => (
-                      <div key={optIdx} className="flex gap-2">
-                        <Input value={option.text} disabled />
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => removeOption(question.id, optIdx)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))}
-                    <div className="flex gap-2">
-                      <Input
-                        value={currentOption}
-                        onChange={(e) => setCurrentOption(e.target.value)}
-                        placeholder="Add an option"
-                        onKeyPress={(e) => {
-                          if (e.key === "Enter") {
-                            e.preventDefault();
-                            addOption(question.id);
-                          }
-                        }}
-                      />
-                      <Button onClick={() => addOption(question.id)}>
-                        <Plus className="h-4 w-4" />
-                      </Button>
                     </div>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        ))}
-        
-        <Button onClick={addQuestion} variant="outline" className="w-full">
-          <Plus className="mr-2 h-4 w-4" />
-          Add Question {questions.length >= 30 && "(Max 30 reached)"}
-        </Button>
-      </div>
+                  )}
 
-      <div className="flex justify-between mt-6">
-        <Button variant="outline" onClick={() => router.back()}>
-          <ArrowLeft className="mr-2 h-4 w-4" />
+                  {/* Options Builder */}
+                  {needsOptions(question.type) && (
+                    <div className="space-y-3 pt-2 border-t border-border/40">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-xs font-semibold">Configured Options ({question.options.length})</Label>
+                        {question.options.length < 2 && (
+                          <span className="text-[11px] text-amber-500 font-medium">
+                            At least 2 options required
+                          </span>
+                        )}
+                      </div>
+
+                      {question.options.length > 0 && (
+                        <div className="space-y-2">
+                          {question.options.map((option, optIdx) => (
+                            <div key={optIdx} className="flex items-center justify-between gap-2 p-2 rounded-xl bg-muted/20 border border-border/40 text-xs">
+                              <span className="font-semibold text-foreground px-1">{option.text}</span>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-6 w-6 text-muted-foreground hover:text-destructive shrink-0"
+                                onClick={() => removeOption(question.id, optIdx)}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="p-3 rounded-xl border border-dashed border-border/60 bg-muted/10 space-y-2.5">
+                        <Label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                          Add Option
+                        </Label>
+                        <div className="flex gap-2">
+                          <Input
+                            value={optionDrafts[question.id] || ""}
+                            onChange={(e) => setOptionDrafts({ ...optionDrafts, [question.id]: e.target.value })}
+                            placeholder="Enter option text..."
+                            maxLength={100}
+                            className="bg-muted/30 border-border/60 h-9 text-xs"
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                addOption(question.id);
+                              }
+                            }}
+                          />
+                          <Button 
+                            type="button" 
+                            size="sm" 
+                            onClick={() => addOption(question.id)}
+                            className="h-9 px-3 rounded-lg text-xs"
+                          >
+                            <Plus className="mr-1 h-3.5 w-3.5" />
+                            Add
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {questions.length > 0 && (
+            <Button 
+              type="button"
+              variant="outline" 
+              onClick={addQuestion} 
+              disabled={questions.length >= 30}
+              className="w-full rounded-2xl border-dashed border-border/60 py-6 text-xs font-semibold hover:bg-muted/20"
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Add Another Question ({questions.length}/30)
+            </Button>
+          )}
+        </div>
+      )}
+
+      {/* STEP 3: LIVE PREVIEW */}
+      {step === 3 && (
+        <div className="space-y-6">
+          {/* Preview Banner */}
+          <div className="flex items-center justify-between p-4 rounded-2xl bg-primary/10 border border-primary/20 text-xs">
+            <div className="flex items-center gap-2 text-foreground font-medium">
+              <Eye className="h-4 w-4 text-primary" />
+              Interactive Form Preview
+            </div>
+            <Badge variant="outline" className="bg-background/80 text-[11px] border-primary/30 text-primary">
+              Read-Only Participant Mode
+            </Badge>
+          </div>
+
+          {/* Form Container Replica */}
+          <div className="rounded-3xl border border-border/60 bg-card/60 backdrop-blur-md shadow-lg overflow-hidden">
+            {/* Header section */}
+            <div className="p-8 border-b border-border/40 bg-muted/20 space-y-3">
+              <Badge variant="secondary" className="text-[11px] font-semibold">
+                Discord Community Form
+              </Badge>
+              <h2 className="text-2xl font-bold tracking-tight text-foreground">
+                {formData.title || "Untitled Form"}
+              </h2>
+              {formData.description ? (
+                <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
+                  {formData.description}
+                </p>
+              ) : (
+                <p className="text-xs text-muted-foreground italic">
+                  No description provided.
+                </p>
+              )}
+
+              <div className="flex items-center gap-3 pt-2 text-[11px] text-muted-foreground flex-wrap">
+                <span className="flex items-center gap-1">
+                  <Clock className="h-3 w-3" />
+                  {formData.maxResponsesPerUser === 0 ? "Unlimited submissions" : `Max ${formData.maxResponsesPerUser} response per user`}
+                </span>
+                {formData.submissionCooldown > 0 && (
+                  <span className="flex items-center gap-1">
+                    <Settings2 className="h-3 w-3" />
+                    Cooldown: {formData.submissionCooldown} {formData.submissionCooldownUnit}
+                  </span>
+                )}
+                <span className="flex items-center gap-1">
+                  <HelpCircle className="h-3 w-3" />
+                  {questions.length} Question{questions.length === 1 ? "" : "s"}
+                </span>
+              </div>
+            </div>
+
+            {/* Questions Replica */}
+            <div className="p-8 space-y-6">
+              {questions.length === 0 ? (
+                <div className="py-8 text-center text-xs text-muted-foreground">
+                  No questions added yet. Go back to Step 2 to add questions.
+                </div>
+              ) : (
+                questions.map((question, index) => (
+                  <div key={question.id} className="p-5 rounded-2xl bg-muted/20 border border-border/40 space-y-3">
+                    <div>
+                      <Label className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                        <span className="text-muted-foreground">{index + 1}.</span>
+                        {question.text || "Untitled Question"}
+                        {question.required && <span className="text-destructive font-bold">*</span>}
+                      </Label>
+                      {question.description && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {question.description}
+                        </p>
+                      )}
+                    </div>
+
+                    {question.type === QuestionType.SHORT_TEXT && (
+                      <Input
+                        placeholder={question.placeholder || "Your answer"}
+                        disabled
+                        className="bg-muted/10 border-border/50 text-xs"
+                      />
+                    )}
+
+                    {question.type === QuestionType.PARAGRAPH && (
+                      <Textarea
+                        placeholder={question.placeholder || "Type your response here..."}
+                        rows={3}
+                        disabled
+                        className="bg-muted/10 border-border/50 text-xs resize-none"
+                      />
+                    )}
+
+                    {question.type === QuestionType.NUMBER && (
+                      <Input
+                        type="number"
+                        placeholder={question.placeholder || "Enter numeric value..."}
+                        disabled
+                        className="bg-muted/10 border-border/50 text-xs"
+                      />
+                    )}
+
+                    {question.type === QuestionType.DATE && (
+                      <Input type="date" disabled className="bg-muted/10 border-border/50 text-xs" />
+                    )}
+
+                    {question.type === QuestionType.TIME && (
+                      <Input type="time" disabled className="bg-muted/10 border-border/50 text-xs" />
+                    )}
+
+                    {question.type === QuestionType.MULTIPLE_CHOICE && (
+                      <RadioGroup disabled className="space-y-2 pt-1">
+                        {question.options.map((option, optIdx) => (
+                          <div key={optIdx} className="flex items-center space-x-2 p-2 rounded-xl bg-background/50 border border-border/30">
+                            <RadioGroupItem value={option.text} id={`preview-${question.id}-${optIdx}`} />
+                            <Label htmlFor={`preview-${question.id}-${optIdx}`} className="text-xs font-normal cursor-pointer">
+                              {option.text}
+                            </Label>
+                          </div>
+                        ))}
+                      </RadioGroup>
+                    )}
+
+                    {question.type === QuestionType.CHECKBOXES && (
+                      <div className="space-y-2 pt-1">
+                        {question.options.map((option, optIdx) => (
+                          <div key={optIdx} className="flex items-center space-x-2 p-2 rounded-xl bg-background/50 border border-border/30">
+                            <Checkbox id={`preview-cb-${question.id}-${optIdx}`} disabled />
+                            <Label htmlFor={`preview-cb-${question.id}-${optIdx}`} className="text-xs font-normal cursor-pointer">
+                              {option.text}
+                            </Label>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {question.type === QuestionType.CHECKBOX && (
+                      <div className="flex items-center space-x-2.5 p-3 rounded-xl bg-background/50 border border-border/30">
+                        <Checkbox id={`preview-single-${question.id}`} disabled />
+                        <Label htmlFor={`preview-single-${question.id}`} className="text-xs font-medium cursor-pointer">
+                          I agree and confirm the above statement
+                        </Label>
+                      </div>
+                    )}
+
+                    {question.type === QuestionType.DROPDOWN && (
+                      <Select disabled>
+                        <SelectTrigger className="bg-muted/10 border-border/50 text-xs">
+                          <SelectValue placeholder={question.placeholder || "Choose an option"} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {question.options.map((option, optIdx) => (
+                            <SelectItem key={optIdx} value={option.text}>
+                              {option.text}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+
+                    {question.type === QuestionType.USER && (
+                      <div className="flex items-center gap-2 p-2.5 rounded-xl bg-muted/10 border border-border/50 text-xs text-muted-foreground">
+                        <Hash className="h-4 w-4" />
+                        <span>Select Discord User / Member</span>
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
+
+              <div className="pt-4 border-t border-border/40">
+                <Button disabled className="w-full sm:w-auto text-xs font-semibold">
+                  Submit Response (Preview Mode)
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Sticky Bottom Navigation Footer */}
+      <div className="sticky bottom-4 z-20 flex items-center justify-between gap-4 p-4 rounded-2xl bg-card/90 backdrop-blur-md border border-border/60 shadow-lg">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => router.push(`/event/server/${guildId}`)}
+          className="rounded-xl border-border/60 text-xs font-medium"
+        >
           Cancel
         </Button>
-        
-        <Button onClick={handleSubmit} disabled={isSubmitting}>
-          {isSubmitting ? "Saving..." : "Save Changes"}
-        </Button>
-      </div>
-    </>
-      ) : (
-        // Preview Mode
-        <>
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle className="text-3xl">{formData.title}</CardTitle>
-              {formData.description && (
-                <CardDescription className="text-base">{formData.description}</CardDescription>
-              )}
-            </CardHeader>
-          </Card>
 
-          {questions.map((question, index) => (
-            <Card key={question.id} className="mb-4">
-              <CardContent className="pt-6">
-                <div className="space-y-4">
-                  <Label className="text-base">
-                    {index + 1}. {question.text}
-                    {question.required && <span className="text-red-500 ml-1">*</span>}
-                  </Label>
-                  {question.description && (
-                    <p className="text-sm text-muted-foreground mt-1">{question.description}</p>
-                  )}
-
-                  {question.type === QuestionType.SHORT_TEXT && (
-                    <Input
-                      placeholder={question.placeholder || "Your answer"}
-                      disabled
-                    />
-                  )}
-
-                  {question.type === QuestionType.PARAGRAPH && (
-                    <Textarea
-                      placeholder={question.placeholder || "Your answer"}
-                      rows={4}
-                      disabled
-                    />
-                  )}
-
-                  {question.type === QuestionType.NUMBER && (
-                    <Input
-                      type="number"
-                      placeholder={question.placeholder || "Your answer"}
-                      disabled
-                    />
-                  )}
-
-                  {question.type === QuestionType.DATE && (
-                    <Input type="date" disabled />
-                  )}
-
-                  {question.type === QuestionType.TIME && (
-                    <Input type="time" disabled />
-                  )}
-
-                  {question.type === QuestionType.MULTIPLE_CHOICE && (
-                    <RadioGroup disabled>
-                      {question.options.map((option) => (
-                        <div key={option.id} className="flex items-center space-x-2">
-                          <RadioGroupItem value={option.text} id={`preview-${question.id}-${option.id}`} />
-                          <Label htmlFor={`preview-${question.id}-${option.id}`} className="font-normal">
-                            {option.text}
-                          </Label>
-                        </div>
-                      ))}
-                    </RadioGroup>
-                  )}
-
-                  {question.type === QuestionType.CHECKBOXES && (
-                    <div className="space-y-2">
-                      {question.options.map((option) => (
-                        <div key={option.id} className="flex items-center space-x-2">
-                          <Checkbox
-                            id={`preview-${question.id}-${option.id}`}
-                            disabled
-                          />
-                          <Label htmlFor={`preview-${question.id}-${option.id}`} className="font-normal">
-                            {option.text}
-                          </Label>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {question.type === QuestionType.CHECKBOX && (
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`preview-${question.id}`}
-                        disabled
-                      />
-                      <Label htmlFor={`preview-${question.id}`} className="font-normal">
-                        Yes
-                      </Label>
-                    </div>
-                  )}
-
-                  {question.type === QuestionType.DROPDOWN && (
-                    <Select disabled>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select an option" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {question.options.map((option) => (
-                          <SelectItem key={option.id} value={option.text}>
-                            {option.text}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-
-          <div className="flex justify-end gap-4 mt-6">
-            <Button disabled>
-              Submit (Preview Only)
+        <div className="flex items-center gap-2">
+          {step > 1 && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setStep(step - 1)}
+              className="rounded-xl border-border/60 text-xs font-medium"
+            >
+              <ChevronLeft className="mr-1.5 h-4 w-4" />
+              Previous
             </Button>
-          </div>
-        </>
-      )}
+          )}
+
+          {step < 3 ? (
+            <Button
+              type="button"
+              onClick={() => setStep(step + 1)}
+              className="rounded-xl text-xs font-semibold"
+            >
+              Next Step
+              <ChevronRight className="ml-1.5 h-4 w-4" />
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              onClick={handleSubmit}
+              disabled={isSubmitting}
+              className="rounded-xl text-xs font-semibold shadow-sm"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving Changes...
+                </>
+              ) : (
+                <>
+                  <Check className="mr-1.5 h-4 w-4" />
+                  Save Changes
+                </>
+              )}
+            </Button>
+          )}
+
+          {step < 3 && (
+            <Button
+              type="button"
+              onClick={handleSubmit}
+              disabled={isSubmitting}
+              className="rounded-xl text-xs font-semibold shadow-sm ml-2 hidden sm:inline-flex"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving Changes...
+                </>
+              ) : (
+                <>
+                  <Check className="mr-1.5 h-4 w-4" />
+                  Save Changes
+                </>
+              )}
+            </Button>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

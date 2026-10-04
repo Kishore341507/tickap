@@ -1,30 +1,27 @@
 import { auth, signIn, signOut } from "@/auth";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogClose } from "@/components/ui/dialog";
-import { ModeToggle } from "@/components/ui/mode-toggle";
-import { Separator } from "@/components/ui/separator";
 import {
+  Sheet,
+  SheetClose,
   SheetContent,
   SheetHeader,
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
 import {
-  Banknote,
   CircleUser,
   FileText,
-  Folder,
-  HomeIcon,
   KeyRound,
   LifeBuoy,
   LogOut,
-  Mail,
   Menu,
   Server,
   Settings,
   SunMoon,
+  Calendar,
+  ShieldCheck,
+  Info,
 } from "lucide-react";
-import { useSession } from "next-auth/react";
 import Link from "next/link";
 import React from "react";
 import Image from "next/image";
@@ -33,19 +30,13 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuPortal,
   DropdownMenuSeparator,
   DropdownMenuSub,
-  DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ModeToggleSub } from "@/components/ui/mode-toggle-sub";
-import { env } from "process";
-import { List } from "postcss/lib/list";
-import { ScrollArea } from "@/components/ui/scroll-area";
-// import { redirect } from "next/navigation";
-import { revalidatePath } from 'next/cache';
+import { revalidatePath } from "next/cache";
 
 export default async function EventTopNav({
   children,
@@ -55,130 +46,238 @@ export default async function EventTopNav({
   const session = await auth();
 
   return (
-    <div className="flex flex-col">
-      <header className="flex h-14 lg:h-[55px] items-center gap-4 border-b px-3 border-secondary">
-        <Dialog>
-          <SheetTrigger className="min-[1024px]:hidden p-2 transition">
-            <Menu />
-            <Link href="/event">
-              <span className="sr-only">Home</span>
-            </Link>
-          </SheetTrigger>
-          <SheetContent side="left">
-            <SheetHeader>
-              <Link className="flex m-auto" href="/">
-                <Image src="/tickap_dark.svg" width={30} height={30} alt="Tickap : logo" />
-                <SheetTitle>TickAp</SheetTitle>
-              </Link>
-            </SheetHeader>
-            <div className="flex flex-col space-y-3 mt-[1rem]">
-              <DialogClose asChild>
-                <Link href="/event">
-                  <Button variant="outline" className="w-full">
-                    <HomeIcon className="mr-2 h-4 w-4" />
-                    Home
-                  </Button>
+    <div className="flex flex-col min-h-screen">
+      <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b border-border/40 bg-background/80 px-4 sm:px-6 backdrop-blur-md">
+        {/* Mobile Nav Trigger & Brand */}
+        <div className="flex items-center gap-3">
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="lg:hidden h-9 w-9 text-muted-foreground hover:text-foreground"
+                aria-label="Open mobile menu"
+              >
+                <Menu className="h-5 w-5" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-72 p-0 flex flex-col">
+              <SheetHeader className="p-4 border-b border-border/40 text-left">
+                <Link className="flex items-center gap-2.5" href="/event">
+                  <div className="relative flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 p-1">
+                    <Image
+                      src="/tickap_dark.svg"
+                      width={22}
+                      height={22}
+                      alt="Tickap Logo"
+                      className="dark:block hidden"
+                    />
+                    <Image
+                      src="/tickap_light.svg"
+                      width={22}
+                      height={22}
+                      alt="Tickap Logo"
+                      className="dark:hidden block"
+                    />
+                  </div>
+                  <SheetTitle className="font-bold text-base tracking-tight">TickAp</SheetTitle>
                 </Link>
-              </DialogClose>
-              <DialogClose asChild>
-                <Link href="/event/server">
-                  <Button variant="outline" className="w-full">
-                    <Server className="mr-2 h-4 w-4" />
-                    Servers
-                  </Button>
-                </Link>
-              </DialogClose>
-              <DialogClose asChild>
-                <Link href="/event/aboutus">
-                  <Button variant="outline" className="w-full">
-                    <Server className="mr-2 h-4 w-4" />
-                    About us
-                  </Button>
-                </Link>
-              </DialogClose>
-              {session && (
-                <DialogClose asChild>
-                  <Link href="/event/forms">
-                    <Button variant="outline" className="w-full">
-                      <FileText className="mr-2 h-4 w-4" />
-                      Forms
+              </SheetHeader>
+
+              {/* Mobile Links */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                <div className="space-y-1">
+                  <p className="text-[11px] font-semibold tracking-wider text-muted-foreground/70 uppercase mb-2">
+                    Discover
+                  </p>
+                  <SheetClose asChild>
+                    <Link
+                      href="/event"
+                      className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-foreground hover:bg-muted transition-colors"
+                    >
+                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                      Browse Events
+                    </Link>
+                  </SheetClose>
+                  <SheetClose asChild>
+                    <Link
+                      href="/event/server"
+                      className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-foreground hover:bg-muted transition-colors"
+                    >
+                      <Server className="h-4 w-4 text-muted-foreground" />
+                      Servers
+                    </Link>
+                  </SheetClose>
+                </div>
+
+                {session && (
+                  <div className="space-y-1">
+                    <p className="text-[11px] font-semibold tracking-wider text-muted-foreground/70 uppercase mb-2">
+                      Organizer
+                    </p>
+                    <SheetClose asChild>
+                      <Link
+                        href="/event/forms"
+                        className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-foreground hover:bg-muted transition-colors"
+                      >
+                        <FileText className="h-4 w-4 text-muted-foreground" />
+                        Forms & Applications
+                      </Link>
+                    </SheetClose>
+                  </div>
+                )}
+
+                <div className="space-y-1">
+                  <p className="text-[11px] font-semibold tracking-wider text-muted-foreground/70 uppercase mb-2">
+                    About
+                  </p>
+                  <SheetClose asChild>
+                    <Link
+                      href="/event/aboutus"
+                      className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-foreground hover:bg-muted transition-colors"
+                    >
+                      <Info className="h-4 w-4 text-muted-foreground" />
+                      About TickAp
+                    </Link>
+                  </SheetClose>
+                </div>
+              </div>
+
+              {/* Mobile Auth Button */}
+              <div className="p-4 border-t border-border/40">
+                {session ? (
+                  <form
+                    action={async () => {
+                      "use server";
+                      await signOut();
+                      revalidatePath("/");
+                    }}
+                  >
+                    <Button variant="outline" className="w-full justify-center gap-2">
+                      <LogOut className="h-4 w-4" />
+                      Sign Out
                     </Button>
-                  </Link>
-                </DialogClose>
-              )}
-              <Separator className="my-3" />
-            </div>
-          </SheetContent>
-        </Dialog>
-        <div className="flex justify-center items-center gap-2 ml-auto">
+                  </form>
+                ) : (
+                  <form
+                    action={async () => {
+                      "use server";
+                      await signIn("discord");
+                      revalidatePath("/");
+                    }}
+                  >
+                    <Button variant="outline" className="w-full justify-center gap-2">
+                      <KeyRound className="h-4 w-4" />
+                      Sign In
+                    </Button>
+                  </form>
+                )}
+              </div>
+            </SheetContent>
+          </Sheet>
+        </div>
+
+        {/* Right Action Deck */}
+        <div className="flex items-center gap-2.5">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="secondary" size="icon" className="rounded-full">
-                {session ? (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="relative h-9 w-9 rounded-full ring-1 ring-border/50 hover:ring-border transition-all"
+                aria-label="User menu"
+              >
+                {session?.user?.image ? (
                   <Image
-                    src={session!.user?.image ?? ""}
-                    className="w-8 h-8 rounded-full"
-                    alt="profile"
+                    src={session.user.image}
+                    className="h-8 w-8 rounded-full object-cover"
+                    alt={session.user.name || "profile"}
                     width={32}
                     height={32}
                   />
                 ) : (
-                  <CircleUser className="h-5 w-5" />
+                  <CircleUser className="h-5 w-5 text-muted-foreground" />
                 )}
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>
-                {session ? `Hi, ${session?.user?.name}` : "Guest User!"}
+            <DropdownMenuContent align="end" className="w-56 p-1.5 shadow-lg border border-border/60">
+              <DropdownMenuLabel className="font-normal px-2 py-1.5">
+                <div className="flex flex-col space-y-1">
+                  <p className="text-sm font-semibold leading-none text-foreground">
+                    {session ? (session.user?.name || "Attendee") : "Guest User!"}
+                  </p>
+                  <p className="text-xs leading-none text-muted-foreground">
+                    {session ? (session.user?.email || "Connected via Discord") : "Not signed in"}
+                  </p>
+                </div>
               </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem disabled>
-                <Settings className="mr-2 h-4 w-4" />
-                Settings
-              </DropdownMenuItem>
+              <DropdownMenuSeparator className="my-1" />
+
+              {session && (
+                <DropdownMenuItem asChild>
+                  <Link href="/event/server" className="cursor-pointer">
+                    <Server className="mr-2 h-4 w-4 text-muted-foreground" />
+                    <span>My Servers</span>
+                  </Link>
+                </DropdownMenuItem>
+              )}
 
               <DropdownMenuSub>
-                <DropdownMenuSubTrigger>
-                  <SunMoon className="mr-2 h-4 w-4" />
-                  <span>appearance</span>
+                <DropdownMenuSubTrigger className="cursor-pointer">
+                  <SunMoon className="mr-2 h-4 w-4 text-muted-foreground" />
+                  <span>Theme</span>
                 </DropdownMenuSubTrigger>
                 <ModeToggleSub />
               </DropdownMenuSub>
 
-              <DropdownMenuItem>
-                <LifeBuoy className="mr-2 h-4 w-4" />
-                <Link href="https://discord.gg/pkVxQU2ae9" target="_blank" >Support</Link>
+              <DropdownMenuItem asChild>
+                <a
+                  href="https://discord.gg/pkVxQU2ae9"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="cursor-pointer"
+                >
+                  <LifeBuoy className="mr-2 h-4 w-4 text-muted-foreground" />
+                  <span>Discord Support</span>
+                </a>
               </DropdownMenuItem>
-              <DropdownMenuSeparator />
 
-              {/* {session &&
+              <DropdownMenuSeparator className="my-1" />
 
-                <DropdownMenuItem onClick={async () => {
-                  "use server"
-                  await signOut()
-                }}>
+              {session ? (
+                <DropdownMenuItem
+                  className="cursor-pointer text-destructive focus:text-destructive"
+                  onClick={async () => {
+                    "use server";
+                    await signOut();
+                    revalidatePath("/");
+                  }}
+                >
                   <LogOut className="mr-2 h-4 w-4" />
-                  <span className="inline-span">Sign Out</span>
+                  <span>Sign Out</span>
                 </DropdownMenuItem>
-              } */}
-
-              <DropdownMenuItem onClick={async () =>{ 
-                "use server"
-                session ? await signOut() : await signIn('discord'); revalidatePath('/'); }}>
-                {session ? (
-                  <LogOut className="mr-2 h-4 w-4" />
-                ) : (
-                  <KeyRound className="mr-2 h-4 w-4" />
-                )}
-                {session ? <span className="inline-span">Sign Out</span> : <span className="inline-span">Sign In</span>}
-              </DropdownMenuItem>
+              ) : (
+                <DropdownMenuItem
+                  className="cursor-pointer"
+                  onClick={async () => {
+                    "use server";
+                    await signIn("discord");
+                    revalidatePath("/");
+                  }}
+                >
+                  <KeyRound className="mr-2 h-4 w-4 text-muted-foreground" />
+                  <span>Sign In</span>
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
       </header>
-      <ScrollArea style={{ height: `calc(100vh - 60px)` }} >
+
+      {/* Main Content Area */}
+      <main className="flex-1 w-full max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
         {children}
-      </ScrollArea>
-    </div >
+      </main>
+    </div>
   );
 }
