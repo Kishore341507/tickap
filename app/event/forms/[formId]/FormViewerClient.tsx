@@ -23,7 +23,8 @@ import {
   ArrowLeft,
   Calendar,
   Send,
-  AlertCircle
+  AlertCircle,
+  AlertTriangle
 } from "lucide-react";
 import { QuestionType } from "@prisma/client";
 import { cn } from "@/lib/utils";
@@ -213,6 +214,14 @@ export function FormViewerClient({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    toast({
+      title: "Submissions Disabled",
+      description: "This form can be filled from the server only.",
+      variant: "destructive",
+    });
+    const allowWebSubmissions = false;
+    if (!allowWebSubmissions) return;
+
     setSubmissionError(null);
 
     // 1. Check max submission limit if configured (> 0 means limited, 0 means unlimited)
@@ -417,6 +426,19 @@ export function FormViewerClient({
             </Badge>
           </div>
         </Card>
+
+        {/* Server-Only Submission Warning Banner */}
+        <div className="p-4 sm:p-5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 flex items-start gap-3.5 text-xs leading-relaxed shadow-sm">
+          <AlertTriangle className="h-5 w-5 shrink-0 mt-0.5 text-amber-500" />
+          <div className="space-y-1">
+            <p className="font-semibold text-sm text-amber-600 dark:text-amber-400">
+              Web Submissions Disabled
+            </p>
+            <p className="text-amber-700/90 dark:text-amber-300/90">
+              This form can be filled from the server only. Web submissions are currently disabled.
+            </p>
+          </div>
+        </div>
 
         {/* Validation Failure Alert */}
         {submissionError && (
@@ -677,33 +699,32 @@ export function FormViewerClient({
         </div>
 
         {/* Sticky Action Strip */}
-        <div className="sticky bottom-4 z-20 flex items-center justify-between gap-4 p-4 rounded-2xl bg-card/90 backdrop-blur-md border border-border/60 shadow-lg">
-          <Button 
-            type="button" 
-            variant="outline" 
-            onClick={() => router.push("/event/forms")}
-            className="rounded-xl border-border/60 text-xs font-medium"
-          >
-            Cancel
-          </Button>
+        <div className="sticky bottom-4 z-20 flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-2xl bg-card/90 backdrop-blur-md border border-border/60 shadow-lg">
+          <div className="flex items-center gap-2 text-xs text-amber-600 dark:text-amber-400 font-medium">
+            <AlertTriangle className="h-4 w-4 shrink-0 text-amber-500" />
+            <span>This form can be filled from the server only</span>
+          </div>
 
-          <Button 
-            type="submit" 
-            disabled={isSubmitting}
-            className="rounded-xl text-xs font-semibold px-6 shadow-sm"
-          >
-            {isSubmitting ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Submitting Response...
-              </>
-            ) : (
-              <>
-                <Send className="mr-2 h-3.5 w-3.5" />
-                Submit Response
-              </>
-            )}
-          </Button>
+          <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => router.push("/event/forms")}
+              className="rounded-xl border-border/60 text-xs font-medium"
+            >
+              Cancel
+            </Button>
+
+            <Button 
+              type="submit" 
+              disabled={true}
+              className="rounded-xl text-xs font-semibold px-6 shadow-sm opacity-60 cursor-not-allowed"
+              title="This form can be filled from the server only"
+            >
+              <Send className="mr-2 h-3.5 w-3.5" />
+              Submit Response
+            </Button>
+          </div>
         </div>
       </form>
     </div>

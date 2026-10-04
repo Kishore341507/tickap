@@ -2,7 +2,7 @@ import { auth } from "@/auth";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ChevronRight, FileQuestion, ArrowLeft } from "lucide-react";
+import { ChevronRight, FileQuestion, ArrowLeft, AlertTriangle } from "lucide-react";
 import prisma from "@/prisma/db";
 import { SignInCard } from "@/components/auth/sign-in-card";
 import { FormViewerClient } from "./FormViewerClient";
@@ -78,6 +78,16 @@ export default async function FormViewerPage({ params }: { params: Promise<{ for
                 {rawForm.description}
               </p>
             )}
+          </div>
+
+          <div className="p-4 mx-8 mt-6 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 flex items-start gap-3.5 text-xs leading-relaxed">
+            <AlertTriangle className="h-5 w-5 shrink-0 mt-0.5 text-amber-500" />
+            <div className="space-y-0.5">
+              <p className="font-semibold text-sm">Notice</p>
+              <p className="text-amber-700/90 dark:text-amber-300/90">
+                This form can be filled from the server only. Web submissions are currently disabled.
+              </p>
+            </div>
           </div>
 
           <CardContent className="p-8">
