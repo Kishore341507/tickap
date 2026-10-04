@@ -46,6 +46,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Member , RegistrationUser , Registration} from "@/types";
+import { ClientSignInButton } from "@/components/auth/client-sign-in-button";
 
 interface RegisterButtonProps {
     eventId: string;
@@ -1102,15 +1103,22 @@ export function RegisterButton({
                     Join a Team
                 </Button>
             )}
-            <Button
-                onClick={handleClick}
-                disabled={disabled}
-                variant={buttonVariant}
-                className="w-full mt-2"
-            >
-                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UserPlus className="mr-2 h-4 w-4" />}
-                {buttonText}
-            </Button>
+            {!session ? (
+                <ClientSignInButton
+                    text="Sign in with Discord to Register"
+                    className="w-full mt-2"
+                />
+            ) : (
+                <Button
+                    onClick={handleClick}
+                    disabled={disabled}
+                    variant={buttonVariant}
+                    className="w-full mt-2"
+                >
+                    {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UserPlus className="mr-2 h-4 w-4" />}
+                    {buttonText}
+                </Button>
+            )}
 
             {/* Team Selection Dialog */}
             <Dialog open={isTeamDialogOpen} onOpenChange={setIsTeamDialogOpen}>

@@ -1,55 +1,78 @@
 import { Skeleton } from "@/components/ui/skeleton";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { AspectRatio } from "@/components/ui/aspect-ratio";
 
-export default function Loading() {
+export default function ServerLoading() {
   return (
-    <>
-      <div className="flex items-center justify-between mb-5">
-        <h4 className="scroll-m-20 text-xl font-semibold tracking-tight">
-          Events
-        </h4>
+    <div className="space-y-6">
+      {/* Back Link Skeleton */}
+      <div>
+        <Skeleton className="h-4 w-24 rounded-md mb-3 bg-muted/60" />
+
+        {/* Server Header Card Skeleton */}
+        <div className="rounded-xl border border-border/50 bg-card/40 p-5 sm:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5">
+            <div className="flex items-center gap-4">
+              {/* Server Icon Skeleton */}
+              <Skeleton className="h-14 w-14 rounded-2xl bg-muted/70 shrink-0" />
+              <div className="space-y-2">
+                {/* Server Title Skeleton */}
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-6 w-44 rounded-md" />
+                  <Skeleton className="h-5 w-16 rounded-full bg-muted/60" />
+                </div>
+                {/* Meta Row Skeleton */}
+                <Skeleton className="h-3.5 w-56 rounded-md bg-muted/60" />
+              </div>
+            </div>
+
+            {/* Action Buttons Skeleton */}
+            <div className="flex items-center gap-2.5">
+              <Skeleton className="h-9 w-24 rounded-lg bg-muted/70" />
+              <Skeleton className="h-9 w-28 rounded-lg bg-muted/70" />
+            </div>
+          </div>
+        </div>
       </div>
-      
-      {/* Tabs List Skeleton */}
-      <div className="grid grid-cols-3 lg:w-[400px] md:w-[400px] mb-5 gap-2">
-        <Skeleton className="h-10 w-full rounded-md" />
-        <Skeleton className="h-10 w-full rounded-md" />
-        <Skeleton className="h-10 w-full rounded-md" />
+
+      {/* Tabs Filter Bar Skeleton */}
+      <div className="h-10 p-1 bg-muted/40 border border-border/40 rounded-lg inline-flex items-center gap-1">
+        <Skeleton className="h-8 w-28 rounded-md bg-muted/70" />
+        <Skeleton className="h-8 w-20 rounded-md bg-muted/70" />
+        <Skeleton className="h-8 w-24 rounded-md bg-muted/70" />
+        <Skeleton className="h-8 w-24 rounded-md bg-muted/70" />
       </div>
 
       {/* Grid of Event Card Skeletons */}
-      <div className="grid lg:grid-cols-3 md:grid-cols-2 sm:grid-cols-1 gap-4">
-        {Array.from({ length: 9 }).map((_, i) => (
-          <Card key={i} className="border-secondary h-full overflow-hidden">
-            {/* Image Skeleton matching CardImage aspect ratio */}
-            <div>
-              <AspectRatio ratio={21 / 9}>
-                <Skeleton className="h-full w-full rounded-t-lg" />
-              </AspectRatio>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div
+            key={i}
+            className="flex flex-col h-full rounded-xl border border-border/60 bg-card overflow-hidden"
+          >
+            {/* 16:9 Aspect Ratio Hero Banner Skeleton with Badges */}
+            <div className="relative aspect-video w-full bg-muted/30 p-3 flex items-start justify-between">
+              <Skeleton className="h-5 w-20 rounded-full bg-muted/60" />
+              <Skeleton className="h-5 w-14 rounded-full bg-muted/60" />
             </div>
-            
-            <CardContent>
-              <CardHeader className="text-center pb-3 px-0 flex flex-col items-center space-y-4 pt-4">
-                {/* Title Skeleton */}
-                <Skeleton className="h-6 w-3/4 rounded-md" />
-                
-                {/* Category Skeleton */}
-                <div className="flex items-center justify-center gap-2 w-full">
-                  <Skeleton className="h-4 w-4 rounded-full" />
-                  <Skeleton className="h-4 w-1/3 rounded-md" />
+
+            {/* Card Body Skeleton */}
+            <div className="flex flex-1 flex-col justify-between p-4 space-y-3">
+              <div>
+                <Skeleton className="h-5 w-3/4 rounded-md mb-2.5" />
+                <div className="flex items-center gap-3">
+                  <Skeleton className="h-3.5 w-24 rounded-md bg-muted/60" />
+                  <Skeleton className="h-3.5 w-28 rounded-md bg-muted/60" />
                 </div>
-                
-                {/* Date Skeleton */}
-                <div className="flex items-center justify-center gap-2 w-full">
-                  <Skeleton className="h-4 w-4 rounded-full" />
-                  <Skeleton className="h-4 w-1/3 rounded-md" />
-                </div>
-              </CardHeader>
-            </CardContent>
-          </Card>
+              </div>
+
+              {/* Card Footer Divider Skeleton */}
+              <div className="pt-3 border-t border-border/50 flex items-center justify-between">
+                <Skeleton className="h-3.5 w-20 rounded-md bg-muted/60" />
+                <Skeleton className="h-3.5 w-16 rounded-md bg-muted/60" />
+              </div>
+            </div>
+          </div>
         ))}
       </div>
-    </>
+    </div>
   );
 }

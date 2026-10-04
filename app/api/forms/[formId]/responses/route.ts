@@ -65,8 +65,19 @@ export async function POST(
           const timeSinceLast = (new Date().getTime() - lastResponse.createdAt.getTime()) / 1000;
           if (timeSinceLast < form.submissionCooldown) {
             const waitTime = Math.ceil(form.submissionCooldown - timeSinceLast);
+            const days = Math.floor(waitTime / 86400);
+            const hours = Math.floor((waitTime % 86400) / 3600);
+            const minutes = Math.floor((waitTime % 3600) / 60);
+            const secs = waitTime % 60;
+            const parts = [];
+            if (days > 0) parts.push(`${days} day${days > 1 ? "s" : ""}`);
+            if (hours > 0) parts.push(`${hours} hour${hours > 1 ? "s" : ""}`);
+            if (minutes > 0) parts.push(`${minutes} minute${minutes > 1 ? "s" : ""}`);
+            if (days === 0 && hours === 0 && secs > 0) parts.push(`${secs} second${secs > 1 ? "s" : ""}`);
+            const waitFormatted = parts.join(", ") || `${waitTime} seconds`;
+
             return NextResponse.json(
-              { error: `Please wait ${waitTime} seconds before submitting again.` },
+              { error: `Cooldown active: Please wait ${waitFormatted} before submitting again (last submitted on ${lastResponse.createdAt.toLocaleDateString()} at ${lastResponse.createdAt.toLocaleTimeString()}).` },
               { status: 429 }
             );
           }
