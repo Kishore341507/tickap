@@ -126,12 +126,38 @@ export interface Event {
   manager_id: bigint | null;
   channel_id: bigint | null;
   notification_channel_id: bigint | null;
+  discord_event_id?: bigint | string | null;
   allow_incomplete_teams?: boolean | null;
   enable_team_invites?: boolean | null;
   enable_team_requests?: boolean | null;
   register_for_other?: boolean | null;
   auto_team_name?: boolean | null;
   team_counter?: number | null;
+}
+
+export interface DiscordScheduledEvent {
+  id: string;
+  guild_id: string;
+  channel_id?: string | null;
+  creator_id?: string | null;
+  name: string;
+  description?: string | null;
+  scheduled_start_time: string;
+  scheduled_end_time?: string | null;
+  privacy_level: number;
+  status: number; // 1: SCHEDULED, 2: ACTIVE, 3: COMPLETED, 4: CANCELED
+  entity_type: number; // 1: STAGE_INSTANCE, 2: VOICE, 3: EXTERNAL
+  entity_id?: string | null;
+  entity_metadata?: {
+    location?: string;
+  } | null;
+  creator?: {
+    id: string;
+    username: string;
+    avatar?: string | null;
+  } | null;
+  user_count?: number;
+  image?: string | null;
 }
 
 /**

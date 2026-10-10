@@ -98,6 +98,8 @@ model events {
   channel_id BigInt?
   notification_channel_id BigInt?
 
+  discord_event_id        BigInt?  @unique
+
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 
