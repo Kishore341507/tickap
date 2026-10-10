@@ -68,6 +68,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { Category , Platform , EventStatus } from "@/types";
+import DiscordEventSyncSection from "../../_components/discord-event-sync-section";
 
 // Create a Zod schema for form validation
 const eventFormSchema = z.object({
@@ -141,6 +142,8 @@ export default function EditEvent() {
   const [eventData, setEventData] = useState<any>(null);
   const [needsBannerUpload, setNeedsBannerUpload] = useState(false);
   const [customQuestions, setCustomQuestions] = useState<CustomQuestion[]>([]);
+  const [discordAction, setDiscordAction] = useState<"create" | "link" | "none" | "unlink">("none");
+  const [selectedDiscordEventId, setSelectedDiscordEventId] = useState<string>("");
 
   // Use form with default values
   const form = useForm<EventFormValues>({
@@ -426,6 +429,12 @@ export default function EditEvent() {
 
       // Add guild_id from params
       formData.append("guild_id", String(params.id));
+      if (discordAction !== "none") {
+        formData.append("discord_action", discordAction);
+        if (discordAction === "link" && selectedDiscordEventId) {
+          formData.append("discord_event_id", selectedDiscordEventId);
+        }
+      }
 
       // Update the event
       const response = await fetch(`/api/events?id=${params.event_id}`, {
@@ -1022,7 +1031,16 @@ export default function EditEvent() {
                 Roles and channels for automatic assignment and real-time bot announcements.
               </CardDescription>
             </CardHeader>
-            <CardContent className="p-5 sm:p-6">
+            <CardContent className="p-5 sm:p-6 space-y-5">
+              <DiscordEventSyncSection
+                guildId={String(params.id)}
+                mode="edit"
+                currentDiscordEventId={eventData?.discord_event_id ? String(eventData.discord_event_id) : null}
+                action={discordAction}
+                selectedEventId={selectedDiscordEventId}
+                onActionChange={setDiscordAction}
+                onSelectEventId={setSelectedDiscordEventId}
+              />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 {/* Registration Role */}
                 <FormField

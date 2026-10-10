@@ -68,6 +68,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { Category , Platform , EventStatus } from "@/types";
+import DiscordEventSyncSection from "../_components/discord-event-sync-section";
 
 // Create a Zod schema for form validation
 const eventFormSchema = z.object({
@@ -143,6 +144,8 @@ export default function CreateEvent() {
   const [channelOpen, setChannelOpen] = useState(false);
   const [notificationChannelOpen, setNotificationChannelOpen] = useState(false);
   const [customQuestions, setCustomQuestions] = useState<CustomQuestion[]>([]);
+  const [discordAction, setDiscordAction] = useState<"create" | "link" | "none" | "unlink">("create");
+  const [selectedDiscordEventId, setSelectedDiscordEventId] = useState<string>("");
 
   // Fetch roles and channels when component mounts
   useEffect(() => {
@@ -334,6 +337,12 @@ export default function CreateEvent() {
 
       // Add status as "Open"
       formData.append("status", EventStatus.Open);
+
+      // Add discord integration action
+      formData.append("discord_action", discordAction);
+      if (discordAction === "link" && selectedDiscordEventId) {
+        formData.append("discord_event_id", selectedDiscordEventId);
+      }
 
       const response = await fetch("/api/events", {
         method: "POST",
@@ -865,7 +874,27 @@ export default function CreateEvent() {
                 Automate role assignments and logging channels directly in your Discord community.
               </CardDescription>
             </CardHeader>
-            <CardContent className="p-5 sm:p-6 space-y-4">
+            <CardContent className="p-5 sm:p-6 space-y-5">
+              <DiscordEventSyncSection
+                guildId={String(params.id)}
+                mode="create"
+                action={discordAction}
+                selectedEventId={selectedDiscordEventId}
+                onActionChange={setDiscordAction}
+                onSelectEventId={setSelectedDiscordEventId}
+                onImportValues={(ev) => {
+                  if (ev.name) form.setValue("name", ev.name);
+                  if (ev.description) form.setValue("details", ev.description);
+                  if (ev.scheduled_start_time) {
+                    const d = new Date(ev.scheduled_start_time);
+                    form.setValue("date", d);
+                    const hours = d.getHours().toString().padStart(2, "0");
+                    const minutes = d.getMinutes().toString().padStart(2, "0");
+                    form.setValue("start_time", `${hours}:${minutes}`);
+                  }
+                }}
+              />
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Registration Role */}
                 <FormField

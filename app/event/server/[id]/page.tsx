@@ -20,6 +20,7 @@ import { env } from "process";
 import { checkIsManager } from "@/lib/discord";
 import Image from "next/image";
 import { Event } from "@/types";
+import CreateEventAction from "./_components/create-event-modal";
 
 export default async function ServerEvents({
   params,
@@ -187,12 +188,7 @@ export default async function ServerEvents({
                     <span>New Form</span>
                   </Button>
                 </Link>
-                <Link href={`/event/server/${id}/create`}>
-                  <Button size="sm" className="h-9 gap-1.5 text-xs">
-                    <Plus className="h-3.5 w-3.5" />
-                    <span>Create Event</span>
-                  </Button>
-                </Link>
+                <CreateEventAction guildId={id} />
               </div>
             )}
           </div>

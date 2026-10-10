@@ -53,6 +53,7 @@ export async function POST(req: NextRequest) {
     
     // Handle banner upload
     let bannerPath = "/tickap_dark.png"; // Default banner
+    let bannerBase64: string | null = null;
     const bannerFile = formData.get("banner") as File || null;
     
     if ( bannerFile && bannerFile.size && bannerFile instanceof Blob) {
@@ -60,6 +61,7 @@ export async function POST(req: NextRequest) {
         console.log("Uploading banner file:", bannerFile);
         const bytes = await bannerFile.arrayBuffer();
         const buffer = Buffer.from(bytes);
+        bannerBase64 = `data:${bannerFile.type || "image/png"};base64,${buffer.toString("base64")}`;
 
         const fileStorage = await prisma.fileStorage.create({
           data: {
@@ -80,8 +82,11 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    const discordAction = formData.get("discord_action")?.toString() || "create";
+    const explicitDiscordEventId = formData.get("discord_event_id")?.toString();
+
     // Parse form data
-    const data = {
+    const data: any = {
       name: formData.get("name") as string,
       banner: bannerPath,
       date: formData.get("date") ? new Date(formData.get("date") as string) : null,
@@ -106,6 +111,7 @@ export async function POST(req: NextRequest) {
       guild_id: formData.get("guild_id") ? BigInt(formData.get("guild_id") as string) : null,
       channel_id: formData.get("channel_id") ? BigInt(formData.get("channel_id") as string) : null,
       notification_channel_id: formData.get("notification_channel_id") ? BigInt(formData.get("notification_channel_id") as string) : null,
+      discord_event_id: discordAction === "link" && explicitDiscordEventId ? BigInt(explicitDiscordEventId) : null,
       hide_registrations: formData.get("hide_registrations") === "true",
       hide_registration_count: formData.get("hide_registration_count") === "true" ? true : (formData.get("hide_registration_count") === "null" ? null : false),
       register_for_other: formData.get("register_for_other") === "true",
@@ -115,10 +121,41 @@ export async function POST(req: NextRequest) {
       auto_team_name: formData.has("auto_team_name") ? formData.get("auto_team_name") === "true" : true,
     };
 
-    // Create event in database
-    const event = await prisma.events.create({
+    // Create event in database first
+    let event = await prisma.events.create({
       data
     });
+
+    // If discordAction is "create", create Discord Scheduled Event and update discord_event_id
+    if (discordAction === "create" && data.date && guildId) {
+      const locationUrl = `https://tickap.com/event/${event.id}`;
+      const { createGuildScheduledEvent } = await import("@/lib/discord");
+      const discordResult = await createGuildScheduledEvent(guildId, {
+        name: data.name,
+        description: data.details,
+        scheduled_start_time: data.date,
+        location: locationUrl,
+        image: bannerBase64,
+      });
+
+      if (discordResult.success && discordResult.event?.id) {
+        event = await prisma.events.update({
+          where: { id: event.id },
+          data: {
+            discord_event_id: BigInt(discordResult.event.id),
+            location_url: locationUrl,
+          },
+        });
+      }
+    } else if (discordAction === "link" && explicitDiscordEventId) {
+      const locationUrl = `https://tickap.com/event/${event.id}`;
+      event = await prisma.events.update({
+        where: { id: event.id },
+        data: {
+          location_url: locationUrl,
+        },
+      });
+    }
 
     await createEventLog({
       event_id: event.id,
@@ -216,6 +253,7 @@ export async function PUT(req: NextRequest) {
     
     // Handle banner upload
     let bannerPath = existingEvent.banner; // Keep existing banner by default
+    let bannerBase64: string | null = null;
     const bannerFile = formData.get("banner") as File || null;
     
     if (bannerFile && bannerFile.size && bannerFile instanceof Blob) {
@@ -223,6 +261,7 @@ export async function PUT(req: NextRequest) {
         console.log("Uploading new banner file:", bannerFile);
         const bytes = await bannerFile.arrayBuffer();
         const buffer = Buffer.from(bytes);
+        bannerBase64 = `data:${bannerFile.type || "image/png"};base64,${buffer.toString("base64")}`;
 
         const fileStorage = await prisma.fileStorage.create({
           data: {
@@ -243,8 +282,18 @@ export async function PUT(req: NextRequest) {
       }
     }
 
+    const discordAction = formData.get("discord_action")?.toString();
+    const explicitDiscordEventId = formData.get("discord_event_id")?.toString();
+
+    let targetDiscordEventId = existingEvent.discord_event_id;
+    if (discordAction === "unlink") {
+      targetDiscordEventId = null;
+    } else if (discordAction === "link" && explicitDiscordEventId) {
+      targetDiscordEventId = BigInt(explicitDiscordEventId);
+    }
+
     // Parse form data
-    const data = {
+    const data: any = {
       name: formData.get("name") as string || existingEvent.name,
       banner: bannerPath,
       date: formData.get("date") ? new Date(formData.get("date") as string) : existingEvent.date,
@@ -269,6 +318,7 @@ export async function PUT(req: NextRequest) {
       guild_id: formData.get("guild_id") ? BigInt(formData.get("guild_id") as string) : existingEvent.guild_id,
       channel_id: formData.get("channel_id") ? BigInt(formData.get("channel_id") as string) : existingEvent.channel_id,
       notification_channel_id: formData.get("notification_channel_id") ? BigInt(formData.get("notification_channel_id") as string) : existingEvent.notification_channel_id,
+      discord_event_id: targetDiscordEventId,
       hide_registrations: formData.has("hide_registrations") ? formData.get("hide_registrations") === "true" : existingEvent.hide_registrations,
       hide_registration_count: formData.has("hide_registration_count") ? (formData.get("hide_registration_count") === "true" ? true : (formData.get("hide_registration_count") === "null" ? null : false)) : existingEvent.hide_registration_count,
       register_for_other: formData.has("register_for_other") ? formData.get("register_for_other") === "true" : existingEvent.register_for_other,
@@ -278,6 +328,43 @@ export async function PUT(req: NextRequest) {
       auto_team_name: formData.has("auto_team_name") ? formData.get("auto_team_name") === "true" : (existingEvent.auto_team_name ?? true),
       updated_at: new Date(),
     };
+
+    // If user requested to create a Discord event on edit
+    if (discordAction === "create" && !existingEvent.discord_event_id && data.date && guildId) {
+      const locationUrl = `https://tickap.com/event/${existingEvent.id}`;
+      const { createGuildScheduledEvent } = await import("@/lib/discord");
+      const discordResult = await createGuildScheduledEvent(guildId, {
+        name: data.name,
+        description: data.details,
+        scheduled_start_time: data.date,
+        location: locationUrl,
+        image: bannerBase64,
+      });
+
+      if (discordResult.success && discordResult.event?.id) {
+        data.discord_event_id = BigInt(discordResult.event.id);
+        targetDiscordEventId = data.discord_event_id;
+      }
+    }
+
+    // Sync mapped updates to Discord Scheduled Event if linked
+    if (targetDiscordEventId && guildId) {
+      const { updateGuildScheduledEvent, mapTickApStatusToDiscord } = await import("@/lib/discord");
+      const discordEventIdStr = targetDiscordEventId.toString();
+
+      const discordStatus =
+        data.status !== existingEvent.status
+          ? mapTickApStatusToDiscord(data.status)
+          : undefined;
+
+      await updateGuildScheduledEvent(guildId, discordEventIdStr, {
+        name: data.name,
+        description: data.details,
+        scheduled_start_time: data.date || undefined,
+        status: discordStatus,
+        image: bannerBase64 || undefined,
+      });
+    }
 
     // Update event in database
     const updatedEvent = await prisma.events.update({

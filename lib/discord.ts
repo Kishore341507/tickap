@@ -719,3 +719,215 @@ export async function sendJoinRequestNotification({
     return null;
   }
 }
+
+/**
+ * Fetch all scheduled events for a Discord guild
+ */
+export async function getGuildScheduledEvents(guildId: string) {
+  try {
+    const response = await fetch(
+      `${env.DISCORD_API_URL}/guilds/${guildId}/scheduled-events?with_user_count=true`,
+      {
+        headers: {
+          Authorization: `Bot ${env.DISCORD_BOT_TOKEN}`,
+        },
+        cache: "no-store",
+      }
+    );
+
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error("Failed to fetch guild scheduled events:", errText);
+      return [];
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error in getGuildScheduledEvents:", error);
+    return [];
+  }
+}
+
+/**
+ * Create a Discord scheduled event (External/TickAp event)
+ */
+export async function createGuildScheduledEvent(
+  guildId: string,
+  eventData: {
+    name: string;
+    description?: string | null;
+    scheduled_start_time: string | Date;
+    scheduled_end_time?: string | Date;
+    location: string;
+    image?: string | null; // Data URI (data:image/png;base64,...)
+  }
+) {
+  try {
+    const startDate =
+      eventData.scheduled_start_time instanceof Date
+        ? eventData.scheduled_start_time
+        : new Date(eventData.scheduled_start_time);
+
+    const endDate = eventData.scheduled_end_time
+      ? eventData.scheduled_end_time instanceof Date
+        ? eventData.scheduled_end_time
+        : new Date(eventData.scheduled_end_time)
+      : new Date(startDate.getTime() + 2 * 60 * 60 * 1000); // 2 hours default
+
+    const payload: Record<string, any> = {
+      name: eventData.name.slice(0, 100),
+      privacy_level: 2, // GUILD_ONLY is required by Discord
+      scheduled_start_time: startDate.toISOString(),
+      scheduled_end_time: endDate.toISOString(),
+      entity_type: 3, // EXTERNAL
+      entity_metadata: {
+        location: eventData.location.slice(0, 100),
+      },
+    };
+
+    if (eventData.description) {
+      payload.description = eventData.description.slice(0, 1000);
+    }
+
+    if (eventData.image) {
+      payload.image = eventData.image;
+    }
+
+    const response = await fetch(
+      `${env.DISCORD_API_URL}/guilds/${guildId}/scheduled-events`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bot ${env.DISCORD_BOT_TOKEN}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+        cache: "no-store",
+      }
+    );
+
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error("Failed to create scheduled event on Discord:", errText);
+      return { success: false, error: errText };
+    }
+
+    const createdEvent = await response.json();
+    return { success: true, event: createdEvent };
+  } catch (error: any) {
+    console.error("Error creating scheduled event on Discord:", error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Update a Discord scheduled event
+ * Note: do not sync entity_type and location on updates as per spec
+ */
+export async function updateGuildScheduledEvent(
+  guildId: string,
+  eventId: string,
+  updateData: {
+    name?: string;
+    description?: string | null;
+    scheduled_start_time?: string | Date;
+    scheduled_end_time?: string | Date;
+    status?: number;
+    image?: string | null;
+  }
+) {
+  try {
+    const payload: Record<string, any> = {};
+
+    if (updateData.name !== undefined) {
+      payload.name = updateData.name.slice(0, 100);
+    }
+
+    if (updateData.description !== undefined) {
+      payload.description = updateData.description
+        ? updateData.description.slice(0, 1000)
+        : "";
+    }
+
+    if (updateData.scheduled_start_time) {
+      const startDate =
+        updateData.scheduled_start_time instanceof Date
+          ? updateData.scheduled_start_time
+          : new Date(updateData.scheduled_start_time);
+      payload.scheduled_start_time = startDate.toISOString();
+
+      const endDate = updateData.scheduled_end_time
+        ? updateData.scheduled_end_time instanceof Date
+          ? updateData.scheduled_end_time
+          : new Date(updateData.scheduled_end_time)
+        : new Date(startDate.getTime() + 2 * 60 * 60 * 1000);
+      payload.scheduled_end_time = endDate.toISOString();
+    }
+
+    if (updateData.image) {
+      payload.image = updateData.image;
+    }
+
+    if (updateData.status !== undefined) {
+      payload.status = updateData.status;
+    }
+
+    const response = await fetch(
+      `${env.DISCORD_API_URL}/guilds/${guildId}/scheduled-events/${eventId}`,
+      {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bot ${env.DISCORD_BOT_TOKEN}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+        cache: "no-store",
+      }
+    );
+
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error("Failed to update scheduled event on Discord:", errText);
+      return { success: false, error: errText };
+    }
+
+    const updatedEvent = await response.json();
+    return { success: true, event: updatedEvent };
+  } catch (error: any) {
+    console.error("Error updating scheduled event on Discord:", error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Status mapping helpers
+ */
+export function mapDiscordStatusToTickAp(discordStatus: number): "Open" | "Live" | "Closed" | "Cancelled" {
+  switch (discordStatus) {
+    case 1:
+      return "Open";
+    case 2:
+      return "Live";
+    case 3:
+      return "Closed";
+    case 4:
+      return "Cancelled";
+    default:
+      return "Open";
+  }
+}
+
+export function mapTickApStatusToDiscord(tickApStatus: string): number {
+  switch (tickApStatus) {
+    case "Open":
+      return 1;
+    case "Live":
+      return 2;
+    case "Closed":
+      return 3;
+    case "Cancelled":
+      return 4;
+    default:
+      return 1;
+  }
+}
