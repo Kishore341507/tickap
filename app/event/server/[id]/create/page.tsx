@@ -104,6 +104,7 @@ const eventFormSchema = z.object({
   enable_team_invites: z.boolean().default(true),
   enable_team_requests: z.boolean().default(true),
   register_for_other: z.boolean().default(true),
+  auto_team_name: z.boolean().default(true),
 }).refine((data) => {
   // If it's not a solo event, min_team_player and max_team_player must be provided
   if (data.is_solo === false) {
@@ -225,6 +226,7 @@ export default function CreateEvent() {
       enable_team_invites: true,
       enable_team_requests: true,
       register_for_other: true,
+      auto_team_name: true,
     },
   });
 
@@ -1356,6 +1358,27 @@ export default function CreateEvent() {
                             <FormLabel className="text-xs font-semibold">Enable Join Requests</FormLabel>
                             <FormDescription className="text-[11px] text-muted-foreground">
                               Solo players can request to join teams with open slots.
+                            </FormDescription>
+                          </div>
+                          <FormControl>
+                            <Switch
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="auto_team_name"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between rounded-xl border border-border/50 bg-muted/15 p-4">
+                          <div className="space-y-0.5 pr-2">
+                            <FormLabel className="text-xs font-semibold">Auto-number Team Names</FormLabel>
+                            <FormDescription className="text-[11px] text-muted-foreground">
+                              Automatically name teams as "Team 1", "Team 2", etc. Participants won't be prompted for a team name.
                             </FormDescription>
                           </div>
                           <FormControl>

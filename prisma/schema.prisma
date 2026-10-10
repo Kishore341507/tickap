@@ -110,6 +110,9 @@ model events {
 
   hide_registrations      Boolean? @default(false)
   hide_registration_count Boolean? @default(false)
+
+  auto_team_name          Boolean? @default(true)
+  team_counter            Int?     @default(0)
 }
 
 model registrations {
@@ -131,6 +134,7 @@ model registrations {
   registrationusers registrationusers[]
   join_requests     JoinRequest[]
 
+  @@index([event_id, local_id])
   // @@map("regs")
 }
 

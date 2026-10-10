@@ -149,11 +149,21 @@ export async function POST(
       );
     }
 
+    // Atomically increment team_counter for the event
+    const updatedEvent = await prisma.events.update({
+      where: { id: BigInt(id) },
+      data: { team_counter: { increment: 1 } },
+      select: { team_counter: true },
+    });
+    const localId = updatedEvent.team_counter || 1;
+    const finalTeamName = teamName?.trim() || `Team ${localId}`;
+
     // Create team registration with all members
     const registration = await prisma.registrations.create({
       data: {
         event_id: BigInt(id),
-        team_name: teamName,
+        team_name: finalTeamName,
+        local_id: localId,
       },
     });
 
