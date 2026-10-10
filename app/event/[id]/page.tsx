@@ -290,6 +290,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
         registerForOther={event.register_for_other}
         enableTeamInvites={event.enable_team_invites}
         openToJoinCount={openToJoinTeams.length}
+        autoTeamName={event.auto_team_name ?? true}
       />
     </div>
   );

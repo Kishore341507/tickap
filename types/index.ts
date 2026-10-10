@@ -130,6 +130,8 @@ export interface Event {
   enable_team_invites?: boolean | null;
   enable_team_requests?: boolean | null;
   register_for_other?: boolean | null;
+  auto_team_name?: boolean | null;
+  team_counter?: number | null;
 }
 
 /**

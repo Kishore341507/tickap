@@ -276,11 +276,24 @@ export async function POST(
       })
     );
 
+    // Atomically increment team_counter for the event
+    const updatedEvent = await prisma.events.update({
+      where: { id: BigInt(id) },
+      data: { team_counter: { increment: 1 } },
+      select: { team_counter: true, auto_team_name: true },
+    });
+    const localId = updatedEvent.team_counter || 1;
+    const isAutoTeamName = updatedEvent.auto_team_name ?? true;
+    const finalTeamName = isAutoTeamName
+      ? `Team ${localId}`
+      : (teamName?.trim() || `Team ${localId}`);
+
     // Create team registration with all members
     const registration = await prisma.registrations.create({
       data: {
         event_id: BigInt(id),
-        team_name: teamName,
+        team_name: finalTeamName,
+        local_id: localId,
         // Store custom question responses if provided
         extra: questionResponses ? JSON.stringify(questionResponses) : undefined,
         registrationusers: {

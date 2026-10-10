@@ -64,6 +64,7 @@ interface RegisterButtonProps {
     registerForOther?: boolean | null;
     enableTeamInvites?: boolean | null;
     openToJoinCount?: number;
+    autoTeamName?: boolean | null;
 }
 
 // Type for custom question
@@ -96,6 +97,7 @@ export function RegisterButton({
     registerForOther,
     enableTeamInvites,
     openToJoinCount = 0,
+    autoTeamName = true,
 }: RegisterButtonProps) {
     const [isLoading, setIsLoading] = useState(false);
     const [isTeamDialogOpen, setIsTeamDialogOpen] = useState(false);
@@ -486,6 +488,11 @@ export function RegisterButton({
     };
 
     const validateTeamName = () => {
+        if (autoTeamName) {
+            setTeamNameError("");
+            return true;
+        }
+
         if (!teamName) {
             setTeamNameError("Team name is required");
             return false;
@@ -566,7 +573,7 @@ export function RegisterButton({
                     "Content-Type": "application/json",
                 },
                 body: JSON.stringify({ 
-                    teamName: isSolo ? null : teamName,
+                    teamName: isSolo || autoTeamName ? null : teamName,
                     teamMembers: isSolo ? null : selectedMembers.map(member => member.user.id),
                     questionResponses: customQuestions.length > 0 ? customResponses : undefined
                 }),
@@ -577,11 +584,12 @@ export function RegisterButton({
                 throw new Error(error.message || "Failed to register for event");
             }
 
+            const teamLabel = isSolo ? "" : (autoTeamName || !teamName ? "Your team" : `Team "${teamName}"`);
             toast({
                 title: isSolo ? "Registration successful" : "Team registration successful",
                 description: isSolo 
                     ? "You have successfully registered for this event!" 
-                    : `Team "${teamName}" with you and ${selectedMembers.length} teammates have been registered for this event!`,
+                    : `${teamLabel} with you and ${selectedMembers.length} teammates have been registered for this event!`,
                 variant: "success",
             });
 
@@ -1132,6 +1140,7 @@ export function RegisterButton({
                     </DialogHeader>
 
                     <div className="space-y-4 py-2 pb-4">
+                        {!autoTeamName && (
                         <div className="space-y-2">
                             <Label htmlFor="teamName" className="text-sm font-medium">
                                 Team Name
@@ -1150,6 +1159,7 @@ export function RegisterButton({
                                 <p className="text-xs text-red-500">{teamNameError}</p>
                             )}
                         </div>
+                        )}
 
                         {registerForOther !== false && (
                         <div className="space-y-2">

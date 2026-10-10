@@ -112,6 +112,7 @@ export async function POST(req: NextRequest) {
       allow_incomplete_teams: formData.get("allow_incomplete_teams") === "true",
       enable_team_invites: formData.get("enable_team_invites") === "true",
       enable_team_requests: formData.get("enable_team_requests") === "true",
+      auto_team_name: formData.has("auto_team_name") ? formData.get("auto_team_name") === "true" : true,
     };
 
     // Create event in database
@@ -274,6 +275,7 @@ export async function PUT(req: NextRequest) {
       allow_incomplete_teams: formData.has("allow_incomplete_teams") ? formData.get("allow_incomplete_teams") === "true" : existingEvent.allow_incomplete_teams,
       enable_team_invites: formData.has("enable_team_invites") ? formData.get("enable_team_invites") === "true" : existingEvent.enable_team_invites,
       enable_team_requests: formData.has("enable_team_requests") ? formData.get("enable_team_requests") === "true" : existingEvent.enable_team_requests,
+      auto_team_name: formData.has("auto_team_name") ? formData.get("auto_team_name") === "true" : (existingEvent.auto_team_name ?? true),
       updated_at: new Date(),
     };
 
