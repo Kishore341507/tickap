@@ -47,6 +47,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Member , RegistrationUser , Registration} from "@/types";
 import { ClientSignInButton } from "@/components/auth/client-sign-in-button";
+import { cn } from "@/lib/utils";
 
 interface RegisterButtonProps {
     eventId: string;
@@ -67,18 +68,184 @@ interface RegisterButtonProps {
     autoTeamName?: boolean | null;
 }
 
-// Type for custom question
-interface CustomQuestion {
-    question: string;
-    placeholder: string;
-    default: string;
-    type: 1 | 2; // 1 for short, 2 for long
-    required: boolean;
-}
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { AtSign, Calendar, Clock, ChevronsUpDown, AlertCircle } from "lucide-react";
+import { EventQuestion, QuestionType } from "@/types";
+import { normalizeEventQuestions } from "@/app/event/server/[id]/_components/event-questions-builder";
 
 // Type for custom question response
 interface CustomQuestionResponse {
-    [key: string]: string;
+    [key: string]: any;
+}
+
+function DiscordMemberQuestionSelect({
+    guildId,
+    value,
+    onChange,
+    min,
+    max,
+    placeholder,
+    error,
+}: {
+    guildId: bigint | null;
+    value: string;
+    onChange: (val: string) => void;
+    min?: number | null;
+    max?: number | null;
+    placeholder?: string;
+    error?: string;
+}) {
+    const [search, setSearch] = useState("");
+    const [results, setResults] = useState<Member[]>([]);
+    const [selectedMembers, setSelectedMembers] = useState<Member[]>([]);
+    const [isSearching, setIsSearching] = useState(false);
+    const [open, setOpen] = useState(false);
+    const maxAllowed = max ?? 1;
+
+    useEffect(() => {
+        if (!search || search.length < 2 || !guildId) {
+            setResults([]);
+            return;
+        }
+        const timer = setTimeout(async () => {
+            setIsSearching(true);
+            try {
+                const res = await fetch(`/api/discord/bot/members/search?query=${encodeURIComponent(search)}&guildId=${guildId}&limit=6`);
+                if (res.ok) {
+                    const data = await res.json();
+                    setResults(Array.isArray(data) ? data : []);
+                }
+            } catch (err) {
+                console.error("Failed to search members:", err);
+            } finally {
+                setIsSearching(false);
+            }
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [search, guildId]);
+
+    const handleSelect = (member: Member) => {
+        if (maxAllowed === 1) {
+            setSelectedMembers([member]);
+            onChange(member.user.id);
+            setOpen(false);
+            setSearch("");
+            return;
+        }
+        const exists = selectedMembers.some((m) => m.user.id === member.user.id);
+        if (exists) return;
+        if (selectedMembers.length >= maxAllowed) return;
+        const next = [...selectedMembers, member];
+        setSelectedMembers(next);
+        onChange(next.map((m) => m.user.id).join(", "));
+        setSearch("");
+    };
+
+    const handleRemove = (memberId: string) => {
+        const next = selectedMembers.filter((m) => m.user.id !== memberId);
+        setSelectedMembers(next);
+        onChange(next.map((m) => m.user.id).join(", "));
+    };
+
+    return (
+        <div className="space-y-2">
+            {selectedMembers.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                    {selectedMembers.map((m) => (
+                        <Badge key={m.user.id} variant="secondary" className="pl-1 pr-1.5 py-0.5 text-xs flex items-center gap-1.5">
+                            <Avatar className="h-4 w-4">
+                                <AvatarImage src={m.user.avatar || `https://cdn.discordapp.com/avatars/${m.user.id}/${m.user.avatar}.png`} />
+                                <AvatarFallback className="text-[9px]">{m.user.username.slice(0, 2).toUpperCase()}</AvatarFallback>
+                            </Avatar>
+                            <span>{m.user.global_name || m.user.username}</span>
+                            <span className="text-[10px] text-muted-foreground font-mono">({m.user.id})</span>
+                            <button
+                                type="button"
+                                onClick={() => handleRemove(m.user.id)}
+                                className="text-muted-foreground hover:text-foreground"
+                            >
+                                <X className="h-3 w-3" />
+                            </button>
+                        </Badge>
+                    ))}
+                </div>
+            )}
+
+            {(maxAllowed > 1 || selectedMembers.length === 0) && (
+                <Popover open={open} onOpenChange={setOpen}>
+                    <PopoverTrigger asChild>
+                        <Button
+                            variant="outline"
+                            role="combobox"
+                            aria-expanded={open}
+                            className={cn(
+                                "w-full justify-between text-xs h-9 font-normal bg-muted/20 border-border/60",
+                                error ? "border-red-500" : ""
+                            )}
+                        >
+                            <span className="flex items-center gap-2 truncate">
+                                <AtSign className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                                {selectedMembers.length === 0
+                                    ? (placeholder || "Search & select Discord member...")
+                                    : `Add another member (${selectedMembers.length}/${maxAllowed})...`}
+                            </span>
+                            <ChevronsUpDown className="ml-2 h-3.5 w-3.5 shrink-0 opacity-50" />
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[320px] p-0" align="start">
+                        <div className="p-2 border-b border-border/40">
+                            <div className="flex items-center px-2 rounded-md bg-muted/20 border border-border/40">
+                                <Search className="h-3.5 w-3.5 text-muted-foreground mr-1.5 shrink-0" />
+                                <Input
+                                    value={search}
+                                    onChange={(e) => setSearch(e.target.value)}
+                                    placeholder="Type username or nickname..."
+                                    className="h-8 text-xs border-0 bg-transparent focus-visible:ring-0 p-0"
+                                />
+                                {isSearching && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground shrink-0" />}
+                            </div>
+                        </div>
+                        <div className="max-h-48 overflow-y-auto p-1">
+                            {search.length < 2 ? (
+                                <p className="text-[11px] text-muted-foreground text-center py-4">
+                                    Type at least 2 characters to search
+                                </p>
+                            ) : results.length === 0 && !isSearching ? (
+                                <p className="text-[11px] text-muted-foreground text-center py-4">No members found</p>
+                            ) : (
+                                results.map((m) => (
+                                    <div
+                                        key={m.user.id}
+                                        onClick={() => handleSelect(m)}
+                                        className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/40 cursor-pointer text-xs transition-colors"
+                                    >
+                                        <div className="flex items-center gap-2 min-w-0">
+                                            <Avatar className="h-6 w-6">
+                                                <AvatarImage src={m.user.avatar || `https://cdn.discordapp.com/avatars/${m.user.id}/${m.user.avatar}.png`} />
+                                                <AvatarFallback className="text-[10px]">{m.user.username.slice(0, 2).toUpperCase()}</AvatarFallback>
+                                            </Avatar>
+                                            <div className="min-w-0">
+                                                <p className="font-medium text-foreground truncate leading-tight">
+                                                    {m.user.global_name || m.user.username}
+                                                </p>
+                                                <p className="text-[10px] text-muted-foreground font-mono truncate">
+                                                    @{m.user.username} · {m.user.id}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <Plus className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </PopoverContent>
+                </Popover>
+            )}
+        </div>
+    );
 }
 
 export function RegisterButton({
@@ -120,7 +287,7 @@ export function RegisterButton({
     const [isSearching, setIsSearching] = useState(false);
     const [teamName, setTeamName] = useState("");
     const [teamNameError, setTeamNameError] = useState("");
-    const [customQuestions, setCustomQuestions] = useState<CustomQuestion[]>([]);
+    const [customQuestions, setCustomQuestions] = useState<EventQuestion[]>([]);
     const [customResponses, setCustomResponses] = useState<CustomQuestionResponse>({});
     const [customQuestionsError, setCustomQuestionsError] = useState<{[key: string]: string}>({});
     const router = useRouter();
@@ -244,34 +411,15 @@ export function RegisterButton({
     // Parse custom questions from eventExtra on component mount
     useEffect(() => {
         if (eventExtra) {
-            try {
-                const parsedExtra = typeof eventExtra === 'string' 
-                    ? JSON.parse(eventExtra) 
-                    : eventExtra;
-                
-                const questionsList: CustomQuestion[] = [];
-                
-                // Convert from object format to array format for the UI
-                Object.entries(parsedExtra).forEach(([question, details]: [string, any]) => {
-                    questionsList.push({
-                        question,
-                        placeholder: details.placeholder || '',
-                        default: details.default || '',
-                        type: details.type || 1,
-                        required: details.required || false
-                    });
-                    
-                    // Initialize responses with default values
-                    setCustomResponses(prev => ({
-                        ...prev,
-                        [question]: details.default || ''
-                    }));
-                });
-                
-                setCustomQuestions(questionsList);
-            } catch (error) {
-                console.error('Error parsing custom questions:', error);
-            }
+            const questionsList = normalizeEventQuestions(eventExtra);
+            setCustomQuestions(questionsList);
+            
+            // Initialize responses with defaults
+            const initialResponses: Record<string, any> = {};
+            questionsList.forEach(q => {
+                initialResponses[q.text] = q.type === QuestionType.CHECKBOX ? false : "";
+            });
+            setCustomResponses(initialResponses);
         }
     }, [eventExtra]);
 
@@ -518,9 +666,71 @@ export function RegisterButton({
         let hasError = false;
         
         customQuestions.forEach(question => {
-            if (question.required && (!customResponses[question.question] || customResponses[question.question].trim() === '')) {
-                errors[question.question] = 'This question is required';
+            const rawVal = customResponses[question.text];
+            const strVal = typeof rawVal === "string" ? rawVal.trim() : (rawVal !== undefined && rawVal !== null ? String(rawVal) : "");
+
+            if (question.type === QuestionType.CHECKBOX) {
+                if (question.required && strVal !== "true" && rawVal !== true) {
+                    errors[question.text] = "You must agree to continue";
+                    hasError = true;
+                }
+                return;
+            }
+
+            if (question.required && (!strVal || strVal === "")) {
+                errors[question.text] = "This question is required";
                 hasError = true;
+                return;
+            }
+
+            if (strVal) {
+                if (question.type === QuestionType.NUMBER) {
+                    const num = Number(strVal);
+                    if (isNaN(num)) {
+                        errors[question.text] = "Please enter a valid number";
+                        hasError = true;
+                    } else {
+                        if (question.min !== null && question.min !== undefined && num < question.min) {
+                            errors[question.text] = `Minimum value is ${question.min}`;
+                            hasError = true;
+                        }
+                        if (question.max !== null && question.max !== undefined && num > question.max) {
+                            errors[question.text] = `Maximum value is ${question.max}`;
+                            hasError = true;
+                        }
+                    }
+                } else if (question.type === QuestionType.SHORT_TEXT || question.type === QuestionType.PARAGRAPH) {
+                    if (question.min !== null && question.min !== undefined && strVal.length < question.min) {
+                        errors[question.text] = `Minimum ${question.min} characters required`;
+                        hasError = true;
+                    }
+                    if (question.max !== null && question.max !== undefined && strVal.length > question.max) {
+                        errors[question.text] = `Maximum ${question.max} characters allowed`;
+                        hasError = true;
+                    }
+                } else if (question.type === QuestionType.CHECKBOXES || question.type === QuestionType.USER) {
+                    const count = strVal ? strVal.split(",").filter((s: string) => s.trim().length > 0).length : 0;
+                    if (question.min !== null && question.min !== undefined && count < question.min) {
+                        errors[question.text] = `Select at least ${question.min} item${question.min > 1 ? "s" : ""}`;
+                        hasError = true;
+                    }
+                    if (question.max !== null && question.max !== undefined && count > question.max) {
+                        errors[question.text] = `Select at most ${question.max} item${question.max > 1 ? "s" : ""}`;
+                        hasError = true;
+                    }
+                } else if (question.type === QuestionType.DATE) {
+                    const dateObj = new Date(strVal);
+                    if (isNaN(dateObj.getTime())) {
+                        errors[question.text] = "Please enter a valid date (YYYY-MM-DD)";
+                        hasError = true;
+                    }
+                } else if (question.type === QuestionType.TIME) {
+                    const timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9](:[0-5][0-9])?(\s?[APap][Mm])?$/;
+                    if (!timeRegex.test(strVal)) {
+                        errors[question.text] = "Please enter a valid time (HH:MM)";
+                        hasError = true;
+                    }
+                }
             }
         });
         
@@ -608,20 +818,21 @@ export function RegisterButton({
     };
 
     // Handle input change for custom questions
-    const handleQuestionChange = (question: string, value: string) => {
+    const handleQuestionChange = (questionText: string, value: any) => {
         setCustomResponses(prev => ({
             ...prev,
-            [question]: value
+            [questionText]: value
         }));
         
-        // Clear error when user types
-        if (customQuestionsError[question]) {
+        // Clear error when user changes value
+        if (customQuestionsError[questionText]) {
             setCustomQuestionsError(prev => {
                 const newErrors = {...prev};
-                delete newErrors[question];
+                delete newErrors[questionText];
                 return newErrors;
             });
-        }    };
+        }
+    };
     
     // Determine button text based on status
     let buttonText = "Register for Event";
@@ -1263,7 +1474,7 @@ export function RegisterButton({
             
             {/* Custom Questions Dialog */}
             <Dialog open={isQuestionsDialogOpen} onOpenChange={setIsQuestionsDialogOpen}>
-                <DialogContent className="sm:max-w-md">
+                <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle>Additional Information</DialogTitle>
                         <DialogDescription>
@@ -1272,33 +1483,152 @@ export function RegisterButton({
                     </DialogHeader>
                     
                     <div className="space-y-4 py-2">
-                        {customQuestions.map((question, index) => (
-                            <div key={index} className="space-y-2">
-                                <Label className="text-sm font-medium flex items-center">
-                                    {question.question} 
-                                    {question.required && <span className="text-red-500 ml-1">*</span>}
-                                </Label>
-                                {question.type === 1 ? (
-                                    <Input 
-                                        placeholder={question.placeholder} 
-                                        value={customResponses[question.question] || ''}
-                                        onChange={(e) => handleQuestionChange(question.question, e.target.value)}
-                                        className={customQuestionsError[question.question] ? "border-red-500" : ""}
-                                    />
-                                ) : (
-                                    <Textarea
-                                        placeholder={question.placeholder}
-                                        value={customResponses[question.question] || ''}
-                                        onChange={(e) => handleQuestionChange(question.question, e.target.value)}
-                                        className={customQuestionsError[question.question] ? "border-red-500" : ""}
-                                        rows={3}
-                                    />
-                                )}
-                                {customQuestionsError[question.question] && (
-                                    <p className="text-xs text-red-500">{customQuestionsError[question.question]}</p>
-                                )}
-                            </div>
-                        ))}
+                        {customQuestions.map((question, index) => {
+                            const errorMsg = customQuestionsError[question.text];
+                            const val = customResponses[question.text] ?? "";
+
+                            return (
+                                <div key={question.id || index} className="space-y-1.5">
+                                    <div className="flex items-center justify-between">
+                                        <Label className="text-xs font-semibold flex items-center text-foreground">
+                                            {question.text}
+                                            {question.required && <span className="text-red-500 ml-1">*</span>}
+                                        </Label>
+                                        {question.description && (
+                                            <span className="text-[11px] text-muted-foreground truncate max-w-[200px]" title={question.description}>
+                                                {question.description}
+                                            </span>
+                                        )}
+                                    </div>
+
+                                    {/* Render based on QuestionType */}
+                                    {question.type === QuestionType.PARAGRAPH ? (
+                                        <Textarea
+                                            placeholder={question.placeholder || "Enter details..."}
+                                            value={val}
+                                            onChange={(e) => handleQuestionChange(question.text, e.target.value)}
+                                            className={errorMsg ? "border-red-500 text-xs min-h-[80px]" : "text-xs min-h-[80px]"}
+                                            rows={3}
+                                        />
+                                    ) : question.type === QuestionType.NUMBER ? (
+                                        <Input
+                                            type="number"
+                                            placeholder={question.placeholder || "Enter a number"}
+                                            value={val}
+                                            min={question.min ?? undefined}
+                                            max={question.max ?? undefined}
+                                            onChange={(e) => handleQuestionChange(question.text, e.target.value)}
+                                            className={errorMsg ? "border-red-500 text-xs h-9" : "text-xs h-9"}
+                                        />
+                                    ) : question.type === QuestionType.DATE ? (
+                                        <Input
+                                            type="date"
+                                            value={val}
+                                            onChange={(e) => handleQuestionChange(question.text, e.target.value)}
+                                            className={errorMsg ? "border-red-500 text-xs h-9" : "text-xs h-9"}
+                                        />
+                                    ) : question.type === QuestionType.TIME ? (
+                                        <Input
+                                            type="time"
+                                            value={val}
+                                            onChange={(e) => handleQuestionChange(question.text, e.target.value)}
+                                            className={errorMsg ? "border-red-500 text-xs h-9" : "text-xs h-9"}
+                                        />
+                                    ) : question.type === QuestionType.CHECKBOX ? (
+                                        <div className="flex items-center space-x-2 pt-1">
+                                            <Checkbox
+                                                id={`reg-chk-${question.id}`}
+                                                checked={val === true || val === "true"}
+                                                onCheckedChange={(checked) => handleQuestionChange(question.text, checked ? "true" : "false")}
+                                            />
+                                            <label htmlFor={`reg-chk-${question.id}`} className="text-xs font-medium cursor-pointer text-muted-foreground hover:text-foreground">
+                                                {question.description || question.placeholder || "I agree / Confirm"}
+                                            </label>
+                                        </div>
+                                    ) : question.type === QuestionType.DROPDOWN ? (
+                                        <Select
+                                            value={val}
+                                            onValueChange={(selected) => handleQuestionChange(question.text, selected)}
+                                        >
+                                            <SelectTrigger className={errorMsg ? "border-red-500 text-xs h-9" : "text-xs h-9"}>
+                                                <SelectValue placeholder={question.placeholder || "Select an option..."} />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {question.options?.map((opt) => (
+                                                    <SelectItem key={opt.id} value={opt.text} className="text-xs">
+                                                        {opt.text}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    ) : question.type === QuestionType.MULTIPLE_CHOICE ? (
+                                        <RadioGroup
+                                            value={val}
+                                            onValueChange={(selected) => handleQuestionChange(question.text, selected)}
+                                            className="space-y-1.5 pt-1"
+                                        >
+                                            {question.options?.map((opt) => (
+                                                <div key={opt.id} className="flex items-center space-x-2">
+                                                    <RadioGroupItem value={opt.text} id={`reg-radio-${question.id}-${opt.id}`} />
+                                                    <label htmlFor={`reg-radio-${question.id}-${opt.id}`} className="text-xs cursor-pointer">
+                                                        {opt.text}
+                                                    </label>
+                                                </div>
+                                            ))}
+                                        </RadioGroup>
+                                    ) : question.type === QuestionType.CHECKBOXES ? (
+                                        <div className="space-y-1.5 pt-1">
+                                            {question.options?.map((opt) => {
+                                                const selectedList = typeof val === "string" ? val.split(",").map((s: string) => s.trim()).filter(Boolean) : [];
+                                                const isChecked = selectedList.includes(opt.text);
+                                                return (
+                                                    <div key={opt.id} className="flex items-center space-x-2">
+                                                        <Checkbox
+                                                            id={`reg-multichk-${question.id}-${opt.id}`}
+                                                            checked={isChecked}
+                                                            onCheckedChange={(checked) => {
+                                                                let next = [...selectedList];
+                                                                if (checked) {
+                                                                    if (!next.includes(opt.text)) next.push(opt.text);
+                                                                } else {
+                                                                    next = next.filter((item: string) => item !== opt.text);
+                                                                }
+                                                                handleQuestionChange(question.text, next.join(", "));
+                                                            }}
+                                                        />
+                                                        <label htmlFor={`reg-multichk-${question.id}-${opt.id}`} className="text-xs cursor-pointer">
+                                                            {opt.text}
+                                                        </label>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    ) : question.type === QuestionType.USER ? (
+                                        <DiscordMemberQuestionSelect
+                                            guildId={guildId}
+                                            value={val}
+                                            onChange={(userVal) => handleQuestionChange(question.text, userVal)}
+                                            min={question.min}
+                                            max={question.max}
+                                            placeholder={question.placeholder}
+                                            error={errorMsg}
+                                        />
+                                    ) : (
+                                        <Input
+                                            placeholder={question.placeholder || "Enter answer"}
+                                            value={val}
+                                            maxLength={question.max ?? 4000}
+                                            onChange={(e) => handleQuestionChange(question.text, e.target.value)}
+                                            className={errorMsg ? "border-red-500 text-xs h-9" : "text-xs h-9"}
+                                        />
+                                    )}
+
+                                    {errorMsg && (
+                                        <p className="text-[11px] text-red-500 mt-0.5">{errorMsg}</p>
+                                    )}
+                                </div>
+                            );
+                        })}
                     </div>
                     
                     <DialogFooter>

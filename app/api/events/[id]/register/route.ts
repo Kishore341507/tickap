@@ -96,7 +96,7 @@ export async function POST(
           event_id: BigInt(id),
           team_name: teamName || `${session.user.name}'s Team`,
           // Store custom question responses if provided
-          extra: questionResponses ? JSON.stringify(questionResponses) : undefined,
+          extra: questionResponses ?? undefined,
           registrationusers: {
             create: {
               user_id: userId,
@@ -148,14 +148,21 @@ export async function POST(
 
     // Team event registration
 
-    // Validate team name
-    if (
-      !teamName ||
-      teamName.trim().length < 3 ||
-      teamName.trim().length > 40
-    ) {
+    // Validate team name (only required if auto_team_name is disabled)
+    if (!event.auto_team_name) {
+      if (
+        !teamName ||
+        teamName.trim().length < 3 ||
+        teamName.trim().length > 40
+      ) {
+        return NextResponse.json(
+          { message: "Team name must be between 3 and 40 characters" },
+          { status: 400 }
+        );
+      }
+    } else if (teamName && teamName.trim().length > 40) {
       return NextResponse.json(
-        { message: "Team name must be between 3 and 40 characters" },
+        { message: "Team name must be less than 40 characters" },
         { status: 400 }
       );
     }
@@ -295,7 +302,7 @@ export async function POST(
         team_name: finalTeamName,
         local_id: localId,
         // Store custom question responses if provided
-        extra: questionResponses ? JSON.stringify(questionResponses) : undefined,
+        extra: questionResponses ?? undefined,
         registrationusers: {
           create: [
             // Register the current user

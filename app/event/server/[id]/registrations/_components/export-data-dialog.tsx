@@ -42,15 +42,56 @@ export function ExportDataDialog({
       let mimeType;
       let fileName;
       
-      if (format === "csv") {
-        // Create CSV content
-        let csvContent = "Team Name,User ID,User Name\n";
+      // Collect all custom question keys across all registrations
+      const customHeaders: string[] = [];
+      registrations.forEach(r => {
+        if (r.extra) {
+          try {
+            const parsed = typeof r.extra === 'string' ? JSON.parse(r.extra) : r.extra;
+            if (parsed && typeof parsed === 'object') {
+              Object.keys(parsed).forEach(k => {
+                if (!customHeaders.includes(k)) {
+                  customHeaders.push(k);
+                }
+              });
+            }
+          } catch {}
+        }
+      });
+
+      const buildCsvContent = () => {
+        const escapeCsv = (val: string) => `"${val.replace(/"/g, '""')}"`;
+        let headerRow = ["Team Name", "User ID", "User Name", ...customHeaders].map(escapeCsv).join(",") + "\n";
+        let rows = "";
         registrations.forEach(registration => {
+          let extraObj: Record<string, any> = {};
+          if (registration.extra) {
+            try {
+              extraObj = typeof registration.extra === 'string' ? JSON.parse(registration.extra) : registration.extra;
+            } catch {}
+          }
+          const extraValues = customHeaders.map(h => {
+            const val = extraObj[h];
+            if (val === undefined || val === null) return "";
+            if (Array.isArray(val)) return val.join("; ");
+            return String(val);
+          });
+
           registration.registrationusers.forEach(user => {
-            csvContent += `"${registration.team_name || 'Unnamed Team'}",${user.user_id.toString()},"${user.user_name || 'Unknown User'}"\n`;
+            const rowValues = [
+              registration.team_name || 'Unnamed Team',
+              user.user_id.toString(),
+              user.user_name || 'Unknown User',
+              ...extraValues
+            ];
+            rows += rowValues.map(escapeCsv).join(",") + "\n";
           });
         });
-        data = csvContent;
+        return headerRow + rows;
+      };
+
+      if (format === "csv") {
+        data = buildCsvContent();
         mimeType = 'text/csv;charset=utf-8;';
         fileName = `${eventName}-registrations.csv`;
       } else if (format === "json") {
@@ -64,14 +105,8 @@ export function ExportDataDialog({
         mimeType = 'application/json';
         fileName = `${eventName}-registrations.json`;
       } else {
-        // For Excel, we'll just create a CSV that Excel can open
-        let csvContent = "Team Name,User ID,User Name\n";
-        registrations.forEach(registration => {
-          registration.registrationusers.forEach(user => {
-            csvContent += `"${registration.team_name || 'Unnamed Team'}",${user.user_id.toString()},"${user.user_name || 'Unknown User'}"\n`;
-          });
-        });
-        data = csvContent;
+        // For Excel, we'll create a CSV that Excel can open
+        data = buildCsvContent();
         mimeType = 'text/csv;charset=utf-8;';
         fileName = `${eventName}-registrations.xlsx`;
       }

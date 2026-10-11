@@ -39,6 +39,19 @@ export enum RequestStatus {
   CANCELLED = "CANCELLED"
 }
 
+export enum QuestionType {
+  SHORT_TEXT = "SHORT_TEXT",
+  PARAGRAPH = "PARAGRAPH",
+  MULTIPLE_CHOICE = "MULTIPLE_CHOICE",
+  CHECKBOXES = "CHECKBOXES",
+  CHECKBOX = "CHECKBOX",
+  DROPDOWN = "DROPDOWN",
+  DATE = "DATE",
+  TIME = "TIME",
+  NUMBER = "NUMBER",
+  USER = "USER"
+}
+
 /**
  * User and member interfaces
  */
@@ -133,6 +146,25 @@ export interface Event {
   register_for_other?: boolean | null;
   auto_team_name?: boolean | null;
   team_counter?: number | null;
+  extra?: any;
+}
+
+export interface EventQuestionOption {
+  id: string;
+  text: string;
+}
+
+export interface EventQuestion {
+  id: string;
+  text: string;
+  description?: string;
+  placeholder?: string;
+  type: QuestionType;
+  required: boolean;
+  options?: EventQuestionOption[];
+  min?: number | null;
+  max?: number | null;
+  order: number;
 }
 
 export interface DiscordScheduledEvent {
