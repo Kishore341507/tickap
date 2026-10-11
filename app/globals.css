@@ -80,7 +80,29 @@
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground antialiased selection:bg-primary/20 selection:text-primary;
   }
+}
+
+@keyframes marquee-ltr {
+  100% {
+    transform: translateX(-50%);
+  }
+
+  0% {
+    transform: translateX(0%);
+  }
+}
+
+.animate-marquee-ltr {
+  display: flex;
+  width: max-content;
+  animation: marquee-ltr 32s linear infinite;
+  will-change: transform;
+}
+
+.animate-marquee-ltr:hover {
+  animation-play-state: paused;
 }
