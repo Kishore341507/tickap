@@ -477,7 +477,7 @@ export async function sendLogMessage(
   data: Registration
 ) {
   try {
-    let embed = {
+    let embed: any = {
       title: userName,
       description: "",
       color: 0x2ecc71,
@@ -485,69 +485,110 @@ export async function sendLogMessage(
         text: `Event ID: ${eventId}`,
         icon_url: `https://tickap.com/tickap_dark.png`,
       },
-      fields: [
-        {
-          name: " ",
-          value: `**[Log](https://tickap.com/event/server/${guildId}/logs/${eventId})** | **[Registration](https://tickap.com/event/server/${guildId}/registrations/${eventId})**`,
-          inline: false,
-        },
-      ],
+      fields: [],
     };
+
+    let fields: Array<{ name: string; value: string; inline: boolean }> = [];
+
     if (type == "Registration") {
       embed.title = data.team_name || userName;
       embed.color = 0x2ecc71;
-      let users = data.registrationusers
+      let users = (data.registrationusers || [])
         .map((user: RegistrationUser) => {
           return `<@${user.user_id}> | ${user.user_id}`;
         })
         .join("\n");
-      embed.description = `${users}`;
+      embed.description = users || userName;
+
       let extra_input = "";
       if (data.extra) {
-        const parsedExtra = JSON.parse(data.extra);
-        if (typeof parsedExtra === "object" && parsedExtra !== null) {
-          let extraLines = [];
-          for (const key in parsedExtra) {
-            if (parsedExtra[key] && parsedExtra[key] !== "") {
-              extraLines.push(`**${key}**\n${parsedExtra[key]}`);
+        let parsedExtra: any = data.extra;
+        if (typeof data.extra === "string") {
+          try {
+            parsedExtra = JSON.parse(data.extra);
+          } catch {
+            parsedExtra = null;
+          }
+        }
+
+        if (parsedExtra && typeof parsedExtra === "object") {
+          let extraLines: string[] = [];
+          if (Array.isArray(parsedExtra)) {
+            for (let i = 0; i < parsedExtra.length; i++) {
+              const item = parsedExtra[i];
+              if (item && typeof item === "object") {
+                const qText = item.text || item.question || item.label || `Question ${i + 1}`;
+                const qAns = item.value ?? item.answer ?? item.val ?? "";
+                const ansStr = Array.isArray(qAns) ? qAns.join(", ") : String(qAns);
+                if (ansStr.trim()) {
+                  extraLines.push(`**${qText}**\n${ansStr}`);
+                }
+              } else if (item !== undefined && item !== null && String(item).trim()) {
+                extraLines.push(`**Question ${i + 1}**\n${String(item)}`);
+              }
+            }
+          } else {
+            for (const key in parsedExtra) {
+              const val = parsedExtra[key];
+              if (val !== undefined && val !== null) {
+                const valStr = Array.isArray(val)
+                  ? val.join(", ")
+                  : typeof val === "boolean"
+                  ? (val ? "Yes" : "No")
+                  : String(val);
+                if (valStr.trim() !== "") {
+                  extraLines.push(`**${key}**\n${valStr}`);
+                }
+              }
             }
           }
           extra_input = extraLines.join("\n");
         }
 
-        embed.fields.push({
-          name: "Extra Input",
-          value: extra_input,
-          inline: false,
-        });
+        if (extra_input.trim()) {
+          const finalVal = extra_input.length > 1024 ? extra_input.slice(0, 1021) + "..." : extra_input;
+          fields.push({
+            name: "Inputs",
+            value: finalVal,
+            inline: false,
+          });
+        }
       }
     } else if (type == "Unregistration") {
       embed.title = `Unregistered by ${userName}`;
       embed.color = 0xe74c3c;
-      embed.description = `Unregistered from ${data.team_name}`;
-      embed.fields.push({
+      embed.description = `Unregistered from ${data.team_name || "event"}`;
+      fields.push({
         name: "Unregistered Users",
-        value: data.registrationusers
+        value: (data.registrationusers || [])
           .map((user: RegistrationUser) => {
             return `<@${user.user_id}> | ${user.user_id}`;
           })
-          .join("\n"),
+          .join("\n") || userName,
         inline: false,
       });
     } else if (type == "Registration Update") {
       embed.title = `Updated by ${userName}`;
       embed.color = 0xf39c12;
-      embed.description = `Updated ${data.team_name}`;
-      embed.fields.push({
+      embed.description = `Updated ${data.team_name || "registration"}`;
+      fields.push({
         name: "Updated Users",
-        value: data.registrationusers
+        value: (data.registrationusers || [])
           .map((user: RegistrationUser) => {
             return `<@${user.user_id}> | ${user.user_id}`;
           })
-          .join("\n"),
+          .join("\n") || userName,
         inline: false,
       });
     }
+
+    fields.push({
+      name: " ",
+      value: `**[Log](https://tickap.com/event/server/${guildId}/logs/${eventId})** | **[Registration](https://tickap.com/event/server/${guildId}/registrations/${eventId})**`,
+      inline: false,
+    });
+
+    embed.fields = fields;
 
     const messageResponse = await fetch(
       `${env.DISCORD_API_URL}/channels/${channelId}/messages`,
