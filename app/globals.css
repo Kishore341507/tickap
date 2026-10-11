@@ -80,16 +80,18 @@
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground antialiased selection:bg-primary/20 selection:text-primary;
   }
 }
 
 @keyframes marquee-ltr {
-  0% {
+  100% {
     transform: translateX(-50%);
   }
-  100% {
+
+  0% {
     transform: translateX(0%);
   }
 }
@@ -103,4 +105,4 @@
 
 .animate-marquee-ltr:hover {
   animation-play-state: paused;
-}
+}
