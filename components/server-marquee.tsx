@@ -75,8 +75,19 @@ function ServerBadgeItem({ guild }: { guild: MarqueeGuild }) {
 export function ServerMarquee({ guilds }: ServerMarqueeProps) {
   if (!guilds || guilds.length === 0) return null;
 
-  // Duplicate list twice to create a seamless infinite loop
-  const displayList = [...guilds, ...guilds];
+  // Ensure sufficient elements to fill screen on wide viewports if guild count is small
+  let half = guilds;
+  if (guilds.length < 5) {
+    half = [...guilds, ...guilds, ...guilds];
+  }
+
+  // Duplicate list twice to create a seamless 50%-50% infinite loop
+  const displayList = [...half, ...half];
+
+  // Constant speed calculation:
+  // Give each card ~3.5 seconds to pass, maintaining the exact same
+  // linear speed (px/sec) whether there are 8 servers or 74+ servers.
+  const duration = Math.max(25, Math.round(half.length * 3.5));
 
   return (
     <div className="relative w-full overflow-hidden py-4 select-none">
@@ -84,8 +95,13 @@ export function ServerMarquee({ guilds }: ServerMarqueeProps) {
       <div className="pointer-events-none absolute left-0 top-0 bottom-0 w-16 sm:w-28 bg-gradient-to-r from-background via-background/80 to-transparent z-10" />
       <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-16 sm:w-28 bg-gradient-to-l from-background via-background/80 to-transparent z-10" />
 
-      {/* Marquee Row: Moving Left to Right */}
-      <div className="animate-marquee-ltr flex items-center gap-4">
+      {/* Marquee Row: Constant speed regardless of server count */}
+      <div
+        className="animate-marquee-ltr flex items-center gap-4"
+        style={{
+          animationDuration: `${duration}s`,
+        }}
+      >
         {displayList.map((guild, idx) => (
           <ServerBadgeItem key={`${guild.id}-${idx}`} guild={guild} />
         ))}

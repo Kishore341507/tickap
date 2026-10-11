@@ -99,7 +99,7 @@
 .animate-marquee-ltr {
   display: flex;
   width: max-content;
-  animation: marquee-ltr 32s linear infinite;
+  animation: marquee-ltr var(--marquee-duration, 32s) linear infinite;
   will-change: transform;
 }
 
