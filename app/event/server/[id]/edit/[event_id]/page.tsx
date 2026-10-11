@@ -67,8 +67,9 @@ import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
-import { Category , Platform , EventStatus } from "@/types";
+import { Category , Platform , EventStatus, EventQuestion, QuestionType } from "@/types";
 import DiscordEventSyncSection from "../../_components/discord-event-sync-section";
+import { EventQuestionsBuilder, normalizeEventQuestions } from "../../_components/event-questions-builder";
 
 // Create a Zod schema for form validation
 const eventFormSchema = z.object({
@@ -141,7 +142,7 @@ export default function EditEvent() {
   const [notificationChannelOpen, setNotificationChannelOpen] = useState(false);
   const [eventData, setEventData] = useState<any>(null);
   const [needsBannerUpload, setNeedsBannerUpload] = useState(false);
-  const [customQuestions, setCustomQuestions] = useState<CustomQuestion[]>([]);
+  const [customQuestions, setCustomQuestions] = useState<EventQuestion[]>([]);
   const [discordAction, setDiscordAction] = useState<"create" | "link" | "none" | "unlink">("none");
   const [selectedDiscordEventId, setSelectedDiscordEventId] = useState<string>("");
 
@@ -181,7 +182,20 @@ export default function EditEvent() {
   });
 
   const isSolo = form.watch("is_solo");
+  const autoTeamName = form.watch("auto_team_name");
   const registerForOther = form.watch("register_for_other");
+  const maxQuestions = isSolo || autoTeamName ? 5 : 4;
+
+  // Enforce question limits when switching to manual team names
+  useEffect(() => {
+    if (!isSolo && !autoTeamName && customQuestions.length > 4) {
+      setCustomQuestions((prev) => prev.slice(0, 4));
+      toast({
+        title: "Question limit adjusted",
+        description: "Manual team name requires a slot; 5th question was automatically removed (max 4 allowed).",
+      });
+    }
+  }, [isSolo, autoTeamName, customQuestions.length, toast]);
 
   useEffect(() => {
     if (!registerForOther) {
@@ -210,30 +224,8 @@ export default function EditEvent() {
 
         // Load custom questions from extra field if they exist
         if (data.event.extra) {
-          try {
-            const extraData = typeof data.event.extra === 'string' 
-              ? JSON.parse(data.event.extra) 
-              : data.event.extra;
-            
-            const loadedQuestions: CustomQuestion[] = [];
-            
-            // Convert from object format to array format for the UI
-            Object.entries(extraData).forEach(([question, details]: [string, any]) => {
-              if (loadedQuestions.length < 4) {
-                loadedQuestions.push({
-                  question,
-                  placeholder: details.placeholder || '',
-                  default: details.default || '',
-                  type: details.type || 1,
-                  required: details.required || false
-                });
-              }
-            });
-            
-            setCustomQuestions(loadedQuestions);
-          } catch (error) {
-            console.error('Error parsing custom questions:', error);
-          }
+          const loadedQuestions = normalizeEventQuestions(data.event.extra);
+          setCustomQuestions(loadedQuestions);
         }
 
         // Set form values
@@ -399,32 +391,39 @@ export default function EditEvent() {
       // Add custom questions to the extra field if any exist
       if (customQuestions.length > 0) {
         // Validate that all questions have text
-        const invalidQuestions = customQuestions.filter(q => !q.question.trim());
+        const invalidQuestions = customQuestions.filter((q) => !q.text.trim());
         if (invalidQuestions.length > 0) {
           toast({
             title: "Invalid Questions",
-            description: "All questions must have question text",
+            description: "All custom questions must have prompt text",
             variant: "destructive",
           });
           setIsSubmitting(false);
           return;
         }
-        
-        // Create a formatted object to save as extra JSON
-        const formattedQuestions = customQuestions.reduce((acc, question, index) => {
-          acc[question.question.trim()] = {
-            placeholder: question.placeholder,
-            default: question.default,
-            type: question.type,
-            required: question.required
-          };
-          return acc;
-        }, {} as Record<string, any>);
-        
-        formData.append("extra", JSON.stringify(formattedQuestions));
+
+        // Validate options for choice types
+        const invalidOptions = customQuestions.filter(
+          (q) =>
+            (q.type === QuestionType.MULTIPLE_CHOICE ||
+              q.type === QuestionType.CHECKBOXES ||
+              q.type === QuestionType.DROPDOWN) &&
+            (!q.options || q.options.length < 2)
+        );
+        if (invalidOptions.length > 0) {
+          toast({
+            title: "Options Required",
+            description: `Question "${invalidOptions[0].text || "Untitled"}" requires at least 2 options`,
+            variant: "destructive",
+          });
+          setIsSubmitting(false);
+          return;
+        }
+
+        formData.append("extra", JSON.stringify(customQuestions));
       } else {
-        // If all questions were removed, set extra to an empty object
-        formData.append("extra", JSON.stringify({}));
+        // If all questions were removed, set extra to empty array
+        formData.append("extra", "[]");
       }
 
       // Add guild_id from params
@@ -1541,181 +1540,11 @@ export default function EditEvent() {
           </Card>
 
           {/* Card 7: Custom Registration Questions */}
-          <Card className="rounded-2xl border border-border/60 bg-card/40 shadow-sm">
-            <CardHeader className="p-5 sm:p-6 pb-4 border-b border-border/40 flex flex-row items-center justify-between space-y-0">
-              <div>
-                <div className="flex items-center gap-2">
-                  <HelpCircle className="h-4 w-4 text-primary" />
-                  <CardTitle className="text-base font-semibold">Custom Registration Questions</CardTitle>
-                </div>
-                <CardDescription className="text-xs mt-1">
-                  Collect participant in-game IDs, ranks, or custom survey answers (up to 4 questions).
-                </CardDescription>
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="h-8 text-xs font-medium"
-                onClick={() => {
-                  if (customQuestions.length >= 4) {
-                    toast({
-                      title: "Limit Reached",
-                      description: "You can add a maximum of 4 custom questions.",
-                      variant: "destructive",
-                    });
-                    return;
-                  }
-                  setCustomQuestions([
-                    ...customQuestions,
-                    {
-                      question: "",
-                      placeholder: "",
-                      default: "",
-                      type: 1,
-                      required: false,
-                    },
-                  ]);
-                }}
-                disabled={customQuestions.length >= 4}
-              >
-                <Plus className="mr-1.5 h-3.5 w-3.5" />
-                Add Question ({customQuestions.length}/4)
-              </Button>
-            </CardHeader>
-            <CardContent className="p-5 sm:p-6 space-y-4">
-              {customQuestions.length === 0 ? (
-                <div className="flex flex-col items-center justify-center border border-dashed border-border/60 rounded-xl py-10 px-4 text-center bg-muted/10">
-                  <div className="p-3 rounded-full bg-muted/40 mb-3">
-                    <HelpCircle className="h-6 w-6 text-muted-foreground" />
-                  </div>
-                  <h3 className="text-sm font-semibold mb-1">No custom questions added</h3>
-                  <p className="text-xs text-muted-foreground max-w-sm">
-                    Ask participants questions during signup, like Riot ID, Epic Tag, BattleTag, or Discord handle.
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {customQuestions.map((question, index) => (
-                    <div
-                      key={index}
-                      className="border border-border/60 bg-muted/15 rounded-xl p-4 sm:p-5 relative space-y-4"
-                    >
-                      <div className="flex items-center justify-between border-b border-border/40 pb-3">
-                        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                          Question #{index + 1}
-                        </span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive transition-colors"
-                          onClick={() => {
-                            const newQuestions = [...customQuestions];
-                            newQuestions.splice(index, 1);
-                            setCustomQuestions(newQuestions);
-                          }}
-                        >
-                          <Trash className="h-4 w-4" />
-                        </Button>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-1.5">
-                          <label className="text-xs font-semibold">
-                            Question Text <span className="text-primary">*</span>
-                          </label>
-                          <Input
-                            value={question.question}
-                            placeholder="e.g. In-Game Riot ID + Tag"
-                            maxLength={45}
-                            className="bg-muted/20 border-border/60 h-9 text-xs"
-                            onChange={(e) => {
-                              const newQuestions = [...customQuestions];
-                              newQuestions[index].question = e.target.value;
-                              setCustomQuestions(newQuestions);
-                            }}
-                          />
-                          <p className="text-[11px] text-muted-foreground text-right">
-                            {question.question.length}/45
-                          </p>
-                        </div>
-
-                        <div className="space-y-1.5">
-                          <label className="text-xs font-semibold">Placeholder Hint</label>
-                          <Input
-                            value={question.placeholder}
-                            placeholder="e.g. PlayerName#NA1"
-                            maxLength={100}
-                            className="bg-muted/20 border-border/60 h-9 text-xs"
-                            onChange={(e) => {
-                              const newQuestions = [...customQuestions];
-                              newQuestions[index].placeholder = e.target.value;
-                              setCustomQuestions(newQuestions);
-                            }}
-                          />
-                          <p className="text-[11px] text-muted-foreground text-right">
-                            {question.placeholder.length}/100
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-1.5">
-                          <label className="text-xs font-semibold">Default Value</label>
-                          <Textarea
-                            value={question.default}
-                            placeholder="Optional default pre-fill value"
-                            maxLength={4000}
-                            rows={2}
-                            className="bg-muted/20 border-border/60 min-h-[64px] text-xs resize-y"
-                            onChange={(e) => {
-                              const newQuestions = [...customQuestions];
-                              newQuestions[index].default = e.target.value;
-                              setCustomQuestions(newQuestions);
-                            }}
-                          />
-                        </div>
-
-                        <div className="flex flex-col justify-between space-y-3">
-                          <div className="space-y-1.5">
-                            <label className="text-xs font-semibold">Answer Field Type</label>
-                            <Select
-                              value={String(question.type)}
-                              onValueChange={(val) => {
-                                const newQuestions = [...customQuestions];
-                                newQuestions[index].type = parseInt(val) as 1 | 2;
-                                setCustomQuestions(newQuestions);
-                              }}
-                            >
-                              <SelectTrigger className="bg-muted/20 border-border/60 h-9 text-xs">
-                                <SelectValue placeholder="Select type" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="1">Short Input (Single Line)</SelectItem>
-                                <SelectItem value="2">Long Input (Textarea)</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-
-                          <div className="flex items-center justify-between rounded-lg border border-border/40 p-2.5 bg-background/50">
-                            <span className="text-xs font-medium">Mandatory Question</span>
-                            <Switch
-                              checked={question.required}
-                              onCheckedChange={(checked) => {
-                                const newQuestions = [...customQuestions];
-                                newQuestions[index].required = checked;
-                                setCustomQuestions(newQuestions);
-                              }}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <EventQuestionsBuilder
+            questions={customQuestions}
+            onChange={setCustomQuestions}
+            maxQuestions={maxQuestions}
+          />
 
           {/* Sticky Bottom Action Bar */}
           <div className="sticky bottom-4 z-20 flex items-center justify-between gap-4 p-4 rounded-2xl bg-card/90 backdrop-blur-md border border-border/80 shadow-lg">

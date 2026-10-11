@@ -10,7 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { UserPlus, UserX, Trash2, RefreshCw, Copy, Check } from "lucide-react";
+import { UserPlus, UserX, Trash2, RefreshCw, Copy, Check, User } from "lucide-react";
 import { RegistrationUser , Registration } from "@/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -209,24 +209,69 @@ export function RegistrationsList({
                       <div className="rounded-xl border border-border/40 bg-muted/20 p-3 space-y-2.5">
                         {(() => {
                           try {
-                            const extraData = typeof registration.extra === 'string'
+                            let extraData = typeof registration.extra === 'string'
                               ? JSON.parse(registration.extra)
                               : registration.extra;
                             
+                            if (typeof extraData === 'string') {
+                              try { extraData = JSON.parse(extraData); } catch {}
+                            }
+                            
+                            if (!extraData || typeof extraData !== 'object' || Object.keys(extraData).length === 0) {
+                              return <p className="text-xs text-muted-foreground">No answers provided</p>;
+                            }
+
                             return Object.entries(extraData).map(([question, answerObj], index) => {
-                              const answer = typeof answerObj === 'string' 
-                                ? answerObj 
-                                : (answerObj as any)?.toString() || "No response";
-                                
+                              const isBooleanTrue = answerObj === true || answerObj === "true";
+                              const isBooleanFalse = answerObj === false || answerObj === "false";
+                              const isArray = Array.isArray(answerObj);
+                              const isUserId = typeof answerObj === "string" && /^\d{17,20}$/.test(answerObj.trim());
+
                               return (
-                                <div key={index} className="space-y-1">
+                                <div key={index} className="space-y-1.5">
                                   <h4 className="text-xs font-medium text-foreground">{question}</h4>
-                                  <div className="bg-background/60 p-2 rounded-lg border border-border/30">
-                                    <CopyableText 
-                                      text={answer} 
-                                      className="text-xs text-muted-foreground whitespace-pre-wrap font-mono"
-                                    />
-                                  </div>
+                                  {isBooleanTrue ? (
+                                    <div className="pt-0.5">
+                                      <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 gap-1.5 text-xs py-1 px-2.5">
+                                        <Check className="h-3 w-3 text-emerald-500" />
+                                        <span>Yes / Confirmed</span>
+                                      </Badge>
+                                    </div>
+                                  ) : isBooleanFalse ? (
+                                    <div className="pt-0.5">
+                                      <Badge variant="outline" className="bg-muted/40 text-muted-foreground border-border/40 text-xs py-1 px-2.5">
+                                        <span>No</span>
+                                      </Badge>
+                                    </div>
+                                  ) : isArray ? (
+                                    <div className="flex flex-wrap gap-1.5 pt-0.5">
+                                      {(answerObj as any[]).map((item: any, idx: number) => {
+                                        const strItem = typeof item === 'string' || typeof item === 'number' ? String(item) : JSON.stringify(item);
+                                        const isMemberId = typeof item === 'string' && /^\d{17,20}$/.test(item.trim());
+                                        return (
+                                          <Badge key={idx} variant="secondary" className="text-xs py-0.5 px-2 font-mono gap-1">
+                                            {isMemberId && <User className="h-3 w-3 text-muted-foreground" />}
+                                            <span>{strItem}</span>
+                                          </Badge>
+                                        );
+                                      })}
+                                    </div>
+                                  ) : isUserId ? (
+                                    <div className="flex items-center gap-2 pt-0.5">
+                                      <Badge variant="secondary" className="font-mono text-xs gap-1.5 py-1 px-2.5">
+                                        <User className="h-3 w-3 text-muted-foreground" />
+                                        <span>{answerObj as string}</span>
+                                      </Badge>
+                                      <CopyableText text={String(answerObj)} className="text-xs text-muted-foreground" />
+                                    </div>
+                                  ) : (
+                                    <div className="bg-background/60 p-2 rounded-lg border border-border/30">
+                                      <CopyableText 
+                                        text={typeof answerObj === 'string' ? answerObj : JSON.stringify(answerObj)} 
+                                        className="text-xs text-muted-foreground whitespace-pre-wrap font-sans"
+                                      />
+                                    </div>
+                                  )}
                                   {index < Object.entries(extraData).length - 1 && (
                                     <Separator className="my-2 opacity-40" />
                                   )}
