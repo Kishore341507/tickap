@@ -132,6 +132,7 @@ async function getStats() {
 
 export default async function Home() {
   const [guilds, stats] = await Promise.all([getBotGuilds(), getStats()]);
+  const marqueeGuilds = guilds.filter((g) => (g.members || 0) > 100);
 
   const totalMembers = guilds.reduce((acc, g) => acc + (g.members || 0), 0);
   const formattedTotalMembers =
@@ -363,7 +364,7 @@ export default async function Home() {
           </div>
 
           {/* Marquee Ticker moving Left to Right */}
-          <ServerMarquee guilds={guilds} />
+          <ServerMarquee guilds={marqueeGuilds} />
 
           <div className="max-w-7xl mx-auto px-4 sm:px-6 mt-3 text-center">
             <p className="text-xs text-muted-foreground">
