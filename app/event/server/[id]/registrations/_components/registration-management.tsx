@@ -12,6 +12,8 @@ import { RemoveUserDialog } from "./remove-user-dialog";
 import { DeleteRegistrationDialog } from "./delete-registration-dialog";
 import { ReplaceUserDialog } from "./replace-user-dialog";
 import { ExportDataDialog } from "./export-data-dialog";
+import { EditInputsDialog } from "./edit-inputs-dialog";
+import { DisqualifyRegistrationDialog } from "./disqualify-registration-dialog";
 import { RegistrationUser , Registration , Event  } from "@/types";
 
 interface RegistrationManagementProps {
@@ -25,13 +27,33 @@ export function RegistrationManagement({ eventId, guildId, event }: Registration
   const [showAddUser, setShowAddUser] = useState(false);
   const [showRemoveUser, setShowRemoveUser] = useState(false);
   const [showDeleteRegistration, setShowDeleteRegistration] = useState(false);
+  const [showDisqualifyRegistration, setShowDisqualifyRegistration] = useState(false);
   const [showReplaceUser, setShowReplaceUser] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
+  const [showEditInputs, setShowEditInputs] = useState(false);
   const [selectedRegistration, setSelectedRegistration] = useState<Registration | null>(null);
   const [selectedUser, setSelectedUser] = useState<RegistrationUser | null>(null);
   const [registrations, setRegistrations] = useState<Registration[]>(
     event.registrations as unknown as Registration[]
   );
+
+  const handleToggleDisqualify = (updatedRegistration: Registration) => {
+    setRegistrations((prev) =>
+      prev.map((reg) =>
+        reg.id.toString() === updatedRegistration.id.toString() ? updatedRegistration : reg
+      )
+    );
+    setShowDisqualifyRegistration(false);
+  };
+
+  const handleEditInputs = (updatedRegistration: Registration) => {
+    setRegistrations((prev) =>
+      prev.map((reg) =>
+        reg.id.toString() === updatedRegistration.id.toString() ? updatedRegistration : reg
+      )
+    );
+    setShowEditInputs(false);
+  };
 
   const handleAddRegistration = (newRegistration: Registration) => {
     setRegistrations([...registrations, newRegistration]);
@@ -72,9 +94,12 @@ export function RegistrationManagement({ eventId, guildId, event }: Registration
     0
   );
 
+  const disqualifiedCount = registrations.filter((r) => r.is_disqualified).length;
+
   const filteredRegistrations = registrations.filter((reg) => {
     if (!searchQuery.trim()) return true;
     const query = searchQuery.toLowerCase();
+    if (query === "disqualified" || query === "dq") return Boolean(reg.is_disqualified);
     const teamMatch = reg.team_name?.toLowerCase().includes(query);
     const userMatch = reg.registrationusers?.some(
       (u) =>
@@ -97,6 +122,11 @@ export function RegistrationManagement({ eventId, guildId, event }: Registration
             {event.max_teams && (
               <span className="text-xs font-normal text-muted-foreground ml-1">
                 / {event.max_teams}
+              </span>
+            )}
+            {disqualifiedCount > 0 && (
+              <span className="text-xs font-normal text-destructive ml-2 font-mono">
+                ({disqualifiedCount} DQ)
               </span>
             )}
           </p>
@@ -158,6 +188,7 @@ export function RegistrationManagement({ eventId, guildId, event }: Registration
               </CardTitle>
               <CardDescription className="text-xs text-muted-foreground mt-1">
                 Showing {filteredRegistrations.length} of {registrations.length} registrations
+                {disqualifiedCount > 0 && ` (${disqualifiedCount} disqualified)`}
               </CardDescription>
             </div>
 
@@ -242,6 +273,14 @@ export function RegistrationManagement({ eventId, guildId, event }: Registration
               setSelectedRegistration(registration);
               setShowDeleteRegistration(true);
             }}
+            onDisqualifyRegistration={(registration) => {
+              setSelectedRegistration(registration);
+              setShowDisqualifyRegistration(true);
+            }}
+            onEditInputs={(registration) => {
+              setSelectedRegistration(registration);
+              setShowEditInputs(true);
+            }}
           />
         </CardContent>
       </Card>
@@ -287,6 +326,14 @@ export function RegistrationManagement({ eventId, guildId, event }: Registration
         registration={selectedRegistration}
       />
 
+      <DisqualifyRegistrationDialog
+        open={showDisqualifyRegistration}
+        onClose={() => setShowDisqualifyRegistration(false)}
+        onUpdate={handleToggleDisqualify}
+        eventId={eventId}
+        registration={selectedRegistration}
+      />
+
       <ReplaceUserDialog
         open={showReplaceUser}
         onClose={() => setShowReplaceUser(false)}
@@ -302,6 +349,14 @@ export function RegistrationManagement({ eventId, guildId, event }: Registration
         onClose={() => setShowExportDialog(false)}
         eventName={event.name}
         registrations={registrations}
+      />
+
+      <EditInputsDialog
+        open={showEditInputs}
+        onClose={() => setShowEditInputs(false)}
+        onUpdate={handleEditInputs}
+        eventId={eventId}
+        registration={selectedRegistration}
       />
     </div>
   );

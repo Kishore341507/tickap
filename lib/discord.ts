@@ -474,33 +474,43 @@ export async function sendLogMessage(
   guildId: string,
   channelId: string,
   type: string,
-  data: Registration
+  data: Registration,
+  options?: {
+    eventName?: string;
+    userAvatar?: string;
+  }
 ) {
   try {
     let embed: any = {
       title: userName,
       description: "",
-      color: 0x2ecc71,
+      color: 0x2a2b31,
       footer: {
-        text: `Event ID: ${eventId}`,
-        icon_url: `https://tickap.com/tickap_dark.png`,
+        text: options?.eventName ? `${options.eventName} | tickap.com` : "tickap.com",
       },
       fields: [],
     };
 
     let fields: Array<{ name: string; value: string; inline: boolean }> = [];
+    let components: any[] = [];
 
     if (type == "Registration") {
       embed.title = data.team_name || userName;
-      embed.color = 0x2ecc71;
+      embed.color = 0x2a2b31;
+      
+      const authorIcon = options?.userAvatar || data.registrationusers?.find((u: RegistrationUser) => u.user_name === userName || u.role === 'LEADER')?.pfp || data.registrationusers?.[0]?.pfp || "https://tickap.com/tickap_dark.png";
+      embed.author = {
+        name: userName,
+        icon_url: authorIcon,
+      };
+
       let users = (data.registrationusers || [])
         .map((user: RegistrationUser) => {
-          return `<@${user.user_id}> | ${user.user_id}`;
+          return `> <@${user.user_id}> (${user.user_id})`;
         })
         .join("\n");
       embed.description = users || userName;
 
-      let extra_input = "";
       if (data.extra) {
         let parsedExtra: any = data.extra;
         if (typeof data.extra === "string") {
@@ -512,47 +522,103 @@ export async function sendLogMessage(
         }
 
         if (parsedExtra && typeof parsedExtra === "object") {
-          let extraLines: string[] = [];
+          const formatInputValue = (val: any): string => {
+            if (val === undefined || val === null) return "";
+            if (typeof val === "boolean") return val ? "Yes" : "No";
+
+            const formatSingle = (s: string): string => {
+              const trimmed = s.trim();
+              const mentionMatch = trimmed.match(/^<@!?(\d{17,20})>$/);
+              if (mentionMatch) {
+                return `<@${mentionMatch[1]}> (${mentionMatch[1]})`;
+              }
+              if (/^\d{17,20}$/.test(trimmed)) {
+                return `<@${trimmed}> (${trimmed})`;
+              }
+              return trimmed;
+            };
+
+            if (Array.isArray(val)) {
+              return val
+                .map((item) => (item !== undefined && item !== null ? formatSingle(String(item)) : ""))
+                .filter((s) => s.length > 0)
+                .join(" , ");
+            }
+
+            const valStr = String(val).trim();
+            const tokens = valStr.split(/[, \t\r\n]+/).map((t) => t.trim()).filter(Boolean);
+            if (
+              tokens.length > 0 &&
+              tokens.every((t) => /^\d{17,20}$/.test(t) || /^<@!?\d{17,20}>$/.test(t))
+            ) {
+              return tokens.map((t) => formatSingle(t)).join(" , ");
+            }
+
+            return valStr;
+          };
+
           if (Array.isArray(parsedExtra)) {
             for (let i = 0; i < parsedExtra.length; i++) {
               const item = parsedExtra[i];
               if (item && typeof item === "object") {
                 const qText = item.text || item.question || item.label || `Question ${i + 1}`;
                 const qAns = item.value ?? item.answer ?? item.val ?? "";
-                const ansStr = Array.isArray(qAns) ? qAns.join(", ") : String(qAns);
+                const ansStr = formatInputValue(qAns);
                 if (ansStr.trim()) {
-                  extraLines.push(`**${qText}**\n${ansStr}`);
+                  fields.push({
+                    name: qText.slice(0, 256),
+                    value: ansStr.length > 1024 ? ansStr.slice(0, 1021) + "..." : ansStr,
+                    inline: false,
+                  });
                 }
               } else if (item !== undefined && item !== null && String(item).trim()) {
-                extraLines.push(`**Question ${i + 1}**\n${String(item)}`);
+                const ansStr = formatInputValue(item);
+                if (ansStr.trim()) {
+                  fields.push({
+                    name: `Question ${i + 1}`,
+                    value: ansStr.length > 1024 ? ansStr.slice(0, 1021) + "..." : ansStr,
+                    inline: false,
+                  });
+                }
               }
             }
           } else {
             for (const key in parsedExtra) {
               const val = parsedExtra[key];
               if (val !== undefined && val !== null) {
-                const valStr = Array.isArray(val)
-                  ? val.join(", ")
-                  : typeof val === "boolean"
-                  ? (val ? "Yes" : "No")
-                  : String(val);
+                const valStr = formatInputValue(val);
                 if (valStr.trim() !== "") {
-                  extraLines.push(`**${key}**\n${valStr}`);
+                  fields.push({
+                    name: key.slice(0, 256),
+                    value: valStr.length > 1024 ? valStr.slice(0, 1021) + "..." : valStr,
+                    inline: false,
+                  });
                 }
               }
             }
           }
-          extra_input = extraLines.join("\n");
         }
+      }
 
-        if (extra_input.trim()) {
-          const finalVal = extra_input.length > 1024 ? extra_input.slice(0, 1021) + "..." : extra_input;
-          fields.push({
-            name: "Inputs",
-            value: finalVal,
-            inline: false,
-          });
-        }
+      embed.footer = {
+        text: options?.eventName ? `${options.eventName} | tickap.com` : "tickap.com",
+      };
+
+      if (data.id) {
+        components = [
+          {
+            type: 1, // ActionRow
+            components: [
+              {
+                type: 2, // Button
+                style: 5, // Link
+                label: "Manage on Web",
+                url: `https://tickap.com/event/server/${guildId}/registrations/${eventId}`,
+                emoji: { name: "🔗" },
+              },
+            ],
+          },
+        ];
       }
     } else if (type == "Unregistration") {
       embed.title = `Unregistered by ${userName}`;
@@ -562,7 +628,7 @@ export async function sendLogMessage(
         name: "Unregistered Users",
         value: (data.registrationusers || [])
           .map((user: RegistrationUser) => {
-            return `<@${user.user_id}> | ${user.user_id}`;
+            return `> <@${user.user_id}> (${user.user_id})`;
           })
           .join("\n") || userName,
         inline: false,
@@ -575,18 +641,12 @@ export async function sendLogMessage(
         name: "Updated Users",
         value: (data.registrationusers || [])
           .map((user: RegistrationUser) => {
-            return `<@${user.user_id}> | ${user.user_id}`;
+            return `> <@${user.user_id}> (${user.user_id})`;
           })
           .join("\n") || userName,
         inline: false,
       });
     }
-
-    fields.push({
-      name: " ",
-      value: `**[Log](https://tickap.com/event/server/${guildId}/logs/${eventId})** | **[Registration](https://tickap.com/event/server/${guildId}/registrations/${eventId})**`,
-      inline: false,
-    });
 
     embed.fields = fields;
 
@@ -600,6 +660,7 @@ export async function sendLogMessage(
         },
         body: JSON.stringify({
           embeds: [embed],
+          ...(components.length > 0 ? { components } : {}),
         }),
         cache: "no-store",
       }

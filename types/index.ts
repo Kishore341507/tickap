@@ -97,6 +97,7 @@ export interface Registration {
   registrationusers: RegistrationUser[];
   join_requests?: JoinRequest[];
   extra?: string | any; // Added to support custom responses
+  is_disqualified?: boolean;
 }
 
 /**

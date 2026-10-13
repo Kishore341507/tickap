@@ -52,6 +52,13 @@ export async function POST(
       );
     }
 
+    if (registration.is_disqualified) {
+      return NextResponse.json(
+        { message: "You are disqualified from this event and cannot add members." },
+        { status: 403 }
+      );
+    }
+
     if (!registration.events.register_for_other) {
       return NextResponse.json(
         { message: "Event does not allow adding members" },
@@ -180,6 +187,13 @@ export async function DELETE(
         ) {
               return NextResponse.json(
                 { message: "Insufficient permissions" },
+                { status: 403 }
+            );
+        }
+
+        if (registration.is_disqualified) {
+            return NextResponse.json(
+                { message: "You are disqualified from this event and cannot remove team members." },
                 { status: 403 }
             );
         }
