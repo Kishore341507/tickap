@@ -32,7 +32,15 @@ interface RegistrationsListProps {
   onEditInputs?: (registration: Registration) => void;
 }
 
-function CopyableText({ text, className }: { text: string, className?: string }) {
+function CopyableText({ 
+  text, 
+  className,
+  truncate = false 
+}: { 
+  text: string; 
+  className?: string;
+  truncate?: boolean;
+}) {
   const [isCopied, setIsCopied] = useState(false);
 
   const handleCopy = (e: React.MouseEvent) => {
@@ -44,16 +52,16 @@ function CopyableText({ text, className }: { text: string, className?: string })
 
   return (
     <div 
-      className={`flex items-center gap-1 cursor-pointer hover:opacity-80 transition-opacity ${className}`}
+      className={`flex ${truncate ? "items-center gap-1" : "items-start justify-between gap-2"} cursor-pointer hover:opacity-80 transition-opacity ${className || ""}`}
       onClick={handleCopy}
     >
-      <div className="truncate">
+      <div className={truncate ? "truncate" : "break-words whitespace-pre-wrap flex-1 leading-relaxed"}>
         {text}
       </div>
       {isCopied ? (
-        <Check className="h-3 w-3 text-green-500 animate-in zoom-in duration-300 shrink-0" />
+        <Check className={`h-3 w-3 text-green-500 animate-in zoom-in duration-300 shrink-0 ${truncate ? "" : "mt-0.5"}`} />
       ) : (
-        <Copy className="h-3 w-3 text-muted-foreground shrink-0" />
+        <Copy className={`h-3 w-3 text-muted-foreground shrink-0 ${truncate ? "" : "mt-0.5"}`} />
       )}
     </div>
   );
@@ -238,6 +246,7 @@ export function RegistrationsList({
                             <CopyableText 
                               text={user.user_id.toString()} 
                               className="text-[11px] text-muted-foreground font-mono"
+                              truncate
                             />
                           </div>
                         </div>
@@ -356,13 +365,13 @@ export function RegistrationsList({
                                         <User className="h-3 w-3 text-muted-foreground" />
                                         <span>{answerObj as string}</span>
                                       </Badge>
-                                      <CopyableText text={String(answerObj)} className="text-xs text-muted-foreground" />
+                                      <CopyableText text={String(answerObj)} className="text-xs text-muted-foreground" truncate />
                                     </div>
                                   ) : (
-                                    <div className="bg-background/60 p-2 rounded-lg border border-border/30">
+                                    <div className="bg-background/60 p-2.5 rounded-lg border border-border/30">
                                       <CopyableText 
                                         text={typeof answerObj === 'string' ? answerObj : JSON.stringify(answerObj)} 
-                                        className="text-xs text-muted-foreground whitespace-pre-wrap font-sans"
+                                        className="text-xs text-muted-foreground whitespace-pre-wrap font-sans w-full"
                                       />
                                     </div>
                                   )}
