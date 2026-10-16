@@ -10,7 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { UserPlus, UserX, Trash2, RefreshCw, Copy, Check, User } from "lucide-react";
+import { UserPlus, UserX, Trash2, RefreshCw, Copy, Check, User, Pencil, Ban, CheckCircle2 } from "lucide-react";
 import { RegistrationUser , Registration } from "@/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -28,6 +28,8 @@ interface RegistrationsListProps {
   onRemoveUser: (registration: Registration, user: RegistrationUser) => void;
   onReplaceUser: (registration: Registration, user: RegistrationUser) => void;
   onDeleteRegistration: (registration: Registration) => void;
+  onDisqualifyRegistration: (registration: Registration) => void;
+  onEditInputs?: (registration: Registration) => void;
 }
 
 function CopyableText({ text, className }: { text: string, className?: string }) {
@@ -63,7 +65,9 @@ export function RegistrationsList({
   onAddUser, 
   onRemoveUser,
   onReplaceUser,
-  onDeleteRegistration 
+  onDeleteRegistration,
+  onDisqualifyRegistration,
+  onEditInputs 
 }: RegistrationsListProps) {
   return (
     <div className="space-y-4">
@@ -80,18 +84,35 @@ export function RegistrationsList({
             <AccordionItem 
               key={registration.id.toString()} 
               value={registration.id.toString()} 
-              className="group border border-border/50 bg-card/30 rounded-xl px-4 py-1 data-[state=open]:border-border/80 transition-colors"
+              className={`group border rounded-xl px-4 py-1 transition-colors ${
+                registration.is_disqualified
+                  ? "border-destructive/40 bg-destructive/5 data-[state=open]:border-destructive/60"
+                  : "border-border/50 bg-card/30 data-[state=open]:border-border/80"
+              }`}
             >
               <div className="flex items-center justify-between">
                 <AccordionTrigger className="flex-1 text-left hover:no-underline py-3">
-                  <div className="flex items-center justify-between w-full pr-3 gap-2">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <span className="font-semibold text-sm text-foreground truncate">
+                  <div className="flex items-center justify-between w-full pr-3 gap-2 flex-wrap sm:flex-nowrap">
+                    <div className="flex items-center gap-2.5 min-w-0 flex-wrap">
+                      <span className={`font-semibold text-sm truncate ${
+                        registration.is_disqualified
+                          ? "text-muted-foreground line-through decoration-destructive/70"
+                          : "text-foreground"
+                      }`}>
                         {registration.team_name || `Team #${regIndex + 1}`}
                       </span>
                       <span className="text-[10px] font-mono text-muted-foreground bg-muted/50 px-1.5 py-0.5 rounded border border-border/40">
                         #{regIndex + 1}
                       </span>
+                      {registration.is_disqualified && (
+                        <Badge 
+                          variant="destructive" 
+                          className="text-[10px] uppercase font-bold tracking-wider px-2 py-0 h-4.5 bg-destructive/15 text-destructive border-destructive/30 gap-1"
+                        >
+                          <Ban className="h-2.5 w-2.5" />
+                          <span>Disqualified</span>
+                        </Badge>
+                      )}
                     </div>
                     <Badge variant="outline" className="text-[11px] font-medium shrink-0 ml-auto">
                       {registration.registrationusers.length}{" "}
@@ -123,22 +144,70 @@ export function RegistrationsList({
                       </Tooltip>
                     </TooltipProvider>
                   )}
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDeleteRegistration(registration);
-                    }}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    <span className="sr-only">Delete registration</span>
-                  </Button>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className={`h-8 w-8 rounded-lg transition-colors ${
+                            registration.is_disqualified
+                              ? "text-amber-500 hover:text-emerald-500 hover:bg-emerald-500/10"
+                              : "text-muted-foreground hover:text-amber-500 hover:bg-amber-500/10"
+                          }`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDisqualifyRegistration(registration);
+                          }}
+                        >
+                          {registration.is_disqualified ? (
+                            <CheckCircle2 className="h-4 w-4" />
+                          ) : (
+                            <Ban className="h-4 w-4" />
+                          )}
+                          <span className="sr-only">
+                            {registration.is_disqualified ? "Re-qualify registration" : "Disqualify registration"}
+                          </span>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{registration.is_disqualified ? "Re-qualify Team" : "Disqualify Team"}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDeleteRegistration(registration);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          <span className="sr-only">Delete registration</span>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Delete Registration</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </div>
               </div>
               <AccordionContent className="pt-2 pb-4 border-t border-border/30 mt-1">
                 <div className="space-y-4">
+                  {registration.is_disqualified && (
+                    <div className="flex items-center gap-2 p-2.5 rounded-xl bg-destructive/10 border border-destructive/30 text-destructive text-xs">
+                      <Ban className="h-4 w-4 shrink-0" />
+                      <p className="font-medium">
+                        This registration is currently disqualified. Team members do not possess active tournament roles.
+                      </p>
+                    </div>
+                  )}
                   {/* Team Members Section */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                     {registration.registrationusers.map((user, uIndex) => (
@@ -203,9 +272,34 @@ export function RegistrationsList({
                   {/* Custom Responses Section */}
                   {registration.extra && (
                     <div className="mt-4 pt-3 border-t border-border/30">
-                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-                        Custom Registration Answers
-                      </p>
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                          Custom Registration Answers
+                        </p>
+                        {onEditInputs && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6 text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-md"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onEditInputs(registration);
+                                  }}
+                                >
+                                  <Pencil className="h-3.5 w-3.5" />
+                                  <span className="sr-only">Edit custom answers</span>
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Edit Custom Answers</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
+                      </div>
                       <div className="rounded-xl border border-border/40 bg-muted/20 p-3 space-y-2.5">
                         {(() => {
                           try {

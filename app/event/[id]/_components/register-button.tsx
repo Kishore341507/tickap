@@ -598,6 +598,16 @@ export function RegisterButton({
     };
 
     const handleUnregister = async () => {
+        if (userRegistration?.is_disqualified) {
+            toast({
+                title: "Cannot unregister",
+                description: "You are disqualified from this event and cannot unregister.",
+                variant: "destructive",
+            });
+            setIsUnregisterDialogOpen(false);
+            return;
+        }
+
         try {
             setIsLoading(true);
             const response = await fetch(`/api/events/${eventId}/register`, {
@@ -1099,15 +1109,32 @@ export function RegisterButton({
                     </CardContent>
                 </Card>
                 
-                <Button
-                    onClick={() => setIsUnregisterDialogOpen(true)}
-                    variant="outline"
-                    className="w-full"
-                    disabled={isLoading}
-                >
-                    {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UserMinus className="mr-2 h-4 w-4" />}
-                    Unregister
-                </Button>
+                {userRegistration?.is_disqualified ? (
+                    <div className="space-y-2">
+                        <div className="flex items-center gap-2 p-2.5 rounded-xl bg-destructive/10 border border-destructive/30 text-destructive text-xs">
+                            <AlertCircle className="h-4 w-4 shrink-0" />
+                            <span>You are disqualified from this event and cannot unregister.</span>
+                        </div>
+                        <Button
+                            variant="outline"
+                            className="w-full opacity-60 cursor-not-allowed"
+                            disabled={true}
+                        >
+                            <UserMinus className="mr-2 h-4 w-4" />
+                            Unregister (Disqualified)
+                        </Button>
+                    </div>
+                ) : (
+                    <Button
+                        onClick={() => setIsUnregisterDialogOpen(true)}
+                        variant="outline"
+                        className="w-full"
+                        disabled={isLoading}
+                    >
+                        {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UserMinus className="mr-2 h-4 w-4" />}
+                        Unregister
+                    </Button>
+                )}
 
                 <AlertDialog open={isUnregisterDialogOpen} onOpenChange={setIsUnregisterDialogOpen}>
                     <AlertDialogContent>
@@ -1489,15 +1516,15 @@ export function RegisterButton({
 
                             return (
                                 <div key={question.id || index} className="space-y-1.5">
-                                    <div className="flex items-center justify-between">
+                                    <div className="space-y-0.5">
                                         <Label className="text-xs font-semibold flex items-center text-foreground">
                                             {question.text}
                                             {question.required && <span className="text-red-500 ml-1">*</span>}
                                         </Label>
                                         {question.description && (
-                                            <span className="text-[11px] text-muted-foreground truncate max-w-[200px]" title={question.description}>
+                                            <p className="text-[11px] text-muted-foreground whitespace-pre-wrap">
                                                 {question.description}
-                                            </span>
+                                            </p>
                                         )}
                                     </div>
 

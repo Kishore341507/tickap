@@ -276,9 +276,16 @@ export async function PUT(
     }
 
     // Check if required fields are provided
-    if (!user_id || !action) {
+    if (!action) {
       return NextResponse.json(
-        { message: "Missing required fields: user_id and action" },
+        { message: "Missing required field: action" },
+        { status: 400 }
+      );
+    }
+
+    if (action !== "update_inputs" && action !== "disqualify" && !user_id) {
+      return NextResponse.json(
+        { message: "Missing required field: user_id" },
         { status: 400 }
       );
     }
@@ -665,9 +672,96 @@ export async function PUT(
         },
         { status: 200 }
       );
+    } else if (action === "update_inputs") {
+      const { extra } = body;
+      const oldRegistration = await prisma.registrations.findUnique({
+        where: { id: registration.id },
+      });
+
+      const updatedRegistration = await prisma.registrations.update({
+        where: { id: registration.id },
+        data: {
+          extra: extra,
+          updated_at: new Date(),
+        },
+        include: {
+          registrationusers: true,
+        },
+      });
+
+      await createEventLog({
+        event_id: BigInt(id),
+        log_type: EventLogType.UPDATE,
+        log_target: EventLogTarget.REGISTRATION,
+        old_data: { extra: oldRegistration?.extra },
+        new_data: { extra: updatedRegistration.extra },
+        registration_id: registration.id,
+      });
+
+      return NextResponse.json(
+        {
+          message: "Registration inputs updated successfully",
+          registration: serializeData(updatedRegistration),
+        },
+        { status: 200 }
+      );
+    } else if (action === "disqualify") {
+      const currentDq = Boolean(registration.is_disqualified);
+      const newDq = typeof body.is_disqualified === "boolean" ? body.is_disqualified : !currentDq;
+
+      const updatedRegistration = await prisma.registrations.update({
+        where: { id: registration.id },
+        data: {
+          is_disqualified: newDq,
+          updated_at: new Date(),
+        },
+        include: {
+          registrationusers: true,
+        },
+      });
+
+      // Handle Discord role toggle if event has role_id
+      if (event.role_id && event.guild_id && registration.registrationusers?.length > 0) {
+        for (const user of registration.registrationusers) {
+          try {
+            if (newDq) {
+              await takeEventRole(
+                event.guild_id.toString(),
+                user.user_id.toString(),
+                event.role_id.toString()
+              );
+            } else {
+              await giveEventRole(
+                event.guild_id.toString(),
+                user.user_id.toString(),
+                event.role_id.toString()
+              );
+            }
+          } catch (err) {
+            console.error(`Failed to update role for user ${user.user_id}:`, err);
+          }
+        }
+      }
+
+      await createEventLog({
+        event_id: BigInt(id),
+        log_type: EventLogType.UPDATE,
+        log_target: EventLogTarget.REGISTRATION,
+        old_data: { is_disqualified: currentDq },
+        new_data: { is_disqualified: newDq },
+        registration_id: registration.id,
+      });
+
+      return NextResponse.json(
+        {
+          message: newDq ? "Team disqualified successfully" : "Team re-qualified successfully",
+          registration: serializeData(updatedRegistration),
+        },
+        { status: 200 }
+      );
     } else {
       return NextResponse.json(
-        { message: "Invalid action. Use 'add', 'remove', or 'replace'" },
+        { message: "Invalid action. Use 'add', 'remove', 'replace', 'update_inputs', or 'disqualify'" },
         { status: 400 }
       );
     }

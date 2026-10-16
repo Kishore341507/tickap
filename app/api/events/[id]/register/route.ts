@@ -137,7 +137,12 @@ export async function POST(
           event.guild_id!.toString(),
           event.channel_id!.toString(),
           'Registration',
-          registration as unknown as Registration )
+          registration as unknown as Registration,
+          {
+            eventName: event.name,
+            userAvatar: session.user.image || undefined,
+          }
+        );
       }
 
       return NextResponse.json(
@@ -377,8 +382,13 @@ export async function POST(
         event.guild_id!.toString(),
         event.channel_id!.toString(),
         'Registration',
-          registration as unknown as Registration )
-      }
+        registration as unknown as Registration,
+        {
+          eventName: event.name,
+          userAvatar: session.user.image || undefined,
+        }
+      );
+    }
 
     if (event.notification_channel_id && event.enable_team_requests) {
       const memberCount = registration.registrationusers.length;
@@ -464,6 +474,14 @@ export async function DELETE(
     }
 
     const registration = event.registrations[0];
+
+    // Check if registration is disqualified
+    if (registration.is_disqualified) {
+      return NextResponse.json(
+        { message: "You are disqualified from this event and cannot unregister." },
+        { status: 403 }
+      );
+    }
 
     // Case 1: Solo event - Delete the entire registration
     if (event.is_solo === true) {
