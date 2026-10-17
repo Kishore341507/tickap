@@ -94,6 +94,7 @@ export interface Registration {
   id: bigint;
   event_id: bigint;
   team_name: string | null;
+  local_id?: number | null;
   registrationusers: RegistrationUser[];
   join_requests?: JoinRequest[];
   extra?: string | any; // Added to support custom responses

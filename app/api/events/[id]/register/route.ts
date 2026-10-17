@@ -90,11 +90,20 @@ export async function POST(
 
     // Solo event registration
     if (event.is_solo === true) {
+      // Atomically increment team_counter for the event
+      const updatedEvent = await prisma.events.update({
+        where: { id: BigInt(id) },
+        data: { team_counter: { increment: 1 } },
+        select: { team_counter: true },
+      });
+      const localId = updatedEvent.team_counter || 1;
+
       // Create a new registration for solo participant
       const registration = await prisma.registrations.create({
         data: {
           event_id: BigInt(id),
           team_name: teamName || `${session.user.name}'s Team`,
+          local_id: localId,
           // Store custom question responses if provided
           extra: questionResponses ?? undefined,
           registrationusers: {

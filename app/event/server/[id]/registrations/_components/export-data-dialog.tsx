@@ -61,9 +61,9 @@ export function ExportDataDialog({
 
       const buildCsvContent = () => {
         const escapeCsv = (val: string) => `"${val.replace(/"/g, '""')}"`;
-        let headerRow = ["Team Name", "User ID", "User Name", ...customHeaders].map(escapeCsv).join(",") + "\n";
+        let headerRow = ["#", "Team Name", "User ID", "User Name", ...customHeaders].map(escapeCsv).join(",") + "\n";
         let rows = "";
-        registrations.forEach(registration => {
+        registrations.forEach((registration, index) => {
           let extraObj: Record<string, any> = {};
           if (registration.extra) {
             try {
@@ -77,8 +77,11 @@ export function ExportDataDialog({
             return String(val);
           });
 
+          const localIdStr = registration.local_id?.toString() || (index + 1).toString();
+
           registration.registrationusers.forEach(user => {
             const rowValues = [
+              localIdStr,
               registration.team_name || 'Unnamed Team',
               user.user_id.toString(),
               user.user_name || 'Unknown User',

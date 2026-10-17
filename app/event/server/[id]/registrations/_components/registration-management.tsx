@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +16,7 @@ import { ReplaceUserDialog } from "./replace-user-dialog";
 import { ExportDataDialog } from "./export-data-dialog";
 import { EditInputsDialog } from "./edit-inputs-dialog";
 import { DisqualifyRegistrationDialog } from "./disqualify-registration-dialog";
+import { TransferWarningDialog, PendingTransfer } from "./transfer-warning-dialog";
 import { RegistrationUser , Registration , Event  } from "@/types";
 
 interface RegistrationManagementProps {
@@ -23,6 +26,8 @@ interface RegistrationManagementProps {
 }
 
 export function RegistrationManagement({ eventId, guildId, event }: RegistrationManagementProps) {
+  const router = useRouter();
+  const { toast } = useToast();
   const [showAddRegistration, setShowAddRegistration] = useState(false);
   const [showAddUser, setShowAddUser] = useState(false);
   const [showRemoveUser, setShowRemoveUser] = useState(false);
@@ -31,6 +36,8 @@ export function RegistrationManagement({ eventId, guildId, event }: Registration
   const [showReplaceUser, setShowReplaceUser] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [showEditInputs, setShowEditInputs] = useState(false);
+  const [showTransferWarning, setShowTransferWarning] = useState(false);
+  const [pendingTransfer, setPendingTransfer] = useState<PendingTransfer | null>(null);
   const [selectedRegistration, setSelectedRegistration] = useState<Registration | null>(null);
   const [selectedUser, setSelectedUser] = useState<RegistrationUser | null>(null);
   const [registrations, setRegistrations] = useState<Registration[]>(
@@ -85,6 +92,122 @@ export function RegistrationManagement({ eventId, guildId, event }: Registration
       setSelectedRegistration(null);
       setShowDeleteRegistration(false);
     }
+  };
+
+  const executeTransfer = async (
+    sourceRegistration: Registration,
+    targetRegistration: Registration,
+    user: RegistrationUser,
+    confirmDisband: boolean = false
+  ) => {
+    try {
+      const response = await fetch(`/api/events/${eventId}/register/manager`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          action: "transfer",
+          user_id: user.user_id.toString(),
+          source_registration_id: sourceRegistration.id.toString(),
+          target_registration_id: targetRegistration.id.toString(),
+          confirm_disband_source: confirmDisband,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.status === 409 && data.requires_confirmation) {
+        setPendingTransfer({
+          user,
+          sourceRegistration,
+          targetRegistration,
+          message: data.message,
+          isLastMember: sourceRegistration.registrationusers.length <= 1,
+        });
+        setShowTransferWarning(true);
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to transfer player");
+      }
+
+      // Single transaction succeeded! Apply both team updates to state
+      setRegistrations((prev) => {
+        let updated = [...prev];
+        if (data.source_disbanded || !data.source_registration) {
+          updated = updated.filter((r) => r.id.toString() !== sourceRegistration.id.toString());
+        } else {
+          updated = updated.map((r) =>
+            r.id.toString() === data.source_registration.id.toString()
+              ? data.source_registration
+              : r
+          );
+        }
+
+        if (data.target_registration) {
+          updated = updated.map((r) =>
+            r.id.toString() === data.target_registration.id.toString()
+              ? data.target_registration
+              : r
+          );
+        }
+
+        return updated;
+      });
+
+      toast({
+        title: "Player Moved Successfully",
+        description: `Moved ${user.user_name || "player"} from "${sourceRegistration.team_name || "Source"}" to "${targetRegistration.team_name || "Target"}".`,
+      });
+
+      setShowTransferWarning(false);
+      setPendingTransfer(null);
+      router.refresh();
+    } catch (error: any) {
+      toast({
+        title: "Transfer Failed",
+        description: error.message || "Unable to transfer player. Transaction rolled back.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleTransferUser = (
+    sourceRegistration: Registration,
+    targetRegistration: Registration,
+    user: RegistrationUser
+  ) => {
+    const minTeamSize = event.min_team_player || 1;
+    const isLastMember = sourceRegistration.registrationusers.length <= 1;
+    const wouldViolateMin =
+      minTeamSize &&
+      sourceRegistration.registrationusers.length <= minTeamSize &&
+      !event.allow_incomplete_teams;
+
+    if (isLastMember || wouldViolateMin) {
+      setPendingTransfer({
+        user,
+        sourceRegistration,
+        targetRegistration,
+        isLastMember,
+      });
+      setShowTransferWarning(true);
+      return;
+    }
+
+    executeTransfer(sourceRegistration, targetRegistration, user, false);
+  };
+
+  const handleConfirmDisbandTransfer = async () => {
+    if (!pendingTransfer) return;
+    await executeTransfer(
+      pendingTransfer.sourceRegistration,
+      pendingTransfer.targetRegistration,
+      pendingTransfer.user,
+      true
+    );
   };
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -255,6 +378,10 @@ export function RegistrationManagement({ eventId, guildId, event }: Registration
           <RegistrationsList
             registrations={filteredRegistrations}
             isSolo={!!event.is_solo}
+            maxTeamSize={event.max_team_player ?? null}
+            minTeamSize={event.min_team_player || 1}
+            allowIncompleteTeams={event.allow_incomplete_teams}
+            onTransferUser={handleTransferUser}
             onAddUser={(registration) => {
               setSelectedRegistration(registration);
               setShowAddUser(true);
@@ -357,6 +484,17 @@ export function RegistrationManagement({ eventId, guildId, event }: Registration
         onUpdate={handleEditInputs}
         eventId={eventId}
         registration={selectedRegistration}
+      />
+
+      <TransferWarningDialog
+        open={showTransferWarning}
+        onClose={() => {
+          setShowTransferWarning(false);
+          setPendingTransfer(null);
+        }}
+        onConfirm={handleConfirmDisbandTransfer}
+        pendingTransfer={pendingTransfer}
+        minTeamSize={event.min_team_player || 1}
       />
     </div>
   );

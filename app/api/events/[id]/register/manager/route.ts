@@ -269,6 +269,7 @@ export async function PUT(
     const { id } = await params;
     const body = await request.json();
     const { user_id, action, registration_id } = body;
+    const effectiveRegistrationId = registration_id || body.source_registration_id;
 
     // Check if user is authenticated
     if (!session || !session.user) {
@@ -319,7 +320,7 @@ export async function PUT(
     // Find the registration
     const registration = await prisma.registrations.findFirst({
       where: {
-        id: registration_id ? BigInt(registration_id) : undefined,
+        id: effectiveRegistrationId ? BigInt(effectiveRegistrationId) : undefined,
         event_id: BigInt(id),
       },
       include: {
@@ -759,9 +760,214 @@ export async function PUT(
         },
         { status: 200 }
       );
+    } else if (action === "transfer") {
+      const { target_registration_id, confirm_disband_source } = body;
+
+      if (event.is_solo) {
+        return NextResponse.json(
+          { message: "Cannot transfer players in a solo event" },
+          { status: 400 }
+        );
+      }
+
+      if (!target_registration_id) {
+        return NextResponse.json(
+          { message: "Missing required field: target_registration_id" },
+          { status: 400 }
+        );
+      }
+
+      if (registration.id.toString() === target_registration_id.toString()) {
+        return NextResponse.json(
+          { message: "Cannot transfer a player to the same team" },
+          { status: 400 }
+        );
+      }
+
+      // Check if user is a member of the source team
+      const userToMove = registration.registrationusers.find(
+        (ru) => ru.user_id.toString() === user_id.toString()
+      );
+
+      if (!userToMove) {
+        return NextResponse.json(
+          { message: "Player is not a member of the source team" },
+          { status: 404 }
+        );
+      }
+
+      // Find the target registration
+      const targetRegistration = await prisma.registrations.findFirst({
+        where: {
+          id: BigInt(target_registration_id),
+          event_id: BigInt(id),
+        },
+        include: {
+          registrationusers: true,
+        },
+      });
+
+      if (!targetRegistration) {
+        return NextResponse.json(
+          { message: "Target team not found" },
+          { status: 404 }
+        );
+      }
+
+      // Check if user is already in the target team
+      const alreadyInTarget = targetRegistration.registrationusers.some(
+        (ru) => ru.user_id.toString() === user_id.toString()
+      );
+      if (alreadyInTarget) {
+        return NextResponse.json(
+          { message: "Player is already a member of the target team" },
+          { status: 400 }
+        );
+      }
+
+      // Check target team max size limit
+      if (
+        event.max_team_player &&
+        targetRegistration.registrationusers.length >= Number(event.max_team_player)
+      ) {
+        return NextResponse.json(
+          {
+            message: `Target team "${targetRegistration.team_name || "Team"}" has reached the maximum capacity of ${event.max_team_player} players`,
+          },
+          { status: 400 }
+        );
+      }
+
+      // Check if moving this user will leave source team below minimum size or empty
+      const isLastMember = registration.registrationusers.length === 1;
+      const wouldViolateMin =
+        event.min_team_player &&
+        registration.registrationusers.length <= Number(event.min_team_player) &&
+        !event.allow_incomplete_teams;
+      const willDisbandSource = isLastMember || Boolean(wouldViolateMin);
+
+      if (willDisbandSource && !confirm_disband_source) {
+        return NextResponse.json(
+          {
+            requires_confirmation: true,
+            warning_type: "disband_source",
+            message: isLastMember
+              ? `Moving ${userToMove.user_name || "this player"} will leave "${registration.team_name || "Source Team"}" with 0 players and disband the team. Do you want to proceed?`
+              : `Moving ${userToMove.user_name || "this player"} will leave "${registration.team_name || "Source Team"}" with fewer than the minimum ${event.min_team_player} players and disband the team. Do you want to proceed?`,
+          },
+          { status: 409 }
+        );
+      }
+
+      // Execute all removal, transfer and add operations in a single atomic transaction
+      const { updatedSource, updatedTarget } = await prisma.$transaction(
+        async (tx) => {
+          // If source team will be disbanded:
+          if (willDisbandSource) {
+            // Delete source registration (cascades to all registrationusers in source)
+            await tx.registrations.delete({
+              where: {
+                id: registration.id,
+              },
+            });
+
+            // If source had other members and event has role_id, revoke role from other members (not the moved player)
+            if (event.role_id) {
+              const otherMembers = registration.registrationusers.filter(
+                (ru) => ru.user_id.toString() !== user_id.toString()
+              );
+              for (const member of otherMembers) {
+                try {
+                  await takeEventRole(
+                    event.guild_id!.toString(),
+                    member.user_id.toString(),
+                    event.role_id!.toString()
+                  );
+                } catch (roleErr) {
+                  console.error("Error revoking role from remaining disbanded member:", roleErr);
+                }
+              }
+            }
+          } else {
+            // Remove user from source team
+            await tx.registrationusers.delete({
+              where: {
+                user_id_registration_id: {
+                  user_id: BigInt(user_id),
+                  registration_id: registration.id,
+                },
+              },
+            });
+          }
+
+          // Add user to target team
+          await tx.registrationusers.create({
+            data: {
+              user_id: BigInt(user_id),
+              registration_id: targetRegistration.id,
+              event_id: BigInt(id),
+              user_name: userToMove.user_name,
+              pfp: userToMove.pfp,
+              role: "MEMBER",
+            },
+          });
+
+          // Fetch updated target registration
+          const newTarget = await tx.registrations.findUnique({
+            where: { id: targetRegistration.id },
+            include: {
+              registrationusers: true,
+            },
+          });
+
+          // Fetch updated source registration if not disbanded
+          let newSource = null;
+          if (!willDisbandSource) {
+            newSource = await tx.registrations.findUnique({
+              where: { id: registration.id },
+              include: {
+                registrationusers: true,
+              },
+            });
+          }
+
+          return { updatedSource: newSource, updatedTarget: newTarget };
+        }
+      );
+
+      // Audit logs
+      await createEventLog({
+        event_id: BigInt(id),
+        log_type: EventLogType.UPDATE,
+        log_target: EventLogTarget.REGISTRATION,
+        old_data: {
+          action: "transfer_player",
+          user_id: user_id.toString(),
+          source_team: registration.team_name,
+          source_registration_id: registration.id.toString(),
+          target_team: targetRegistration.team_name,
+          target_registration_id: targetRegistration.id.toString(),
+          source_disbanded: willDisbandSource,
+        },
+        new_data: {
+          transferred_user: userToMove,
+          target_registration: updatedTarget,
+          source_disbanded: willDisbandSource,
+        },
+      });
+
+      return NextResponse.json(
+        {
+          message: `Player moved successfully to "${targetRegistration.team_name || "team"}"`,
+          source_registration: updatedSource ? serializeData(updatedSource) : null,
+          target_registration: serializeData(updatedTarget),
+          source_disbanded: willDisbandSource,
+        },
+        { status: 200 }
+      );
     } else {
       return NextResponse.json(
-        { message: "Invalid action. Use 'add', 'remove', 'replace', 'update_inputs', or 'disqualify'" },
+        { message: "Invalid action. Use 'add', 'remove', 'replace', 'update_inputs', 'disqualify', or 'transfer'" },
         { status: 400 }
       );
     }
