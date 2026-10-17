@@ -648,64 +648,165 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
             </div>
           )}
 
-          {/* Registered Teams Accordion */}
+          {/* Registered Teams / Players Section */}
           {event.registrations.length > 0 && showRegistrations && (
             <div className="rounded-2xl border border-border/50 bg-card/40 p-6 sm:p-7 backdrop-blur-sm space-y-4">
               <div className="flex items-center justify-between pb-3 border-b border-border/40">
                 <div className="flex items-center gap-2">
                   <Users className="h-4 w-4 text-primary" />
-                  <h2 className="text-base font-semibold text-foreground">Registered Teams</h2>
+                  <h2 className="text-base font-semibold text-foreground">
+                    {event.is_solo ? "Registered Players" : "Registered Teams"}
+                  </h2>
                 </div>
                 <span className="text-xs text-muted-foreground font-mono">
-                  {event.registrations.length} team{event.registrations.length !== 1 ? "s" : ""}
+                  {event.registrations.length} {event.is_solo ? (event.registrations.length === 1 ? "player" : "players") : (event.registrations.length === 1 ? "team" : "teams")}
                 </span>
               </div>
 
-              <Accordion type="single" collapsible className="w-full space-y-2">
-                {event.registrations.map((registration) => (
-                  <AccordionItem
-                    id={`team-${registration.id.toString()}`}
-                    key={registration.id.toString()}
-                    value={registration.id.toString()}
-                    className="border border-border/40 rounded-xl px-4 bg-muted/10 data-[state=open]:bg-muted/20"
-                  >
-                    <AccordionTrigger className="hover:no-underline py-3">
-                      <div className="flex items-center justify-between w-full pr-3">
-                        <span className="font-semibold text-sm text-foreground">
-                          {registration.team_name || "Unnamed Team"}
-                        </span>
-                        <Badge variant="outline" className="text-[10px] font-mono font-normal">
-                          {registration.registrationusers.length}{" "}
-                          {registration.registrationusers.length === 1 ? "player" : "players"}
-                        </Badge>
-                      </div>
-                    </AccordionTrigger>
-                    <AccordionContent className="pb-3 pt-1">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2">
-                        {registration.registrationusers.map((user) => (
-                          <div
-                            key={user.user_id.toString()}
-                            className="flex items-center gap-2.5 p-2 rounded-lg border border-border/40 bg-card/60"
-                          >
-                            <Avatar className="h-7 w-7 rounded-full ring-1 ring-border/50">
-                              <AvatarImage
-                                src={user.pfp || undefined}
-                                alt={user.user_name || "User"}
-                              />
-                              <AvatarFallback>
-                                <UserCircle2 className="h-5 w-5 text-muted-foreground" />
-                              </AvatarFallback>
-                            </Avatar>
-                            <span className="font-medium text-xs text-foreground truncate">
-                              {user.user_name || "Unknown User"}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </AccordionContent>
-                  </AccordionItem>
-                ))}
-              </Accordion>
+              {event.is_solo ? (
+                (() => {
+                  const soloRegistrations = event.registrations.filter(r => (r.registrationusers?.length || 0) <= 1);
+                  const legacyTeamRegistrations = event.registrations.filter(r => (r.registrationusers?.length || 0) > 1);
+
+                  return (
+                    <div className="space-y-4">
+                      {/* Solo participants grid */}
+                      {soloRegistrations.length > 0 && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
+                          {soloRegistrations.map((registration, regIdx) => {
+                            const user = registration.registrationusers?.[0];
+                            const username = user?.user_name || registration.team_name || "Unknown User";
+                            const pfp = user?.pfp || undefined;
+
+                            return (
+                              <div
+                                key={registration.id.toString()}
+                                className="flex items-center gap-2.5 p-2.5 rounded-xl border border-border/40 bg-card/60 hover:bg-muted/10 transition-colors"
+                              >
+                                <Avatar className="h-8 w-8 rounded-full ring-1 ring-border/50 shrink-0">
+                                  <AvatarImage src={pfp} alt={username} />
+                                  <AvatarFallback>
+                                    <UserCircle2 className="h-5 w-5 text-muted-foreground" />
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div className="flex items-center justify-between gap-1.5 min-w-0 flex-1">
+                                  <span className="font-medium text-xs text-foreground truncate">
+                                    {username}
+                                  </span>
+                                  <span className="text-[10px] font-mono text-muted-foreground bg-muted/50 px-1.5 py-0.5 rounded border border-border/40 shrink-0">
+                                    #{registration.local_id ?? (regIdx + 1)}
+                                  </span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+
+                      {/* Legacy multi-member teams (if converted from team to solo) */}
+                      {legacyTeamRegistrations.length > 0 && (
+                        <div className="space-y-2 pt-2">
+                          <p className="text-xs font-medium text-muted-foreground">
+                            Registered Teams ({legacyTeamRegistrations.length})
+                          </p>
+                          <Accordion type="single" collapsible className="w-full space-y-2">
+                            {legacyTeamRegistrations.map((registration) => (
+                              <AccordionItem
+                                id={`team-${registration.id.toString()}`}
+                                key={registration.id.toString()}
+                                value={registration.id.toString()}
+                                className="border border-border/40 rounded-xl px-4 bg-muted/10 data-[state=open]:bg-muted/20"
+                              >
+                                <AccordionTrigger className="hover:no-underline py-3">
+                                  <div className="flex items-center justify-between w-full pr-3">
+                                    <span className="font-semibold text-sm text-foreground">
+                                      {registration.team_name || "Unnamed Team"}
+                                    </span>
+                                    <Badge variant="outline" className="text-[10px] font-mono font-normal">
+                                      {registration.registrationusers.length}{" "}
+                                      {registration.registrationusers.length === 1 ? "player" : "players"}
+                                    </Badge>
+                                  </div>
+                                </AccordionTrigger>
+                                <AccordionContent className="pb-3 pt-1">
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2">
+                                    {registration.registrationusers.map((user) => (
+                                      <div
+                                        key={user.user_id.toString()}
+                                        className="flex items-center gap-2.5 p-2 rounded-lg border border-border/40 bg-card/60"
+                                      >
+                                        <Avatar className="h-7 w-7 rounded-full ring-1 ring-border/50">
+                                          <AvatarImage
+                                            src={user.pfp || undefined}
+                                            alt={user.user_name || "User"}
+                                          />
+                                          <AvatarFallback>
+                                            <UserCircle2 className="h-5 w-5 text-muted-foreground" />
+                                          </AvatarFallback>
+                                        </Avatar>
+                                        <span className="font-medium text-xs text-foreground truncate">
+                                          {user.user_name || "Unknown User"}
+                                        </span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </AccordionContent>
+                              </AccordionItem>
+                            ))}
+                          </Accordion>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()
+              ) : (
+                /* Standard Team Accordion */
+                <Accordion type="single" collapsible className="w-full space-y-2">
+                  {event.registrations.map((registration) => (
+                    <AccordionItem
+                      id={`team-${registration.id.toString()}`}
+                      key={registration.id.toString()}
+                      value={registration.id.toString()}
+                      className="border border-border/40 rounded-xl px-4 bg-muted/10 data-[state=open]:bg-muted/20"
+                    >
+                      <AccordionTrigger className="hover:no-underline py-3">
+                        <div className="flex items-center justify-between w-full pr-3">
+                          <span className="font-semibold text-sm text-foreground">
+                            {registration.team_name || "Unnamed Team"}
+                          </span>
+                          <Badge variant="outline" className="text-[10px] font-mono font-normal">
+                            {registration.registrationusers.length}{" "}
+                            {registration.registrationusers.length === 1 ? "player" : "players"}
+                          </Badge>
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent className="pb-3 pt-1">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2">
+                          {registration.registrationusers.map((user) => (
+                            <div
+                              key={user.user_id.toString()}
+                              className="flex items-center gap-2.5 p-2 rounded-lg border border-border/40 bg-card/60"
+                            >
+                              <Avatar className="h-7 w-7 rounded-full ring-1 ring-border/50">
+                                <AvatarImage
+                                  src={user.pfp || undefined}
+                                  alt={user.user_name || "User"}
+                                />
+                                <AvatarFallback>
+                                  <UserCircle2 className="h-5 w-5 text-muted-foreground" />
+                                </AvatarFallback>
+                              </Avatar>
+                              <span className="font-medium text-xs text-foreground truncate">
+                                {user.user_name || "Unknown User"}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  ))}
+                </Accordion>
+              )}
             </div>
           )}
         </div>

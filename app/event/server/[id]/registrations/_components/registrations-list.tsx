@@ -67,6 +67,136 @@ function CopyableText({
   );
 }
 
+function hasCustomAnswers(extra: any): boolean {
+  if (!extra) return false;
+  try {
+    let data = typeof extra === 'string' ? JSON.parse(extra) : extra;
+    if (typeof data === 'string') {
+      try { data = JSON.parse(data); } catch {}
+    }
+    return !!data && typeof data === 'object' && Object.keys(data).length > 0;
+  } catch {
+    return false;
+  }
+}
+
+function renderCustomResponses(
+  registration: Registration,
+  onEditInputs?: (registration: Registration) => void
+) {
+  if (!registration.extra) return null;
+
+  return (
+    <div className="mt-4 pt-3 border-t border-border/30">
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          Custom Registration Answers
+        </p>
+        {onEditInputs && (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-md"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEditInputs(registration);
+                  }}
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                  <span className="sr-only">Edit custom answers</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Edit Custom Answers</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
+      </div>
+      <div className="rounded-xl border border-border/40 bg-muted/20 p-3 space-y-2.5">
+        {(() => {
+          try {
+            let extraData = typeof registration.extra === 'string'
+              ? JSON.parse(registration.extra)
+              : registration.extra;
+            
+            if (typeof extraData === 'string') {
+              try { extraData = JSON.parse(extraData); } catch {}
+            }
+            
+            if (!extraData || typeof extraData !== 'object' || Object.keys(extraData).length === 0) {
+              return <p className="text-xs text-muted-foreground">No answers provided</p>;
+            }
+
+            return Object.entries(extraData).map(([question, answerObj], index) => {
+              const isBooleanTrue = answerObj === true || answerObj === "true";
+              const isBooleanFalse = answerObj === false || answerObj === "false";
+              const isArray = Array.isArray(answerObj);
+              const isUserId = typeof answerObj === "string" && /^\d{17,20}$/.test(answerObj.trim());
+
+              return (
+                <div key={index} className="space-y-1.5">
+                  <h4 className="text-xs font-medium text-foreground">{question}</h4>
+                  {isBooleanTrue ? (
+                    <div className="pt-0.5">
+                      <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 gap-1.5 text-xs py-1 px-2.5">
+                        <Check className="h-3 w-3 text-emerald-500" />
+                        <span>Yes / Confirmed</span>
+                      </Badge>
+                    </div>
+                  ) : isBooleanFalse ? (
+                    <div className="pt-0.5">
+                      <Badge variant="outline" className="bg-muted/40 text-muted-foreground border-border/40 text-xs py-1 px-2.5">
+                        <span>No</span>
+                      </Badge>
+                    </div>
+                  ) : isArray ? (
+                    <div className="flex flex-wrap gap-1.5 pt-0.5">
+                      {(answerObj as any[]).map((item: any, idx: number) => {
+                        const strItem = typeof item === 'string' || typeof item === 'number' ? String(item) : JSON.stringify(item);
+                        const isMemberId = typeof item === 'string' && /^\d{17,20}$/.test(item.trim());
+                        return (
+                          <Badge key={idx} variant="secondary" className="text-xs py-0.5 px-2 font-mono gap-1">
+                            {isMemberId && <User className="h-3 w-3 text-muted-foreground" />}
+                            <span>{strItem}</span>
+                          </Badge>
+                        );
+                      })}
+                    </div>
+                  ) : isUserId ? (
+                    <div className="flex items-center gap-2 pt-0.5">
+                      <Badge variant="secondary" className="font-mono text-xs gap-1.5 py-1 px-2.5">
+                        <User className="h-3 w-3 text-muted-foreground" />
+                        <span>{answerObj as string}</span>
+                      </Badge>
+                      <CopyableText text={String(answerObj)} className="text-xs text-muted-foreground" truncate />
+                    </div>
+                  ) : (
+                    <div className="bg-background/60 p-2.5 rounded-lg border border-border/30">
+                      <CopyableText 
+                        text={typeof answerObj === 'string' ? answerObj : JSON.stringify(answerObj)} 
+                        className="text-xs text-muted-foreground whitespace-pre-wrap font-sans w-full"
+                      />
+                    </div>
+                  )}
+                  {index < Object.entries(extraData).length - 1 && (
+                    <Separator className="my-2 opacity-40" />
+                  )}
+                </div>
+              );
+            });
+          } catch (e) {
+            return <p className="text-xs text-muted-foreground">Unable to display custom responses</p>;
+          }
+        })()}
+      </div>
+    </div>
+  );
+}
+
 export function RegistrationsList({ 
   registrations, 
   isSolo, 
@@ -77,18 +207,238 @@ export function RegistrationsList({
   onDisqualifyRegistration,
   onEditInputs 
 }: RegistrationsListProps) {
+  if (registrations.length === 0) {
+    return (
+      <div className="text-center py-12 border border-dashed border-border/60 rounded-xl bg-muted/10">
+        <p className="text-sm font-medium text-foreground">No registrations found</p>
+        <p className="text-xs text-muted-foreground mt-1">
+          Try adjusting your search criteria or add a new registration above.
+        </p>
+      </div>
+    );
+  }
+
+  const renderActionButtons = (registration: Registration, canAddMember: boolean = false) => (
+    <div className="flex items-center gap-1 shrink-0">
+      {canAddMember && (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onAddUser(registration);
+                }}
+              >
+                <UserPlus className="h-4 w-4" />
+                <span className="sr-only">Add member</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Add Member</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      )}
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className={`h-8 w-8 rounded-lg transition-colors ${
+                registration.is_disqualified
+                  ? "text-amber-500 hover:text-emerald-500 hover:bg-emerald-500/10"
+                  : "text-muted-foreground hover:text-amber-500 hover:bg-amber-500/10"
+              }`}
+              onClick={(e) => {
+                e.stopPropagation();
+                onDisqualifyRegistration(registration);
+              }}
+            >
+              {registration.is_disqualified ? (
+                <CheckCircle2 className="h-4 w-4" />
+              ) : (
+                <Ban className="h-4 w-4" />
+              )}
+              <span className="sr-only">
+                {registration.is_disqualified ? "Re-qualify registration" : "Disqualify registration"}
+              </span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>{registration.is_disqualified ? "Re-qualify Team" : "Disqualify Team"}</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDeleteRegistration(registration);
+              }}
+            >
+              <Trash2 className="h-4 w-4" />
+              <span className="sr-only">Delete registration</span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Delete Registration</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    </div>
+  );
+
   return (
-    <div className="space-y-4">
-      {registrations.length === 0 ? (
-        <div className="text-center py-12 border border-dashed border-border/60 rounded-xl bg-muted/10">
-          <p className="text-sm font-medium text-foreground">No registrations found</p>
-          <p className="text-xs text-muted-foreground mt-1">
-            Try adjusting your search criteria or add a new registration above.
-          </p>
-        </div>
-      ) : (
-        <Accordion type="multiple" className="w-full space-y-3">
-          {registrations.map((registration, regIndex) => (
+    <div className="space-y-3">
+      <Accordion type="multiple" className="w-full space-y-3">
+        {registrations.map((registration, regIndex) => {
+          const isMultiPlayer = (registration.registrationusers?.length || 0) > 1;
+          const isSoloItem = isSolo && !isMultiPlayer;
+          const user = registration.registrationusers?.[0];
+          const hasAnswers = hasCustomAnswers(registration.extra);
+
+          // CASE 1: Solo item with NO custom answers -> Clean static card (no accordion chevron)
+          if (isSoloItem && !hasAnswers) {
+            return (
+              <div
+                key={registration.id.toString()}
+                className={`border rounded-xl px-4 py-2.5 transition-colors ${
+                  registration.is_disqualified
+                    ? "border-destructive/40 bg-destructive/5"
+                    : "border-border/50 bg-card/30"
+                }`}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <Avatar className="h-9 w-9 ring-1 ring-border/50 shrink-0">
+                      <AvatarImage src={user?.pfp || undefined} alt={user?.user_name || registration.team_name || "User"} />
+                      <AvatarFallback className="text-xs">
+                        {(user?.user_name || registration.team_name)?.substring(0, 2).toUpperCase() || "U"}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className={`font-semibold text-sm truncate ${
+                          registration.is_disqualified
+                            ? "text-muted-foreground line-through decoration-destructive/70"
+                            : "text-foreground"
+                        }`}>
+                          {user?.user_name || registration.team_name || "Unknown User"}
+                        </span>
+                        <span className="text-[10px] font-mono text-muted-foreground bg-muted/50 px-1.5 py-0.5 rounded border border-border/40 shrink-0">
+                          #{registration.local_id ?? (regIndex + 1)}
+                        </span>
+                        {registration.is_disqualified && (
+                          <Badge 
+                            variant="destructive" 
+                            className="text-[10px] uppercase font-bold tracking-wider px-2 py-0 h-4.5 bg-destructive/15 text-destructive border-destructive/30 gap-1 shrink-0"
+                          >
+                            <Ban className="h-2.5 w-2.5" />
+                            <span>Disqualified</span>
+                          </Badge>
+                        )}
+                      </div>
+                      {user?.user_id && (
+                        <CopyableText 
+                          text={user.user_id.toString()} 
+                          className="text-[11px] text-muted-foreground font-mono mt-0.5"
+                          truncate
+                        />
+                      )}
+                    </div>
+                  </div>
+                  {renderActionButtons(registration, false)}
+                </div>
+              </div>
+            );
+          }
+
+          // CASE 2: Solo item WITH custom answers -> Collapsible AccordionItem (header has avatar + username + copyable ID, content has answers only)
+          if (isSoloItem && hasAnswers) {
+            return (
+              <AccordionItem
+                key={registration.id.toString()}
+                value={registration.id.toString()}
+                className={`group border rounded-xl px-4 py-1 transition-colors ${
+                  registration.is_disqualified
+                    ? "border-destructive/40 bg-destructive/5 data-[state=open]:border-destructive/60"
+                    : "border-border/50 bg-card/30 data-[state=open]:border-border/80"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <AccordionTrigger className="flex-1 text-left hover:no-underline py-2.5">
+                    <div className="flex items-center justify-between w-full pr-3 gap-3">
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <Avatar className="h-9 w-9 ring-1 ring-border/50 shrink-0">
+                          <AvatarImage src={user?.pfp || undefined} alt={user?.user_name || registration.team_name || "User"} />
+                          <AvatarFallback className="text-xs">
+                            {(user?.user_name || registration.team_name)?.substring(0, 2).toUpperCase() || "U"}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className={`font-semibold text-sm truncate ${
+                              registration.is_disqualified
+                                ? "text-muted-foreground line-through decoration-destructive/70"
+                                : "text-foreground"
+                            }`}>
+                              {user?.user_name || registration.team_name || "Unknown User"}
+                            </span>
+                            <span className="text-[10px] font-mono text-muted-foreground bg-muted/50 px-1.5 py-0.5 rounded border border-border/40 shrink-0">
+                              #{registration.local_id ?? (regIndex + 1)}
+                            </span>
+                            {registration.is_disqualified && (
+                              <Badge 
+                                variant="destructive" 
+                                className="text-[10px] uppercase font-bold tracking-wider px-2 py-0 h-4.5 bg-destructive/15 text-destructive border-destructive/30 gap-1 shrink-0"
+                              >
+                                <Ban className="h-2.5 w-2.5" />
+                                <span>Disqualified</span>
+                              </Badge>
+                            )}
+                          </div>
+                          {user?.user_id && (
+                            <CopyableText 
+                              text={user.user_id.toString()} 
+                              className="text-[11px] text-muted-foreground font-mono mt-0.5"
+                              truncate
+                            />
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </AccordionTrigger>
+                  {renderActionButtons(registration, false)}
+                </div>
+                <AccordionContent className="pt-2 pb-4 border-t border-border/30 mt-1">
+                  <div className="space-y-4">
+                    {registration.is_disqualified && (
+                      <div className="flex items-center gap-2 p-2.5 rounded-xl bg-destructive/10 border border-destructive/30 text-destructive text-xs">
+                        <Ban className="h-4 w-4 shrink-0" />
+                        <p className="font-medium">
+                          This registration is currently disqualified. Player does not possess active tournament roles.
+                        </p>
+                      </div>
+                    )}
+                    {renderCustomResponses(registration, onEditInputs)}
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            );
+          }
+
+          // CASE 3: Multi-Player Team (Standard Team Event OR Legacy Team in Solo Event)
+          return (
             <AccordionItem 
               key={registration.id.toString()} 
               value={registration.id.toString()} 
@@ -112,6 +462,11 @@ export function RegistrationsList({
                       <span className="text-[10px] font-mono text-muted-foreground bg-muted/50 px-1.5 py-0.5 rounded border border-border/40">
                         #{registration.local_id ?? (regIndex + 1)}
                       </span>
+                      {isSolo && isMultiPlayer && (
+                        <Badge variant="outline" className="text-[10px] font-normal bg-amber-500/10 text-amber-500 border-amber-500/30">
+                          Team ({registration.registrationusers.length} players)
+                        </Badge>
+                      )}
                       {registration.is_disqualified && (
                         <Badge 
                           variant="destructive" 
@@ -122,89 +477,15 @@ export function RegistrationsList({
                         </Badge>
                       )}
                     </div>
-                    <Badge variant="outline" className="text-[11px] font-medium shrink-0 ml-auto">
-                      {registration.registrationusers.length}{" "}
-                      {registration.registrationusers.length === 1 ? "player" : "players"}
-                    </Badge>
+                    {!isSolo && (
+                      <Badge variant="outline" className="text-[11px] font-medium shrink-0 ml-auto">
+                        {registration.registrationusers.length}{" "}
+                        {registration.registrationusers.length === 1 ? "player" : "players"}
+                      </Badge>
+                    )}
                   </div>
                 </AccordionTrigger>
-                <div className="flex items-center gap-1 shrink-0">
-                  {!isSolo && (
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onAddUser(registration);
-                            }}
-                          >
-                            <UserPlus className="h-4 w-4" />
-                            <span className="sr-only">Add member</span>
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Add Member</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  )}
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className={`h-8 w-8 rounded-lg transition-colors ${
-                            registration.is_disqualified
-                              ? "text-amber-500 hover:text-emerald-500 hover:bg-emerald-500/10"
-                              : "text-muted-foreground hover:text-amber-500 hover:bg-amber-500/10"
-                          }`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onDisqualifyRegistration(registration);
-                          }}
-                        >
-                          {registration.is_disqualified ? (
-                            <CheckCircle2 className="h-4 w-4" />
-                          ) : (
-                            <Ban className="h-4 w-4" />
-                          )}
-                          <span className="sr-only">
-                            {registration.is_disqualified ? "Re-qualify registration" : "Disqualify registration"}
-                          </span>
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>{registration.is_disqualified ? "Re-qualify Team" : "Disqualify Team"}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onDeleteRegistration(registration);
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                          <span className="sr-only">Delete registration</span>
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Delete Registration</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
+                {renderActionButtons(registration, !isSolo)}
               </div>
               <AccordionContent className="pt-2 pb-4 border-t border-border/30 mt-1">
                 <div className="space-y-4">
@@ -250,18 +531,20 @@ export function RegistrationsList({
                             />
                           </div>
                         </div>
-                        {!isSolo && (
+                        {(!isSolo || isMultiPlayer) && (
                           <div className="flex items-center gap-0.5 shrink-0">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7 text-muted-foreground hover:text-foreground rounded-md"
-                              onClick={() => onReplaceUser(registration, user)}
-                              title="Replace player"
-                            >
-                              <RefreshCw className="h-3.5 w-3.5" />
-                              <span className="sr-only">Replace user</span>
-                            </Button>
+                            {!isSolo && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-muted-foreground hover:text-foreground rounded-md"
+                                onClick={() => onReplaceUser(registration, user)}
+                                title="Replace player"
+                              >
+                                <RefreshCw className="h-3.5 w-3.5" />
+                                <span className="sr-only">Replace user</span>
+                              </Button>
+                            )}
                             <Button
                               variant="ghost"
                               size="icon"
@@ -279,121 +562,13 @@ export function RegistrationsList({
                   </div>
 
                   {/* Custom Responses Section */}
-                  {registration.extra && (
-                    <div className="mt-4 pt-3 border-t border-border/30">
-                      <div className="flex items-center justify-between mb-2">
-                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                          Custom Registration Answers
-                        </p>
-                        {onEditInputs && (
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-6 w-6 text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-md"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    onEditInputs(registration);
-                                  }}
-                                >
-                                  <Pencil className="h-3.5 w-3.5" />
-                                  <span className="sr-only">Edit custom answers</span>
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Edit Custom Answers</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        )}
-                      </div>
-                      <div className="rounded-xl border border-border/40 bg-muted/20 p-3 space-y-2.5">
-                        {(() => {
-                          try {
-                            let extraData = typeof registration.extra === 'string'
-                              ? JSON.parse(registration.extra)
-                              : registration.extra;
-                            
-                            if (typeof extraData === 'string') {
-                              try { extraData = JSON.parse(extraData); } catch {}
-                            }
-                            
-                            if (!extraData || typeof extraData !== 'object' || Object.keys(extraData).length === 0) {
-                              return <p className="text-xs text-muted-foreground">No answers provided</p>;
-                            }
-
-                            return Object.entries(extraData).map(([question, answerObj], index) => {
-                              const isBooleanTrue = answerObj === true || answerObj === "true";
-                              const isBooleanFalse = answerObj === false || answerObj === "false";
-                              const isArray = Array.isArray(answerObj);
-                              const isUserId = typeof answerObj === "string" && /^\d{17,20}$/.test(answerObj.trim());
-
-                              return (
-                                <div key={index} className="space-y-1.5">
-                                  <h4 className="text-xs font-medium text-foreground">{question}</h4>
-                                  {isBooleanTrue ? (
-                                    <div className="pt-0.5">
-                                      <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 gap-1.5 text-xs py-1 px-2.5">
-                                        <Check className="h-3 w-3 text-emerald-500" />
-                                        <span>Yes / Confirmed</span>
-                                      </Badge>
-                                    </div>
-                                  ) : isBooleanFalse ? (
-                                    <div className="pt-0.5">
-                                      <Badge variant="outline" className="bg-muted/40 text-muted-foreground border-border/40 text-xs py-1 px-2.5">
-                                        <span>No</span>
-                                      </Badge>
-                                    </div>
-                                  ) : isArray ? (
-                                    <div className="flex flex-wrap gap-1.5 pt-0.5">
-                                      {(answerObj as any[]).map((item: any, idx: number) => {
-                                        const strItem = typeof item === 'string' || typeof item === 'number' ? String(item) : JSON.stringify(item);
-                                        const isMemberId = typeof item === 'string' && /^\d{17,20}$/.test(item.trim());
-                                        return (
-                                          <Badge key={idx} variant="secondary" className="text-xs py-0.5 px-2 font-mono gap-1">
-                                            {isMemberId && <User className="h-3 w-3 text-muted-foreground" />}
-                                            <span>{strItem}</span>
-                                          </Badge>
-                                        );
-                                      })}
-                                    </div>
-                                  ) : isUserId ? (
-                                    <div className="flex items-center gap-2 pt-0.5">
-                                      <Badge variant="secondary" className="font-mono text-xs gap-1.5 py-1 px-2.5">
-                                        <User className="h-3 w-3 text-muted-foreground" />
-                                        <span>{answerObj as string}</span>
-                                      </Badge>
-                                      <CopyableText text={String(answerObj)} className="text-xs text-muted-foreground" truncate />
-                                    </div>
-                                  ) : (
-                                    <div className="bg-background/60 p-2.5 rounded-lg border border-border/30">
-                                      <CopyableText 
-                                        text={typeof answerObj === 'string' ? answerObj : JSON.stringify(answerObj)} 
-                                        className="text-xs text-muted-foreground whitespace-pre-wrap font-sans w-full"
-                                      />
-                                    </div>
-                                  )}
-                                  {index < Object.entries(extraData).length - 1 && (
-                                    <Separator className="my-2 opacity-40" />
-                                  )}
-                                </div>
-                              );
-                            });
-                          } catch (e) {
-                            return <p className="text-xs text-muted-foreground">Unable to display custom responses</p>;
-                          }
-                        })()}
-                      </div>
-                    </div>
-                  )}
+                  {renderCustomResponses(registration, onEditInputs)}
                 </div>
               </AccordionContent>
             </AccordionItem>
-          ))}
-        </Accordion>
-      )}
+          );
+        })}
+      </Accordion>
     </div>
   );
 }
