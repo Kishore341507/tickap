@@ -107,10 +107,10 @@ export function RegistrationsList({
                           ? "text-muted-foreground line-through decoration-destructive/70"
                           : "text-foreground"
                       }`}>
-                        {registration.team_name || `Team #${regIndex + 1}`}
+                        {registration.team_name || `Team #${registration.local_id ?? (regIndex + 1)}`}
                       </span>
                       <span className="text-[10px] font-mono text-muted-foreground bg-muted/50 px-1.5 py-0.5 rounded border border-border/40">
-                        #{regIndex + 1}
+                        #{registration.local_id ?? (regIndex + 1)}
                       </span>
                       {registration.is_disqualified && (
                         <Badge 
